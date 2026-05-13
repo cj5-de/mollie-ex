@@ -13,7 +13,18 @@ defmodule MollieEx.MixProject do
       description: description(),
       package: package(),
       source_url: @source_url,
-      deps: []
+      aliases: aliases(),
+      deps: [
+        {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
+      ]
+    ]
+  end
+
+  def cli do
+    [
+      preferred_envs: [
+        precommit: :test
+      ]
     ]
   end
 
@@ -41,6 +52,17 @@ defmodule MollieEx.MixProject do
       links: %{
         "GitHub" => @source_url
       }
+    ]
+  end
+
+  defp aliases do
+    [
+      precommit: [
+        "format --check-formatted",
+        "compile --warnings-as-errors",
+        "test",
+        "credo --strict"
+      ]
     ]
   end
 end
