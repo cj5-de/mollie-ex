@@ -278,6 +278,81 @@ defmodule MollieEx.HTTP.TransportTest do
     end
   end
 
+  test "rejects header-unsafe optional idempotency keys before auth and transport" do
+    test_pid = self()
+    marker = "marker-crlf-key"
+    unsafe_key = marker <> "\r\nX-Leak: yes"
+
+    Req.Test.stub(__MODULE__, fn conn ->
+      send(test_pid, :request_sent)
+      Req.Test.json(conn, %{"id" => "tr_123"})
+    end)
+
+    client =
+      Client.new!(
+        api_key: fn ->
+          send(test_pid, :auth_resolved)
+          @api_key
+        end,
+        transport: {:req_test, __MODULE__}
+      )
+
+    request = %Request{
+      method: :post,
+      path: "/payments",
+      body: %{"description" => "Order #123"},
+      idempotency_key: unsafe_key,
+      idempotency_policy: :optional,
+      operation: :payments_create
+    }
+
+    assert {:error, %Error{} = error} = Transport.request(client, request)
+    assert error.type == :configuration
+    assert error.reason == :invalid_idempotency_key
+    assert error.method == :post
+    assert error.path == "/payments"
+    assert error.operation == :payments_create
+    assert error.idempotency_key_fingerprint =~ ~r/^sha256:[0-9a-f]{16}$/
+
+    refute_receive :auth_resolved, 10
+    refute_receive :request_sent, 10
+
+    rendered =
+      Enum.join([inspect(error), Exception.message(error), inspect(Map.from_struct(error))], "\n")
+
+    refute rendered =~ marker
+    refute rendered =~ "X-Leak"
+  end
+
+  test "rejects header-unsafe required idempotency keys before sending" do
+    client =
+      Client.new!(
+        api_key: fn -> raise "auth should not be resolved" end,
+        transport: {:req_test, __MODULE__}
+      )
+
+    for key <- ["order-123\t", "order-123" <> <<0>>, "order-123" <> <<255>>] do
+      request = %Request{
+        method: :post,
+        path: "/transfers",
+        idempotency_key: key,
+        idempotency_policy: :required,
+        operation: :transfers_create
+      }
+
+      assert {:error, %Error{} = error} = Transport.request(client, request)
+      assert error.type == :configuration
+      assert error.reason == :invalid_idempotency_key
+      assert error.method == :post
+      assert error.path == "/transfers"
+      assert error.operation == :transfers_create
+      assert error.idempotency_key_fingerprint =~ ~r/^sha256:[0-9a-f]{16}$/
+
+      refute inspect(error) =~ "order-123"
+      refute Exception.message(error) =~ "order-123"
+    end
+  end
+
   test "maps API errors into SDK errors with response diagnostics" do
     Req.Test.expect(__MODULE__, fn conn ->
       conn
