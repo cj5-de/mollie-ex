@@ -3,6 +3,7 @@ defmodule MollieEx.PaymentsTest do
 
   alias MollieEx.Client
   alias MollieEx.Error
+  alias MollieEx.List, as: MollieList
   alias MollieEx.Payment
   alias MollieEx.Payments
   alias MollieEx.Types.{Link, Money}
@@ -11,6 +12,7 @@ defmodule MollieEx.PaymentsTest do
 
   @api_key "test_payments_secret"
   @payment_fixture Path.expand("../fixtures/mollie/payments/create_success.json", __DIR__)
+  @payment_list_fixture Path.expand("../fixtures/mollie/payments/list_success.json", __DIR__)
 
   test "creates a payment with camelCased body, include query, and caller idempotency key" do
     Req.Test.expect(__MODULE__, fn conn ->
@@ -224,6 +226,84 @@ defmodule MollieEx.PaymentsTest do
     assert {:ok, %Payment{id: "tr_123"}} = Payments.get(client, "tr_123")
   end
 
+  test "lists payments with pagination query params" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/v2/payments"
+
+      assert URI.decode_query(conn.query_string) == %{
+               "from" => "tr_from",
+               "limit" => "2",
+               "sort" => "asc"
+             }
+
+      assert header(conn, "authorization") == "Bearer #{@api_key}"
+      assert header(conn, "idempotency-key") == nil
+
+      payment_list_fixture_response(conn, 200)
+    end)
+
+    assert {:ok, %MollieList{} = list} =
+             Payments.list(client(), from: "tr_from", limit: 2, sort: :asc)
+
+    assert list.count == 1
+
+    assert %Link{href: "https://api.mollie.com/v2/payments?from=tr_next&limit=1"} =
+             list.links["next"]
+
+    assert [%Payment{id: "tr_list_123"} = payment] = list.data
+    assert payment.amount == %Money{currency: "EUR", value: "75.00", raw: payment.amount.raw}
+    assert payment.metadata == %{"order_id" => "12345"}
+    assert payment.raw["unexpectedFutureField"] == %{"visible" => true}
+  end
+
+  test "lists OAuth payments with profileId and explicit false testmode" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert URI.decode_query(conn.query_string) == %{
+               "profileId" => "pfl_override",
+               "testmode" => "false"
+             }
+
+      payment_list_fixture_response(conn, 200)
+    end)
+
+    client =
+      Client.new!(
+        organization_token: "org_test_secret",
+        profile_id: "pfl_default",
+        testmode: true,
+        transport: {:req_test, __MODULE__}
+      )
+
+    assert {:ok, %MollieList{data: [%Payment{id: "tr_list_123"}]}} =
+             Payments.list(client, profile_id: "pfl_override", testmode: false)
+  end
+
+  test "requires profileId for non-API-key list requests" do
+    client = Client.new!(oauth_token: "access_test_secret", transport: {:req_test, __MODULE__})
+
+    assert {:error, %Error{} = error} = Payments.list(client)
+    assert error.type == :configuration
+    assert error.reason == :missing_profile_id
+  end
+
+  test "rejects profileId and testmode for API-key list requests before sending" do
+    test_pid = self()
+
+    Req.Test.stub(__MODULE__, fn conn ->
+      send(test_pid, :request_sent)
+      Req.Test.json(conn, %{"count" => 0, "_embedded" => %{}, "_links" => %{}})
+    end)
+
+    assert {:error, %Error{reason: :unsupported_profile_id}} =
+             Payments.list(client(), profile_id: "pfl_123")
+
+    assert {:error, %Error{reason: :unsupported_testmode}} =
+             Payments.list(client(), testmode: true)
+
+    refute_receive :request_sent, 10
+  end
+
   test "maps payment API errors through the SDK error model" do
     for {status, type} <- [
           {401, :authentication},
@@ -253,6 +333,34 @@ defmodule MollieEx.PaymentsTest do
     end
   end
 
+  test "maps payment list API errors through the SDK error model" do
+    for {status, type} <- [
+          {401, :authentication},
+          {404, :not_found},
+          {422, :validation},
+          {429, :rate_limited},
+          {503, :server_error}
+        ] do
+      Req.Test.expect(__MODULE__, fn conn ->
+        conn
+        |> Plug.Conn.put_resp_header("x-request-id", "req_list_#{status}")
+        |> Plug.Conn.put_status(status)
+        |> Req.Test.json(%{
+          "status" => status,
+          "title" => "Mollie error",
+          "detail" => "Payment list failed"
+        })
+      end)
+
+      assert {:error, %Error{} = error} = Payments.list(client(max_retries: 0))
+      assert error.type == type
+      assert error.status == status
+      assert error.operation == :payments_list
+      assert error.request_id == "req_list_#{status}"
+      assert error.raw["detail"] == "Payment list failed"
+    end
+  end
+
   test "maps malformed payment JSON into decode errors" do
     Req.Test.expect(__MODULE__, fn conn ->
       conn
@@ -266,6 +374,19 @@ defmodule MollieEx.PaymentsTest do
     assert error.raw == "{"
   end
 
+  test "maps malformed payment list JSON into decode errors" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      conn
+      |> Plug.Conn.put_resp_header("content-type", "application/json")
+      |> Plug.Conn.send_resp(200, "{")
+    end)
+
+    assert {:error, %Error{} = error} = Payments.list(client(max_retries: 0))
+    assert error.type == :decode
+    assert error.operation == :payments_list
+    assert error.raw == "{"
+  end
+
   test "maps transport timeouts into timeout errors" do
     Req.Test.expect(__MODULE__, fn conn ->
       Req.Test.transport_error(conn, :timeout)
@@ -274,6 +395,14 @@ defmodule MollieEx.PaymentsTest do
     assert {:error, %Error{} = error} = Payments.get(client(max_retries: 0), "tr_123")
     assert error.type == :timeout
     assert error.operation == :payments_get
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      Req.Test.transport_error(conn, :timeout)
+    end)
+
+    assert {:error, %Error{} = error} = Payments.list(client(max_retries: 0))
+    assert error.type == :timeout
+    assert error.operation == :payments_list
   end
 
   test "rejects invalid local inputs before sending" do
@@ -292,6 +421,21 @@ defmodule MollieEx.PaymentsTest do
     assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
              Payments.get(client(), "tr_123", unknown: true)
 
+    assert {:error, %Error{reason: :invalid_options}} = Payments.list(client(), "bad")
+    assert {:error, %Error{reason: :invalid_client}} = Payments.list("bad")
+
+    assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
+             Payments.list(client(), unknown: true)
+
+    assert {:error, %Error{reason: {:invalid_option, :from}}} =
+             Payments.list(client(), from: "")
+
+    assert {:error, %Error{reason: {:invalid_option, :limit}}} =
+             Payments.list(client(), limit: 0)
+
+    assert {:error, %Error{reason: {:invalid_option, :sort}}} =
+             Payments.list(client(), sort: :newest)
+
     refute_receive :request_sent, 10
   end
 
@@ -306,6 +450,38 @@ defmodule MollieEx.PaymentsTest do
     assert error.reason == :invalid_payment_response
     assert error.operation == :payments_get
     assert error.raw == %{"status" => "open"}
+  end
+
+  test "returns decode errors for invalid payment list response shapes" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      Req.Test.json(conn, %{"count" => 1, "_embedded" => %{"payments" => %{}}, "_links" => %{}})
+    end)
+
+    assert {:error, %Error{} = error} = Payments.list(client())
+    assert error.type == :decode
+    assert error.status == 200
+    assert error.reason == :invalid_list_response
+    assert error.operation == :payments_list
+    assert error.raw == %{"count" => 1, "_embedded" => %{"payments" => %{}}, "_links" => %{}}
+  end
+
+  test "returns decode errors for invalid embedded payment list items" do
+    invalid_payment = %{"status" => "open"}
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      Req.Test.json(conn, %{
+        "count" => 1,
+        "_embedded" => %{"payments" => [invalid_payment]},
+        "_links" => %{}
+      })
+    end)
+
+    assert {:error, %Error{} = error} = Payments.list(client())
+    assert error.type == :decode
+    assert error.status == 200
+    assert error.reason == :invalid_payment_response
+    assert error.operation == :payments_list
+    assert error.raw == invalid_payment
   end
 
   test "emits exception telemetry for invalid hydrated payment response shapes" do
@@ -355,6 +531,53 @@ defmodule MollieEx.PaymentsTest do
     refute_receive {:telemetry, ^stop_event, _measurements, _metadata}, 20
   end
 
+  test "emits exception telemetry for invalid hydrated payment list response shapes" do
+    prefix = [:mollie_payments_test_list_hydration_decode]
+
+    attach_telemetry(prefix, [
+      [:request, :start],
+      [:request, :stop],
+      [:request, :exception],
+      [:decode, :exception]
+    ])
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      Req.Test.json(conn, %{"count" => 1, "_embedded" => %{"payments" => %{}}, "_links" => %{}})
+    end)
+
+    assert {:error, %Error{} = error} =
+             Payments.list(client(telemetry_prefix: prefix))
+
+    assert error.type == :decode
+    assert error.reason == :invalid_list_response
+
+    start_event = prefix ++ [:request, :start]
+    decode_event = prefix ++ [:decode, :exception]
+    request_exception_event = prefix ++ [:request, :exception]
+    stop_event = prefix ++ [:request, :stop]
+
+    assert_receive {:telemetry, ^start_event, %{system_time: system_time}, start_metadata}
+    assert is_integer(system_time)
+    assert start_metadata.operation == :payments_list
+    assert start_metadata.path_template == "/payments"
+
+    assert_receive {:telemetry, ^decode_event, %{duration: _duration}, decode_metadata}
+    assert decode_metadata.error_type == :decode
+    assert decode_metadata.reason == :invalid_list_response
+    assert decode_metadata.status == 200
+    assert decode_metadata.operation == :payments_list
+    assert decode_metadata.path_template == "/payments"
+
+    assert_receive {:telemetry, ^request_exception_event, %{duration: _duration},
+                    exception_metadata}
+
+    assert exception_metadata.error_type == :decode
+    assert exception_metadata.reason == :invalid_list_response
+    assert exception_metadata.status == 200
+
+    refute_receive {:telemetry, ^stop_event, _measurements, _metadata}, 20
+  end
+
   test "emits safe request telemetry for successful payment calls" do
     prefix = [:mollie_payments_test_success]
     attach_telemetry(prefix, [[:request, :start], [:request, :stop]])
@@ -386,6 +609,37 @@ defmodule MollieEx.PaymentsTest do
     refute telemetry_text =~ @api_key
     refute telemetry_text =~ "order-123"
     refute telemetry_text =~ "Order #123"
+    refute telemetry_text =~ "authorization"
+  end
+
+  test "emits safe request telemetry for successful payment list calls" do
+    prefix = [:mollie_payments_test_list_success]
+    attach_telemetry(prefix, [[:request, :start], [:request, :stop]])
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      payment_list_fixture_response(conn, 200)
+    end)
+
+    assert {:ok, %MollieList{}} =
+             client(telemetry_prefix: prefix)
+             |> Payments.list(limit: 1, sort: "desc")
+
+    start_event = prefix ++ [:request, :start]
+    stop_event = prefix ++ [:request, :stop]
+
+    assert_receive {:telemetry, ^start_event, %{system_time: system_time}, start_metadata}
+    assert is_integer(system_time)
+    assert start_metadata.operation == :payments_list
+    assert start_metadata.method == "GET"
+    assert start_metadata.path_template == "/payments"
+
+    assert_receive {:telemetry, ^stop_event, %{duration: duration}, stop_metadata}
+    assert is_integer(duration)
+    assert stop_metadata.status == 200
+    assert stop_metadata.operation == :payments_list
+
+    telemetry_text = inspect([start_metadata, stop_metadata])
+    refute telemetry_text =~ @api_key
     refute telemetry_text =~ "authorization"
   end
 
@@ -459,6 +713,12 @@ defmodule MollieEx.PaymentsTest do
     conn
     |> Plug.Conn.put_resp_header("content-type", "application/hal+json")
     |> Plug.Conn.send_resp(status, File.read!(@payment_fixture))
+  end
+
+  defp payment_list_fixture_response(conn, status) do
+    conn
+    |> Plug.Conn.put_resp_header("content-type", "application/hal+json")
+    |> Plug.Conn.send_resp(status, File.read!(@payment_list_fixture))
   end
 
   defp assert_json_body(conn, expected) do

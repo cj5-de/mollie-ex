@@ -1,6 +1,6 @@
 defmodule MollieEx.Payments do
   @moduledoc """
-  Create and retrieve Mollie payments.
+  Create, retrieve, and list Mollie payments.
 
   All functions return result tuples. They do not raise for ordinary API,
   transport, or validation failures.
@@ -9,8 +9,11 @@ defmodule MollieEx.Payments do
   alias MollieEx.Client
   alias MollieEx.Error
   alias MollieEx.HTTP.{Telemetry, Transport}
+  alias MollieEx.List, as: MollieList
   alias MollieEx.Payment
+  alias MollieEx.Resources.ListDecoder
   alias MollieEx.Resources.Payments.{Create, Get}
+  alias MollieEx.Resources.Payments.List, as: ListRequest
 
   @type create_params :: map()
   @type create_option ::
@@ -24,6 +27,15 @@ defmodule MollieEx.Payments do
   @type get_option ::
           {:include, String.t()}
           | {:embed, String.t()}
+          | {:testmode, boolean()}
+          | {:pool_timeout, pos_integer()}
+          | {:receive_timeout, pos_integer()}
+          | {:request_timeout, pos_integer()}
+  @type list_option ::
+          {:from, String.t()}
+          | {:limit, pos_integer()}
+          | {:sort, :asc | :desc | String.t()}
+          | {:profile_id, String.t()}
           | {:testmode, boolean()}
           | {:pool_timeout, pos_integer()}
           | {:receive_timeout, pos_integer()}
@@ -69,6 +81,22 @@ defmodule MollieEx.Payments do
   def get(%Client{}, _payment_id, _opts), do: configuration_error(:invalid_payment_id)
   def get(_client, _payment_id, _opts), do: configuration_error(:invalid_client)
 
+  @doc """
+  Lists Mollie payments.
+  """
+  @spec list(Client.t(), [list_option()]) ::
+          {:ok, MollieList.t(Payment.t())} | {:error, Error.t()}
+  def list(client, opts \\ [])
+
+  def list(%Client{} = client, opts) when is_list(opts) do
+    with {:ok, request, transport_opts} <- ListRequest.build(client, opts) do
+      request_payment_list(client, request, transport_opts)
+    end
+  end
+
+  def list(%Client{}, _opts), do: configuration_error(:invalid_options)
+  def list(_client, _opts), do: configuration_error(:invalid_client)
+
   defp configuration_error(reason) do
     {:error, Error.exception(type: :configuration, reason: reason)}
   end
@@ -89,7 +117,34 @@ defmodule MollieEx.Payments do
     end
   end
 
+  defp request_payment_list(%Client{} = client, request, transport_opts) do
+    start_time = Telemetry.start(client, request)
+    transport_opts = Keyword.put(transport_opts, :telemetry, false)
+
+    case Transport.request(client, request, transport_opts) do
+      {:ok, response} ->
+        result =
+          ListDecoder.from_response(
+            response,
+            "payments",
+            :payments_list,
+            &Payment.from_response(&1, :payments_list)
+          )
+
+        emit_payment_result(client, request, response, result, start_time)
+        result
+
+      {:error, %Error{} = error} = result ->
+        Telemetry.emit_result(client, request, result, start_time)
+        {:error, error}
+    end
+  end
+
   defp emit_payment_result(client, request, response, {:ok, %Payment{}}, start_time) do
+    Telemetry.emit_result(client, request, {:ok, response}, start_time)
+  end
+
+  defp emit_payment_result(client, request, response, {:ok, %MollieList{}}, start_time) do
     Telemetry.emit_result(client, request, {:ok, response}, start_time)
   end
 

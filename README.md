@@ -69,9 +69,22 @@ case payment.status do
 end
 ```
 
+List payments with ordinary Mollie pagination:
+
+```elixir
+{:ok, payment_list} = MollieEx.Payments.list(client, limit: 10, sort: :desc)
+
+for payment <- payment_list.data do
+  IO.puts("#{payment.id}: #{payment.status}")
+end
+
+next_page_url = payment_list.links["next"] && payment_list.links["next"].href
+```
+
 All public resource functions return result tuples:
 
 ```elixir
 {:ok, %MollieEx.Payment{}}
+{:ok, %MollieEx.List{}}
 {:error, %MollieEx.Error{}}
 ```
