@@ -106,7 +106,11 @@ defmodule MollieEx.HTTP.TransportTest do
     request = %Request{
       method: :get,
       path: "/payments/tr_123",
-      headers: [{"idempotency-key", "header-key"}, {"Idempotency-Key", "header-key-2"}],
+      headers: [
+        {"idempotency-key", "header-key"},
+        {"Idempotency-Key", "header-key-2"},
+        idempotency_key: "atom-header-key"
+      ],
       idempotency_key: "order-123",
       idempotency_policy: :unsupported
     }
@@ -124,7 +128,11 @@ defmodule MollieEx.HTTP.TransportTest do
     request = %Request{
       method: :post,
       path: "/payments",
-      headers: [{"idempotency-key", "header-key"}, {"Idempotency-Key", "header-key-2"}],
+      headers: [
+        {"idempotency-key", "header-key"},
+        {"Idempotency-Key", "header-key-2"},
+        idempotency_key: "atom-header-key"
+      ],
       body: %{"description" => "Order #123"},
       idempotency_key: "order-123",
       idempotency_policy: :optional

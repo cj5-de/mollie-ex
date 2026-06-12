@@ -188,6 +188,13 @@ defmodule MollieEx.ClientTest do
     end
   end
 
+  test "validates Finch name" do
+    for finch_name <- ["MyApp.MollieFinch", true, false, 123] do
+      assert {:error, %Error{type: :configuration, reason: :invalid_finch_name}} =
+               Client.new(api_key: @api_key, finch_name: finch_name)
+    end
+  end
+
   test "validates profile_id and testmode values" do
     assert {:error, %Error{type: :configuration, reason: :invalid_profile_id}} =
              Client.new(oauth_token: @oauth_token, profile_id: "")

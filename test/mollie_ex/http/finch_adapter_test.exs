@@ -72,6 +72,13 @@ defmodule MollieEx.HTTP.FinchAdapterTest do
              FinchAdapter.ensure_pool(client(finch_name: finch_name))
   end
 
+  test "maps malformed Finch names to transport errors" do
+    client = struct!(client(), finch_name: "MyApp.MollieFinch")
+
+    assert {:error, %Req.TransportError{reason: :finch_not_started}} =
+             FinchAdapter.ensure_pool(client)
+  end
+
   test "request function maps missing Finch supervisors to transport errors" do
     finch_name = :"#{__MODULE__}.RequestMissingFinch.#{System.unique_integer([:positive])}"
     request_fun = FinchAdapter.request_fun(100)

@@ -92,5 +92,13 @@ defmodule MollieEx.HTTP.Idempotency do
   defp key_header?(name) when is_binary(name),
     do: String.downcase(name) == "idempotency-key"
 
+  defp key_header?(name) when is_atom(name) do
+    name
+    |> Atom.to_string()
+    |> String.replace("_", "-")
+    |> String.downcase()
+    |> Kernel.==("idempotency-key")
+  end
+
   defp key_header?(_name), do: false
 end
