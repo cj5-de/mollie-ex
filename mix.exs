@@ -1,7 +1,7 @@
 defmodule MollieEx.MixProject do
   use Mix.Project
 
-  @version "0.0.1"
+  @version "0.1.0"
   @source_url "https://github.com/cj5-de/mollie-ex"
 
   def project do
@@ -13,6 +13,7 @@ defmodule MollieEx.MixProject do
       description: description(),
       package: package(),
       source_url: @source_url,
+      docs: docs(),
       aliases: aliases(),
       deps: [
         {:req, "~> 0.5"},
@@ -21,7 +22,8 @@ defmodule MollieEx.MixProject do
         {:telemetry, "~> 1.4"},
         {:bypass, "~> 2.1", only: :test},
         {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-        {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
+        {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+        {:ex_doc, "~> 0.40.3", only: :dev, runtime: false}
       ]
     ]
   end
@@ -58,6 +60,37 @@ defmodule MollieEx.MixProject do
       links: %{
         "GitHub" => @source_url
       }
+    ]
+  end
+
+  defp docs do
+    [
+      main: "readme",
+      source_ref: "v#{@version}",
+      source_url: @source_url,
+      extras: ["README.md", "CHANGELOG.md", "LICENSE"],
+      groups_for_modules: [
+        Client: [
+          MollieEx,
+          MollieEx.Client,
+          MollieEx.Error
+        ],
+        Resources: [
+          MollieEx.Payments,
+          MollieEx.Refunds,
+          MollieEx.Captures
+        ],
+        Structs: [
+          MollieEx.Payment,
+          MollieEx.Refund,
+          MollieEx.Capture,
+          MollieEx.List
+        ],
+        Types: [
+          MollieEx.Types.Money,
+          MollieEx.Types.Link
+        ]
+      ]
     ]
   end
 

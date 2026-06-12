@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.0 - 2026-06-12
+
 ### Added
 
 - Add `MollieEx.Payments.create/3` and `MollieEx.Payments.get/3`.
@@ -18,6 +20,7 @@
 - Add decoded capture structs while preserving raw Mollie response payloads.
 - Emit minimal safe request telemetry for transport success, API errors,
   decode failures, and rate-limit responses.
+- Add HexDocs configuration for published API documentation.
 
 ## 0.0.1 - 2026-05-13
 
