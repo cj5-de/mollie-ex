@@ -19,7 +19,7 @@ in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:mollie_ex, "~> 0.0.1"}
+    {:mollie_ex, "~> 0.1.0"}
   ]
 end
 ```
