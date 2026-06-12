@@ -85,6 +85,17 @@ Update a payment with a caller-owned idempotency key:
   )
 ```
 
+Cancel a payment with a caller-owned idempotency key:
+
+```elixir
+{:ok, payment} =
+  MollieEx.Payments.cancel(
+    client,
+    "tr_123",
+    idempotency_key: "5c26fb1d-6fd0-43df-9b55-19b84e1f7b7a"
+  )
+```
+
 List payments with ordinary Mollie pagination:
 
 ```elixir
