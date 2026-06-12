@@ -9,19 +9,12 @@ defmodule MollieEx.HTTP.FinchAdapter do
   def ensure_pool(%Client{transport: {:req_test, _name}}), do: :ok
   def ensure_pool(%Client{finch_name: nil}), do: :ok
 
-  def ensure_pool(%Client{} = client) do
-    client.finch_name
-    |> Finch.start_pool(
-      Finch.Pool.new(client.base_url),
-      conn_opts: [transport_opts: [timeout: client.connect_timeout]]
-    )
-  rescue
-    exception in ArgumentError ->
-      if unknown_registry?(exception) do
-        {:error, Req.TransportError.exception(reason: :finch_not_started)}
-      else
-        reraise exception, __STACKTRACE__
-      end
+  def ensure_pool(%Client{finch_name: finch_name}) do
+    if Process.whereis(finch_name) do
+      :ok
+    else
+      {:error, Req.TransportError.exception(reason: :finch_not_started)}
+    end
   end
 
   @spec put_options(keyword(), Client.t(), pos_integer()) :: keyword()
