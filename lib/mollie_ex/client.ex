@@ -102,6 +102,7 @@ defmodule MollieEx.Client do
          {:ok, transport} <- transport(opts),
          {:ok, finch_name} <- finch_name(opts),
          {:ok, timeouts} <- timeouts(opts),
+         :ok <- validate_connect_timeout_scope(finch_name, timeouts),
          {:ok, max_retries} <- max_retries(opts),
          {:ok, max_retry_after} <- max_retry_after(opts),
          {:ok, telemetry_prefix} <- telemetry_prefix(opts),
@@ -301,6 +302,16 @@ defmodule MollieEx.Client do
         :error -> {:halt, {:error, :invalid_timeout}}
       end
     end)
+  end
+
+  defp validate_connect_timeout_scope(nil, _timeouts), do: :ok
+
+  defp validate_connect_timeout_scope(_finch_name, timeouts) do
+    if Keyword.fetch!(timeouts, :connect_timeout) == @default_connect_timeout do
+      :ok
+    else
+      {:error, :unsupported_connect_timeout}
+    end
   end
 
   defp max_retries(opts) do
