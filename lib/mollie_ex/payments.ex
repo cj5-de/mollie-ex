@@ -1,6 +1,6 @@
 defmodule MollieEx.Payments do
   @moduledoc """
-  Create, retrieve, list, update, and cancel Mollie payments.
+  Create, retrieve, list, update, cancel, and release authorizations for Mollie payments.
 
   All functions return result tuples. They do not raise for ordinary API,
   transport, or validation failures.
@@ -8,11 +8,11 @@ defmodule MollieEx.Payments do
 
   alias MollieEx.Client
   alias MollieEx.Error
-  alias MollieEx.HTTP.{Telemetry, Transport}
+  alias MollieEx.HTTP.{Response, Telemetry, Transport}
   alias MollieEx.List, as: MollieList
   alias MollieEx.Payment
   alias MollieEx.Resources.ListDecoder
-  alias MollieEx.Resources.Payments.{Cancel, Create, Get, Update}
+  alias MollieEx.Resources.Payments.{Cancel, Create, Get, ReleaseAuthorization, Update}
   alias MollieEx.Resources.Payments.List, as: ListRequest
 
   @type create_params :: map()
@@ -49,6 +49,13 @@ defmodule MollieEx.Payments do
           | {:request_timeout, pos_integer()}
   @type cancel_option ::
           {:idempotency_key, String.t()}
+          | {:testmode, boolean()}
+          | {:pool_timeout, pos_integer()}
+          | {:receive_timeout, pos_integer()}
+          | {:request_timeout, pos_integer()}
+  @type release_authorization_option ::
+          {:idempotency_key, String.t()}
+          | {:profile_id, String.t()}
           | {:testmode, boolean()}
           | {:pool_timeout, pos_integer()}
           | {:receive_timeout, pos_integer()}
@@ -158,6 +165,32 @@ defmodule MollieEx.Payments do
   def cancel(%Client{}, _payment_id, _opts), do: configuration_error(:invalid_payment_id)
   def cancel(_client, _payment_id, _opts), do: configuration_error(:invalid_client)
 
+  @doc """
+  Releases the remaining authorization for a Mollie payment.
+
+  Authorization release supports caller-owned idempotency keys. The SDK never
+  generates idempotency keys implicitly.
+  """
+  @spec release_authorization(Client.t(), String.t(), [release_authorization_option()]) ::
+          {:ok, :accepted} | {:error, Error.t()}
+  def release_authorization(client, payment_id, opts \\ [])
+
+  def release_authorization(%Client{} = client, payment_id, opts)
+      when is_binary(payment_id) and is_list(opts) do
+    with {:ok, request, transport_opts} <-
+           ReleaseAuthorization.build(client, payment_id, opts) do
+      request_accepted(client, request, transport_opts)
+    end
+  end
+
+  def release_authorization(%Client{}, _payment_id, opts) when not is_list(opts),
+    do: configuration_error(:invalid_options)
+
+  def release_authorization(%Client{}, _payment_id, _opts),
+    do: configuration_error(:invalid_payment_id)
+
+  def release_authorization(_client, _payment_id, _opts), do: configuration_error(:invalid_client)
+
   defp configuration_error(reason) do
     {:error, Error.exception(type: :configuration, reason: reason)}
   end
@@ -201,6 +234,26 @@ defmodule MollieEx.Payments do
     end
   end
 
+  defp request_accepted(%Client{} = client, request, transport_opts) do
+    start_time = Telemetry.start(client, request)
+    transport_opts = Keyword.put(transport_opts, :telemetry, false)
+
+    case Transport.request(client, request, transport_opts) do
+      {:ok, %Response{status: 202, body: nil} = response} ->
+        Telemetry.emit_result(client, request, {:ok, response}, start_time)
+        {:ok, :accepted}
+
+      {:ok, %Response{} = response} ->
+        error = invalid_accepted_response_error(request, response)
+        Telemetry.emit_result(client, request, {:error, error}, start_time)
+        {:error, error}
+
+      {:error, %Error{} = error} = result ->
+        Telemetry.emit_result(client, request, result, start_time)
+        {:error, error}
+    end
+  end
+
   defp emit_payment_result(client, request, response, {:ok, %Payment{}}, start_time) do
     Telemetry.emit_result(client, request, {:ok, response}, start_time)
   end
@@ -211,5 +264,16 @@ defmodule MollieEx.Payments do
 
   defp emit_payment_result(client, request, _response, {:error, %Error{} = error}, start_time) do
     Telemetry.emit_result(client, request, {:error, error}, start_time)
+  end
+
+  defp invalid_accepted_response_error(request, %Response{} = response) do
+    Error.exception(
+      type: :decode,
+      status: response.status,
+      headers: response.headers,
+      raw: response.raw,
+      reason: :invalid_accepted_response,
+      operation: request.operation
+    )
   end
 end
