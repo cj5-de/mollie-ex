@@ -1,6 +1,6 @@
 defmodule MollieEx.Payments do
   @moduledoc """
-  Create, retrieve, list, and update Mollie payments.
+  Create, retrieve, list, update, and cancel Mollie payments.
 
   All functions return result tuples. They do not raise for ordinary API,
   transport, or validation failures.
@@ -12,7 +12,7 @@ defmodule MollieEx.Payments do
   alias MollieEx.List, as: MollieList
   alias MollieEx.Payment
   alias MollieEx.Resources.ListDecoder
-  alias MollieEx.Resources.Payments.{Create, Get, Update}
+  alias MollieEx.Resources.Payments.{Cancel, Create, Get, Update}
   alias MollieEx.Resources.Payments.List, as: ListRequest
 
   @type create_params :: map()
@@ -42,6 +42,12 @@ defmodule MollieEx.Payments do
           | {:request_timeout, pos_integer()}
   @type update_params :: map()
   @type update_option ::
+          {:idempotency_key, String.t()}
+          | {:testmode, boolean()}
+          | {:pool_timeout, pos_integer()}
+          | {:receive_timeout, pos_integer()}
+          | {:request_timeout, pos_integer()}
+  @type cancel_option ::
           {:idempotency_key, String.t()}
           | {:testmode, boolean()}
           | {:pool_timeout, pos_integer()}
@@ -129,6 +135,28 @@ defmodule MollieEx.Payments do
 
   def update(%Client{}, _payment_id, _params, _opts), do: configuration_error(:invalid_payment_id)
   def update(_client, _payment_id, _params, _opts), do: configuration_error(:invalid_client)
+
+  @doc """
+  Cancels a Mollie payment by payment ID.
+
+  Payment cancellation supports caller-owned idempotency keys. The SDK never
+  generates idempotency keys implicitly.
+  """
+  @spec cancel(Client.t(), String.t(), [cancel_option()]) ::
+          {:ok, Payment.t()} | {:error, Error.t()}
+  def cancel(client, payment_id, opts \\ [])
+
+  def cancel(%Client{} = client, payment_id, opts) when is_binary(payment_id) and is_list(opts) do
+    with {:ok, request, transport_opts} <- Cancel.build(client, payment_id, opts) do
+      request_payment(client, request, transport_opts, :payments_cancel)
+    end
+  end
+
+  def cancel(%Client{}, _payment_id, opts) when not is_list(opts),
+    do: configuration_error(:invalid_options)
+
+  def cancel(%Client{}, _payment_id, _opts), do: configuration_error(:invalid_payment_id)
+  def cancel(_client, _payment_id, _opts), do: configuration_error(:invalid_client)
 
   defp configuration_error(reason) do
     {:error, Error.exception(type: :configuration, reason: reason)}
