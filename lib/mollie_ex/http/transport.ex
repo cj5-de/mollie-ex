@@ -3,15 +3,13 @@ defmodule MollieEx.HTTP.Transport do
 
   alias MollieEx.Client
   alias MollieEx.Error
-  alias MollieEx.HTTP.{Request, Response}
+  alias MollieEx.HTTP.{Request, Response, RetryDelay}
 
   @json_content_type "application/json"
   @default_headers [
     {"accept", @json_content_type},
     {"content-type", @json_content_type}
   ]
-  @retry_base_delay 250
-  @retry_max_delay 5_000
   @retryable_statuses [408, 429, 500, 502, 503, 504]
   @retryable_transport_reasons [:timeout, :econnrefused, :closed]
   @retryable_http2_reasons [
@@ -153,8 +151,7 @@ defmodule MollieEx.HTTP.Transport do
   defp exponential_retry_delay(%Req.Request{} = req) do
     req
     |> Req.Request.get_private(:req_retry_count, 0)
-    |> then(&(@retry_base_delay * Integer.pow(2, &1)))
-    |> min(@retry_max_delay)
+    |> RetryDelay.jittered_exponential()
   end
 
   defp retry_after(%Req.Response{} = response) do
@@ -305,7 +302,20 @@ defmodule MollieEx.HTTP.Transport do
   defp json_response?(%Req.Response{} = response) do
     response
     |> Req.Response.get_header("content-type")
-    |> Enum.any?(&String.starts_with?(&1, @json_content_type))
+    |> Enum.any?(&json_content_type?/1)
+  end
+
+  defp json_content_type?(content_type) when is_binary(content_type) do
+    media_type =
+      content_type
+      |> String.split(";", parts: 2)
+      |> List.first()
+      |> String.trim()
+      |> String.downcase()
+
+    media_type == @json_content_type or
+      (String.starts_with?(media_type, "application/") and
+         String.ends_with?(media_type, "+json"))
   end
 
   defp auth_token({mode, credential}) when mode in [:api_key, :oauth, :organization_token] do
