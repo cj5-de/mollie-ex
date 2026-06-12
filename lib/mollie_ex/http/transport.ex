@@ -26,8 +26,9 @@ defmodule MollieEx.HTTP.Transport do
           {:ok, Response.t()} | {:error, Error.t()}
   def request(%Client{} = client, %Request{} = request, opts \\ []) do
     with :ok <- validate_request(request),
+         {:ok, body} <- encode_body(request),
          {:ok, token} <- auth_token(client.auth),
-         {:ok, req_options} <- req_options(client, request, token, opts),
+         {:ok, req_options} <- req_options(client, request, token, opts, body),
          {:ok, response} <- Req.request(req_options) do
       response(client, request, response)
     else
@@ -63,7 +64,7 @@ defmodule MollieEx.HTTP.Transport do
 
   defp idempotency_key_status(key) when is_binary(key) do
     cond do
-      not String.valid?(key) or contains_header_control_byte?(key) -> :invalid
+      not String.valid?(key) or contains_header_unsafe_byte?(key) -> :invalid
       String.trim(key) == "" -> :missing
       true -> :valid
     end
@@ -94,16 +95,40 @@ defmodule MollieEx.HTTP.Transport do
      )}
   end
 
-  defp contains_header_control_byte?(<<>>), do: false
+  defp contains_header_unsafe_byte?(<<>>), do: false
 
-  defp contains_header_control_byte?(<<byte, _rest::binary>>)
-       when byte < 32 or byte == 127,
+  defp contains_header_unsafe_byte?(<<byte, _rest::binary>>)
+       when byte < 32 or byte > 126,
        do: true
 
-  defp contains_header_control_byte?(<<_byte, rest::binary>>),
-    do: contains_header_control_byte?(rest)
+  defp contains_header_unsafe_byte?(<<_byte, rest::binary>>),
+    do: contains_header_unsafe_byte?(rest)
 
-  defp req_options(client, request, token, opts) do
+  defp encode_body(%Request{body: nil}), do: {:ok, nil}
+
+  defp encode_body(%Request{} = request) do
+    case Jason.encode(request.body) do
+      {:ok, body} -> {:ok, body}
+      {:error, error} -> invalid_json_body_error(request, error)
+    end
+  rescue
+    exception ->
+      invalid_json_body_error(request, exception)
+  end
+
+  defp invalid_json_body_error(%Request{} = request, error) do
+    {:error,
+     Error.exception(
+       type: :configuration,
+       reason: :invalid_json_body,
+       method: request.method,
+       path: request.path,
+       operation: request.operation,
+       source: error
+     )}
+  end
+
+  defp req_options(client, request, token, opts, body) do
     req_options =
       [
         method: request.method,
@@ -118,15 +143,15 @@ defmodule MollieEx.HTTP.Transport do
         finch_request: finch_request(Keyword.get(opts, :request_timeout, client.request_timeout))
       ]
       |> Keyword.merge(retry_options(client, request))
-      |> maybe_put_json(request.body)
+      |> maybe_put_body(body)
       |> maybe_put_finch(client)
       |> maybe_put_req_test(client)
 
     {:ok, req_options}
   end
 
-  defp maybe_put_json(req_options, nil), do: req_options
-  defp maybe_put_json(req_options, body), do: Keyword.put(req_options, :json, body)
+  defp maybe_put_body(req_options, nil), do: req_options
+  defp maybe_put_body(req_options, body), do: Keyword.put(req_options, :body, body)
 
   defp retry_options(_client, %Request{retry_policy: :disabled}), do: [retry: false]
 
@@ -505,6 +530,7 @@ defmodule MollieEx.HTTP.Transport do
   defp error_type(404), do: :not_found
   defp error_type(410), do: :gone
   defp error_type(422), do: :validation
+  defp error_type(408), do: :timeout
   defp error_type(429), do: :rate_limited
   defp error_type(504), do: :timeout
   defp error_type(status) when status in 500..599, do: :server_error
