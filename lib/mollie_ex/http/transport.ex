@@ -28,6 +28,7 @@ defmodule MollieEx.HTTP.Transport do
     with :ok <- validate_request(request),
          {:ok, body} <- encode_body(request),
          {:ok, token} <- auth_token(client.auth),
+         :ok <- ensure_custom_finch_pool(client),
          {:ok, req_options} <- req_options(client, request, token, opts, body),
          {:ok, response} <- Req.request(req_options) do
       response(client, request, response)
@@ -253,12 +254,39 @@ defmodule MollieEx.HTTP.Transport do
 
   defp maybe_put_req_test(req_options, %Client{transport: :finch}), do: req_options
 
+  defp ensure_custom_finch_pool(%Client{transport: {:req_test, _name}}), do: :ok
+  defp ensure_custom_finch_pool(%Client{finch_name: nil}), do: :ok
+
+  defp ensure_custom_finch_pool(%Client{} = client) do
+    client.finch_name
+    |> Finch.start_pool(
+      Finch.Pool.new(client.base_url),
+      conn_opts: [transport_opts: [timeout: client.connect_timeout]]
+    )
+  rescue
+    exception in ArgumentError ->
+      if finch_unknown_registry?(exception) do
+        {:error, Req.TransportError.exception(reason: :finch_not_started)}
+      else
+        reraise exception, __STACKTRACE__
+      end
+  end
+
   defp headers(client, request, token) do
     @default_headers
     |> Kernel.++([{"authorization", "Bearer " <> token}, {"user-agent", client.user_agent}])
-    |> Kernel.++(request.headers)
+    |> Kernel.++(safe_custom_headers(request.headers))
     |> maybe_add_idempotency_key(request)
   end
+
+  defp safe_custom_headers(headers) do
+    Enum.reject(headers, fn {name, _value} -> idempotency_key_header?(name) end)
+  end
+
+  defp idempotency_key_header?(name) when is_binary(name),
+    do: String.downcase(name) == "idempotency-key"
+
+  defp idempotency_key_header?(_name), do: false
 
   defp maybe_add_idempotency_key(headers, %Request{
          idempotency_policy: policy,
@@ -317,7 +345,7 @@ defmodule MollieEx.HTTP.Transport do
   defp finch_unknown_registry?(%ArgumentError{} = exception) do
     exception
     |> Exception.message()
-    |> String.contains?("unknown registry:")
+    |> String.contains?(["unknown registry:", "is not running"])
   end
 
   defp normalize_finch_error(%Req.TransportError{} = error), do: error

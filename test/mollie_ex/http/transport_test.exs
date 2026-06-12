@@ -1,6 +1,7 @@
 defmodule MollieEx.HTTP.TransportTest do
   use ExUnit.Case, async: true
 
+  alias Finch.Pool.Manager, as: FinchPoolManager
   alias MollieEx.Client
   alias MollieEx.Error
   alias MollieEx.HTTP.{Request, Response, Transport}
@@ -97,6 +98,7 @@ defmodule MollieEx.HTTP.TransportTest do
   test "does not send unsupported idempotency keys" do
     Req.Test.expect(__MODULE__, fn conn ->
       assert header(conn, "idempotency-key") == nil
+      assert headers(conn, "idempotency-key") == []
 
       Req.Test.json(conn, %{"id" => "tr_123"})
     end)
@@ -104,8 +106,28 @@ defmodule MollieEx.HTTP.TransportTest do
     request = %Request{
       method: :get,
       path: "/payments/tr_123",
+      headers: [{"idempotency-key", "header-key"}, {"Idempotency-Key", "header-key-2"}],
       idempotency_key: "order-123",
       idempotency_policy: :unsupported
+    }
+
+    assert {:ok, %Response{}} = Transport.request(client(), request)
+  end
+
+  test "sends only policy-owned idempotency keys when custom headers include one" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert headers(conn, "idempotency-key") == ["order-123"]
+
+      Req.Test.json(conn, %{"id" => "tr_123"})
+    end)
+
+    request = %Request{
+      method: :post,
+      path: "/payments",
+      headers: [{"idempotency-key", "header-key"}, {"Idempotency-Key", "header-key-2"}],
+      body: %{"description" => "Order #123"},
+      idempotency_key: "order-123",
+      idempotency_policy: :optional
     }
 
     assert {:ok, %Response{}} = Transport.request(client(), request)
@@ -827,6 +849,7 @@ defmodule MollieEx.HTTP.TransportTest do
     bypass = Bypass.open()
     finch_name = :"#{__MODULE__}.Finch.#{System.unique_integer([:positive])}"
     start_supervised!({Finch, name: finch_name})
+    connect_timeout = 1_234
 
     Bypass.expect(bypass, "GET", "/v2/payments/tr_123", fn conn ->
       assert header(conn, "authorization") == "Bearer #{@api_key}"
@@ -840,12 +863,26 @@ defmodule MollieEx.HTTP.TransportTest do
       Client.new!(
         api_key: @api_key,
         base_url: "http://localhost:#{bypass.port}/v2",
+        connect_timeout: connect_timeout,
         finch_name: finch_name
       )
 
     request = %Request{method: :get, path: "/payments/tr_123"}
 
     assert {:ok, %Response{body: %{"id" => "tr_123"}}} = Transport.request(client, request)
+
+    assert {_pid, _pool_name, _pool_mod, _pool_count, pool_config} =
+             FinchPoolManager.get_pool_supervisor(
+               finch_name,
+               Finch.Pool.new("http://localhost:#{bypass.port}/v2")
+             )
+
+    transport_opts =
+      pool_config
+      |> Map.fetch!(:conn_opts)
+      |> Keyword.fetch!(:transport_opts)
+
+    assert Keyword.fetch!(transport_opts, :timeout) == connect_timeout
   end
 
   defp client do
@@ -859,6 +896,10 @@ defmodule MollieEx.HTTP.TransportTest do
       {^name, value} -> value
       nil -> nil
     end
+  end
+
+  defp headers(conn, name) do
+    for {^name, value} <- conn.req_headers, do: value
   end
 
   defp http2_error(conn, reason) do
