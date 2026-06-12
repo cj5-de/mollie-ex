@@ -9,13 +9,16 @@ defmodule MollieEx.HTTP.FinchAdapter do
   def ensure_pool(%Client{transport: {:req_test, _name}}), do: :ok
   def ensure_pool(%Client{finch_name: nil}), do: :ok
 
-  def ensure_pool(%Client{finch_name: finch_name}) do
+  def ensure_pool(%Client{finch_name: finch_name}) when is_atom(finch_name) do
     if Process.whereis(finch_name) do
       :ok
     else
       {:error, Req.TransportError.exception(reason: :finch_not_started)}
     end
   end
+
+  def ensure_pool(%Client{}),
+    do: {:error, Req.TransportError.exception(reason: :finch_not_started)}
 
   @spec put_options(keyword(), Client.t(), pos_integer()) :: keyword()
   def put_options(req_options, %Client{} = client, request_timeout) do

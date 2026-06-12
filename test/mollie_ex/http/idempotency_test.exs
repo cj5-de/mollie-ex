@@ -78,12 +78,14 @@ defmodule MollieEx.HTTP.IdempotencyTest do
       {"idempotency-key", "caller-key"},
       {"Idempotency-Key", "caller-key-2"},
       {"x-request-trace", "trace-123"},
-      {:idempotency_key, "atom-header-is-not-a-wire-header"}
+      {:idempotency_key, "atom-header"},
+      {:"idempotency-key", "quoted-atom-header"},
+      {:x_request_trace, "atom-trace"}
     ]
 
     assert Idempotency.reject_custom_headers(headers) == [
              {"x-request-trace", "trace-123"},
-             {:idempotency_key, "atom-header-is-not-a-wire-header"}
+             {:x_request_trace, "atom-trace"}
            ]
   end
 

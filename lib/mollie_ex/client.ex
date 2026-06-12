@@ -43,7 +43,7 @@ defmodule MollieEx.Client do
           testmode: boolean() | nil,
           user_agent: String.t(),
           user_agent_suffix: String.t() | nil,
-          finch_name: term(),
+          finch_name: atom() | nil,
           transport: transport(),
           connect_timeout: pos_integer(),
           pool_timeout: pos_integer(),
@@ -100,6 +100,7 @@ defmodule MollieEx.Client do
          {:ok, base_url} <- base_url(opts),
          {:ok, user_agent_suffix} <- user_agent_suffix(opts),
          {:ok, transport} <- transport(opts),
+         {:ok, finch_name} <- finch_name(opts),
          {:ok, timeouts} <- timeouts(opts),
          {:ok, max_retries} <- max_retries(opts),
          {:ok, max_retry_after} <- max_retry_after(opts),
@@ -117,7 +118,7 @@ defmodule MollieEx.Client do
            testmode: testmode,
            user_agent: user_agent(user_agent_suffix),
            user_agent_suffix: user_agent_suffix,
-           finch_name: Keyword.get(opts, :finch_name),
+           finch_name: finch_name,
            transport: transport,
            max_retries: max_retries,
            max_retry_after: max_retry_after,
@@ -276,6 +277,22 @@ defmodule MollieEx.Client do
   end
 
   defp normalize_transport(_transport), do: {:error, :invalid_transport}
+
+  defp finch_name(opts) do
+    opts
+    |> Keyword.get(:finch_name)
+    |> normalize_finch_name()
+  end
+
+  defp normalize_finch_name(nil), do: {:ok, nil}
+
+  defp normalize_finch_name(name) do
+    if named_atom?(name) do
+      {:ok, name}
+    else
+      {:error, :invalid_finch_name}
+    end
+  end
 
   defp timeouts(opts) do
     Enum.reduce_while(@timeout_defaults, {:ok, []}, fn {key, default}, {:ok, timeouts} ->
