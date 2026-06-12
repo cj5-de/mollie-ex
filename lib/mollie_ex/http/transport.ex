@@ -230,6 +230,13 @@ defmodule MollieEx.HTTP.Transport do
       else
         reraise exception, __STACKTRACE__
       end
+
+    exception in ArgumentError ->
+      if finch_unknown_registry?(exception) do
+        {:error, Req.TransportError.exception(reason: :finch_not_started)}
+      else
+        reraise exception, __STACKTRACE__
+      end
   catch
     :exit, {:timeout, {NimblePool, :checkout, _affected_pids}} ->
       {:error, Req.TransportError.exception(reason: :timeout)}
@@ -239,6 +246,12 @@ defmodule MollieEx.HTTP.Transport do
     exception
     |> Exception.message()
     |> String.contains?("Finch was unable to provide a connection within the timeout")
+  end
+
+  defp finch_unknown_registry?(%ArgumentError{} = exception) do
+    exception
+    |> Exception.message()
+    |> String.contains?("unknown registry:")
   end
 
   defp normalize_finch_error(%Req.TransportError{} = error), do: error

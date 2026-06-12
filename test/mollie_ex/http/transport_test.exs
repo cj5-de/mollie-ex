@@ -537,6 +537,25 @@ defmodule MollieEx.HTTP.TransportTest do
     assert %Req.Response{status: 200} = Task.await(holder, 2_000)
   end
 
+  test "maps missing custom Finch supervisors into transport errors" do
+    finch_name = :"#{__MODULE__}.MissingFinch.#{System.unique_integer([:positive])}"
+
+    client =
+      Client.new!(
+        api_key: @api_key,
+        base_url: "http://127.0.0.1:9/v2",
+        finch_name: finch_name,
+        max_retries: 0
+      )
+
+    request = %Request{method: :get, path: "/payments/tr_123", retry_policy: :disabled}
+
+    assert {:error, %Error{} = error} = Transport.request(client, request)
+    assert error.type == :transport
+    assert error.reason == :finch_not_started
+    assert error.path == "/payments/tr_123"
+  end
+
   test "resolves function credentials at the transport boundary" do
     Req.Test.expect(__MODULE__, fn conn ->
       assert header(conn, "authorization") == "Bearer #{@api_key}"
