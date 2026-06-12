@@ -1,0 +1,390 @@
+defmodule MollieEx.HTTP.TransportTest do
+  use ExUnit.Case, async: true
+
+  alias MollieEx.Client
+  alias MollieEx.Error
+  alias MollieEx.HTTP.{Request, Response, Transport}
+
+  setup {Req.Test, :verify_on_exit!}
+
+  @api_key "test_transport_secret"
+
+  test "sends method path headers and JSON body through Req.Test" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "POST"
+      assert conn.request_path == "/v2/payments"
+      assert conn.query_string == "include=details"
+      assert header(conn, "authorization") == "Bearer #{@api_key}"
+      assert header(conn, "user-agent") =~ ~r/^mollie_ex\/.+ elixir\/.+ otp\/.+/
+      assert header(conn, "idempotency-key") == "order-123"
+
+      assert {:ok, %{"description" => "Order #123"}} =
+               conn
+               |> Req.Test.raw_body()
+               |> IO.iodata_to_binary()
+               |> Jason.decode()
+
+      Req.Test.json(conn, %{"id" => "tr_123", "status" => "open"})
+    end)
+
+    client = client()
+
+    request = %Request{
+      method: :post,
+      path: "/payments",
+      query: [include: "details"],
+      body: %{"description" => "Order #123"},
+      idempotency_key: " order-123 ",
+      idempotency_policy: :optional,
+      operation: :payments_create
+    }
+
+    assert {:ok, %Response{} = response} = Transport.request(client, request)
+    assert response.status == 200
+    assert response.body == %{"id" => "tr_123", "status" => "open"}
+    assert response.raw == response.body
+  end
+
+  test "does not send unsupported idempotency keys" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == nil
+
+      Req.Test.json(conn, %{"id" => "tr_123"})
+    end)
+
+    request = %Request{
+      method: :get,
+      path: "/payments/tr_123",
+      idempotency_key: "order-123",
+      idempotency_policy: :unsupported
+    }
+
+    assert {:ok, %Response{}} = Transport.request(client(), request)
+  end
+
+  test "retries safe GET requests on transient server errors" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      transient_json(conn, 503)
+    end)
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      Req.Test.json(conn, %{"id" => "tr_123"})
+    end)
+
+    client = Client.new!(api_key: @api_key, transport: {:req_test, __MODULE__}, max_retries: 1)
+    request = %Request{method: :get, path: "/payments/tr_123"}
+
+    assert {:ok, %Response{body: %{"id" => "tr_123"}}} = Transport.request(client, request)
+  end
+
+  test "does not retry when retry policy is disabled" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      transient_json(conn, 503)
+    end)
+
+    client = Client.new!(api_key: @api_key, transport: {:req_test, __MODULE__}, max_retries: 1)
+    request = %Request{method: :get, path: "/payments/tr_123", retry_policy: :disabled}
+
+    assert {:error, %Error{type: :server_error, status: 503}} =
+             Transport.request(client, request)
+  end
+
+  test "does not retry writes without an idempotency key" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == nil
+
+      transient_json(conn, 503)
+    end)
+
+    client = Client.new!(api_key: @api_key, transport: {:req_test, __MODULE__}, max_retries: 1)
+
+    request = %Request{
+      method: :post,
+      path: "/payments",
+      body: %{"description" => "Order #123"},
+      idempotency_policy: :optional
+    }
+
+    assert {:error, %Error{type: :server_error, status: 503}} =
+             Transport.request(client, request)
+  end
+
+  test "retries idempotent writes with the same key and body" do
+    body = %{"description" => "Order #123"}
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == "order-123"
+      assert_json_body(conn, body)
+
+      transient_json(conn, 503)
+    end)
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == "order-123"
+      assert_json_body(conn, body)
+
+      Req.Test.json(conn, %{"id" => "tr_123"})
+    end)
+
+    client = Client.new!(api_key: @api_key, transport: {:req_test, __MODULE__}, max_retries: 1)
+
+    request = %Request{
+      method: :post,
+      path: "/payments",
+      body: body,
+      idempotency_key: "order-123",
+      idempotency_policy: :optional
+    }
+
+    assert {:ok, %Response{body: %{"id" => "tr_123"}}} = Transport.request(client, request)
+  end
+
+  test "honors the client retry budget" do
+    Req.Test.expect(__MODULE__, 2, fn conn ->
+      transient_json(conn, 503)
+    end)
+
+    client = Client.new!(api_key: @api_key, transport: {:req_test, __MODULE__}, max_retries: 1)
+    request = %Request{method: :get, path: "/payments/tr_123"}
+
+    assert {:error, %Error{type: :server_error, status: 503}} =
+             Transport.request(client, request)
+  end
+
+  test "rejects missing required idempotency keys before sending" do
+    client =
+      Client.new!(
+        api_key: fn -> raise "auth should not be resolved" end,
+        transport: {:req_test, __MODULE__}
+      )
+
+    for key <- [nil, "", "  "] do
+      request = %Request{
+        method: :post,
+        path: "/transfers",
+        idempotency_key: key,
+        idempotency_policy: :required,
+        operation: :transfers_create
+      }
+
+      assert {:error, %Error{} = error} = Transport.request(client, request)
+      assert error.type == :configuration
+      assert error.reason == :missing_idempotency_key
+      assert error.method == :post
+      assert error.path == "/transfers"
+      assert error.operation == :transfers_create
+    end
+  end
+
+  test "maps API errors into SDK errors with response diagnostics" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      conn
+      |> Plug.Conn.put_resp_header("x-request-id", "req_123")
+      |> Plug.Conn.put_status(422)
+      |> Req.Test.json(%{
+        "title" => "Unprocessable Entity",
+        "detail" => "api_key=raw_secret",
+        "field" => "amount.value",
+        "_links" => %{
+          "documentation" => %{
+            "href" => "https://docs.mollie.com/reference/error-handling",
+            "type" => "text/html"
+          }
+        },
+        "extra" => "preserved"
+      })
+    end)
+
+    request = %Request{method: :get, path: "/payments/tr_123", operation: :payments_get}
+
+    assert {:error, %Error{} = error} = Transport.request(client(), request)
+    assert error.type == :validation
+    assert error.status == 422
+    assert error.method == :get
+    assert error.path == "/payments/tr_123"
+    assert error.operation == :payments_get
+    assert error.request_id == "req_123"
+    assert error.title == "Unprocessable Entity"
+    assert error.detail == "api_key=[REDACTED]"
+    assert error.field == "amount.value"
+
+    assert error.links == %{
+             "documentation" => %{
+               "href" => "https://docs.mollie.com/reference/error-handling",
+               "type" => "text/html"
+             }
+           }
+
+    assert error.raw["detail"] == "api_key=[REDACTED]"
+    assert error.raw["extra"] == "preserved"
+  end
+
+  test "maps common API status codes" do
+    cases = [
+      {401, :authentication},
+      {403, :authorization},
+      {404, :not_found},
+      {429, :rate_limited},
+      {504, :timeout},
+      {500, :server_error}
+    ]
+
+    for {status, type} <- cases do
+      name = :"#{__MODULE__}.#{status}"
+
+      Req.Test.expect(name, fn conn ->
+        conn
+        |> Plug.Conn.put_status(status)
+        |> Req.Test.json(%{"status" => status})
+      end)
+
+      client = Client.new!(api_key: @api_key, transport: {:req_test, name})
+      request = %Request{method: :get, path: "/payments/tr_123", retry_policy: :disabled}
+
+      assert {:error, %Error{type: ^type, status: ^status}} = Transport.request(client, request)
+    end
+  end
+
+  test "maps malformed JSON into decode errors with redacted raw body" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      conn
+      |> Plug.Conn.put_resp_content_type("application/json")
+      |> Plug.Conn.send_resp(200, "api_key=raw_secret")
+    end)
+
+    request = %Request{method: :get, path: "/payments/tr_123"}
+
+    assert {:error, %Error{} = error} = Transport.request(client(), request)
+    assert error.type == :decode
+    assert error.status == 200
+    assert error.raw == "api_key=[REDACTED]"
+  end
+
+  test "maps Req transport timeouts into timeout errors" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      Req.Test.transport_error(conn, :timeout)
+    end)
+
+    request = %Request{method: :get, path: "/payments/tr_123", retry_policy: :disabled}
+
+    assert {:error, %Error{} = error} = Transport.request(client(), request)
+    assert error.type == :timeout
+    assert error.path == "/payments/tr_123"
+  end
+
+  test "maps live Finch receive timeouts into timeout errors" do
+    {:ok, listen_socket} =
+      :gen_tcp.listen(0, [
+        :binary,
+        active: false,
+        packet: :raw,
+        reuseaddr: true,
+        ip: {127, 0, 0, 1}
+      ])
+
+    {:ok, port} = :inet.port(listen_socket)
+    test_pid = self()
+
+    server_pid =
+      spawn(fn ->
+        {:ok, socket} = :gen_tcp.accept(listen_socket)
+        send(test_pid, :slow_server_accepted)
+        Process.sleep(100)
+        :gen_tcp.close(socket)
+        :gen_tcp.close(listen_socket)
+      end)
+
+    on_exit(fn ->
+      Process.exit(server_pid, :kill)
+      :gen_tcp.close(listen_socket)
+    end)
+
+    finch_name = :"#{__MODULE__}.TimeoutFinch.#{System.unique_integer([:positive])}"
+    start_supervised!({Finch, name: finch_name})
+
+    client =
+      Client.new!(
+        api_key: @api_key,
+        base_url: "http://127.0.0.1:#{port}/v2",
+        finch_name: finch_name,
+        receive_timeout: 50,
+        request_timeout: 200,
+        max_retries: 0
+      )
+
+    request = %Request{method: :get, path: "/slow", retry_policy: :disabled}
+
+    assert {:error, %Error{} = error} = Transport.request(client, request)
+    assert_receive :slow_server_accepted
+    assert error.type == :timeout
+    assert error.path == "/slow"
+  end
+
+  test "resolves function credentials at the transport boundary" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "authorization") == "Bearer #{@api_key}"
+
+      Req.Test.json(conn, %{"id" => "tr_123"})
+    end)
+
+    client = Client.new!(api_key: fn -> @api_key end, transport: {:req_test, __MODULE__})
+    request = %Request{method: :get, path: "/payments/tr_123"}
+
+    assert {:ok, %Response{}} = Transport.request(client, request)
+  end
+
+  test "uses a caller supplied Finch instance" do
+    bypass = Bypass.open()
+    finch_name = :"#{__MODULE__}.Finch.#{System.unique_integer([:positive])}"
+    start_supervised!({Finch, name: finch_name})
+
+    Bypass.expect(bypass, "GET", "/v2/payments/tr_123", fn conn ->
+      assert header(conn, "authorization") == "Bearer #{@api_key}"
+
+      conn
+      |> Plug.Conn.put_resp_content_type("application/json")
+      |> Plug.Conn.send_resp(200, Jason.encode!(%{"id" => "tr_123"}))
+    end)
+
+    client =
+      Client.new!(
+        api_key: @api_key,
+        base_url: "http://localhost:#{bypass.port}/v2",
+        finch_name: finch_name
+      )
+
+    request = %Request{method: :get, path: "/payments/tr_123"}
+
+    assert {:ok, %Response{body: %{"id" => "tr_123"}}} = Transport.request(client, request)
+  end
+
+  defp client do
+    Client.new!(api_key: @api_key, transport: {:req_test, __MODULE__})
+  end
+
+  defp header(conn, name) do
+    conn.req_headers
+    |> List.keyfind(name, 0)
+    |> case do
+      {^name, value} -> value
+      nil -> nil
+    end
+  end
+
+  defp transient_json(conn, status) do
+    conn
+    |> Plug.Conn.put_resp_header("retry-after", "0")
+    |> Plug.Conn.put_status(status)
+    |> Req.Test.json(%{"status" => status})
+  end
+
+  defp assert_json_body(conn, expected) do
+    assert {:ok, decoded} =
+             conn
+             |> Req.Test.raw_body()
+             |> IO.iodata_to_binary()
+             |> Jason.decode()
+
+    assert decoded == expected
+  end
+end
