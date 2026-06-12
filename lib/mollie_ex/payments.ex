@@ -1,0 +1,99 @@
+defmodule MollieEx.Payments do
+  @moduledoc """
+  Create and retrieve Mollie payments.
+
+  All functions return result tuples. They do not raise for ordinary API,
+  transport, or validation failures.
+  """
+
+  alias MollieEx.Client
+  alias MollieEx.Error
+  alias MollieEx.HTTP.{Telemetry, Transport}
+  alias MollieEx.Payment
+  alias MollieEx.Resources.Payments.{Create, Get}
+
+  @type create_params :: map()
+  @type create_option ::
+          {:idempotency_key, String.t()}
+          | {:include, String.t()}
+          | {:profile_id, String.t()}
+          | {:testmode, boolean()}
+          | {:pool_timeout, pos_integer()}
+          | {:receive_timeout, pos_integer()}
+          | {:request_timeout, pos_integer()}
+  @type get_option ::
+          {:include, String.t()}
+          | {:embed, String.t()}
+          | {:testmode, boolean()}
+          | {:pool_timeout, pos_integer()}
+          | {:receive_timeout, pos_integer()}
+          | {:request_timeout, pos_integer()}
+
+  @doc """
+  Creates a Mollie payment.
+
+  Payment creation supports caller-owned idempotency keys. The SDK never
+  generates idempotency keys implicitly.
+  """
+  @spec create(Client.t(), create_params(), [create_option()]) ::
+          {:ok, Payment.t()} | {:error, Error.t()}
+  def create(client, params, opts \\ [])
+
+  def create(%Client{} = client, params, opts) when is_map(params) and is_list(opts) do
+    with {:ok, request, transport_opts} <- Create.build(client, params, opts) do
+      request_payment(client, request, transport_opts, :payments_create)
+    end
+  end
+
+  def create(%Client{}, _params, opts) when not is_list(opts),
+    do: configuration_error(:invalid_options)
+
+  def create(%Client{}, _params, _opts), do: configuration_error(:invalid_payment_params)
+  def create(_client, _params, _opts), do: configuration_error(:invalid_client)
+
+  @doc """
+  Retrieves a Mollie payment by payment ID.
+  """
+  @spec get(Client.t(), String.t(), [get_option()]) :: {:ok, Payment.t()} | {:error, Error.t()}
+  def get(client, payment_id, opts \\ [])
+
+  def get(%Client{} = client, payment_id, opts) when is_binary(payment_id) and is_list(opts) do
+    with {:ok, request, transport_opts} <- Get.build(client, payment_id, opts) do
+      request_payment(client, request, transport_opts, :payments_get)
+    end
+  end
+
+  def get(%Client{}, _payment_id, opts) when not is_list(opts),
+    do: configuration_error(:invalid_options)
+
+  def get(%Client{}, _payment_id, _opts), do: configuration_error(:invalid_payment_id)
+  def get(_client, _payment_id, _opts), do: configuration_error(:invalid_client)
+
+  defp configuration_error(reason) do
+    {:error, Error.exception(type: :configuration, reason: reason)}
+  end
+
+  defp request_payment(%Client{} = client, request, transport_opts, operation) do
+    start_time = Telemetry.start(client, request)
+    transport_opts = Keyword.put(transport_opts, :telemetry, false)
+
+    case Transport.request(client, request, transport_opts) do
+      {:ok, response} ->
+        result = Payment.from_response(response, operation)
+        emit_payment_result(client, request, response, result, start_time)
+        result
+
+      {:error, %Error{} = error} = result ->
+        Telemetry.emit_result(client, request, result, start_time)
+        {:error, error}
+    end
+  end
+
+  defp emit_payment_result(client, request, response, {:ok, %Payment{}}, start_time) do
+    Telemetry.emit_result(client, request, {:ok, response}, start_time)
+  end
+
+  defp emit_payment_result(client, request, _response, {:error, %Error{} = error}, start_time) do
+    Telemetry.emit_result(client, request, {:error, error}, start_time)
+  end
+end

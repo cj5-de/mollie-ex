@@ -2,11 +2,8 @@
 
 Community driven Elixir SDK for [Mollie](https://www.mollie.com/de/).
 
-Planned Hex package and Mix application name: `:mollie_ex`.
-Planned public SDK module namespace: `MollieEx.*`.
-
-> This package is a namespace reservation placeholder. It does not include a
-> usable Mollie SDK API yet.
+Hex package and Mix application name: `:mollie_ex`.
+Public SDK module namespace: `MollieEx.*`.
 
 ## Requirements
 
@@ -25,4 +22,56 @@ def deps do
     {:mollie_ex, "~> 0.0.1"}
   ]
 end
+```
+
+## Usage
+
+Build an explicit client. The library does not read credentials from the
+environment by itself.
+
+```elixir
+client =
+  MollieEx.Client.new!(
+    api_key: System.fetch_env!("MOLLIE_API_KEY")
+  )
+```
+
+Create a payment with a caller-owned idempotency key. Mollie returns a checkout
+link in the payment response.
+
+```elixir
+idempotency_key = "9f0f9a78-9d56-4d2b-a7b6-7fdb8cc7d5f3"
+
+{:ok, payment} =
+  MollieEx.Payments.create(
+    client,
+    %{
+      description: "Order #123",
+      amount: %{currency: "EUR", value: "10.00"},
+      redirect_url: "https://example.com/checkout/return",
+      webhook_url: "https://example.com/webhooks/mollie"
+    },
+    idempotency_key: idempotency_key
+  )
+
+checkout_url = payment.links["checkout"].href
+```
+
+Retrieve a payment by ID:
+
+```elixir
+{:ok, payment} = MollieEx.Payments.get(client, "tr_123")
+
+case payment.status do
+  "paid" -> :ok
+  "open" -> {:pending, payment.raw}
+  status -> {:payment_status, status}
+end
+```
+
+All public resource functions return result tuples:
+
+```elixir
+{:ok, %MollieEx.Payment{}}
+{:error, %MollieEx.Error{}}
 ```

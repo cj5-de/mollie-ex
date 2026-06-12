@@ -13,6 +13,8 @@ defmodule MollieEx.HTTP.Request do
           idempotency_key: String.t() | nil,
           idempotency_policy: idempotency_policy(),
           operation: atom() | nil,
+          path_template: String.t() | nil,
+          testmode: boolean() | nil,
           retry_policy: :default | :disabled
         }
 
@@ -26,6 +28,8 @@ defmodule MollieEx.HTTP.Request do
     idempotency_key: nil,
     idempotency_policy: :unsupported,
     operation: nil,
+    path_template: nil,
+    testmode: nil,
     retry_policy: :default
   ]
 end
