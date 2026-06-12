@@ -1,0 +1,139 @@
+{
+  "resource": "payment",
+  "id": "tr_rich_123",
+  "mode": "test",
+  "createdAt": "2026-06-12T10:00:00+00:00",
+  "authorizedAt": "2026-06-12T10:01:00+00:00",
+  "paidAt": "2026-06-12T10:02:00+00:00",
+  "canceledAt": "2026-06-12T10:03:00+00:00",
+  "expiresAt": "2026-06-13T10:00:00+00:00",
+  "expiredAt": "2026-06-13T10:01:00+00:00",
+  "failedAt": "2026-06-13T10:02:00+00:00",
+  "status": "paid",
+  "statusReason": {
+    "code": "approved",
+    "description": "The payment was approved."
+  },
+  "isCancelable": false,
+  "amount": {
+    "currency": "EUR",
+    "value": "75.00"
+  },
+  "amountRefunded": {
+    "currency": "EUR",
+    "value": "10.00"
+  },
+  "amountRemaining": {
+    "currency": "EUR",
+    "value": "65.00"
+  },
+  "amountCaptured": {
+    "currency": "EUR",
+    "value": "70.00"
+  },
+  "amountChargedBack": {
+    "currency": "EUR",
+    "value": "5.00"
+  },
+  "settlementAmount": {
+    "currency": "EUR",
+    "value": "72.50"
+  },
+  "description": "Order #12345",
+  "method": "creditcard",
+  "metadata": {
+    "order_id": "12345",
+    "nested_meta": {
+      "line_id": "1"
+    }
+  },
+  "details": {
+    "consumerName": "Jane Doe",
+    "cardLabel": "Visa"
+  },
+  "profileId": "pfl_123",
+  "sequenceType": "first",
+  "redirectUrl": "https://webshop.example.org/order/12345/return",
+  "cancelUrl": "https://webshop.example.org/order/12345/cancel",
+  "webhookUrl": "https://webshop.example.org/webhooks/mollie",
+  "locale": "nl_NL",
+  "countryCode": "NL",
+  "customerId": "cst_123",
+  "mandateId": "mdt_123",
+  "subscriptionId": "sub_123",
+  "orderId": "ord_123",
+  "settlementId": "stl_123",
+  "captureMode": "manual",
+  "captureDelay": "8 hours",
+  "captureBefore": "2026-06-19T10:00:00+00:00",
+  "applicationFee": {
+    "amount": {
+      "currency": "EUR",
+      "value": "1.00"
+    },
+    "description": "Platform fee"
+  },
+  "routing": [
+    {
+      "amount": {
+        "currency": "EUR",
+        "value": "25.00"
+      },
+      "destination": {
+        "type": "organization",
+        "organizationId": "org_123"
+      }
+    }
+  ],
+  "lines": [
+    {
+      "type": "physical",
+      "description": "T-shirt",
+      "quantity": 1,
+      "unitPrice": {
+        "currency": "EUR",
+        "value": "75.00"
+      },
+      "totalAmount": {
+        "currency": "EUR",
+        "value": "75.00"
+      }
+    }
+  ],
+  "billingAddress": {
+    "givenName": "Jane",
+    "familyName": "Doe",
+    "email": "jane@example.org"
+  },
+  "shippingAddress": {
+    "givenName": "Jane",
+    "familyName": "Doe",
+    "streetAndNumber": "Main Street 1"
+  },
+  "restrictPaymentMethodsToCountry": "NL",
+  "unexpectedFutureField": {
+    "visible": true
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/payments/tr_rich_123",
+      "type": "application/hal+json"
+    },
+    "checkout": {
+      "href": "https://www.mollie.com/checkout/select-method/tr_rich_123",
+      "type": "text/html"
+    },
+    "mobileAppCheckout": {
+      "href": "mollie://checkout/tr_rich_123",
+      "type": "text/html"
+    },
+    "refunds": {
+      "href": "https://api.mollie.com/v2/payments/tr_rich_123/refunds",
+      "type": "application/hal+json"
+    },
+    "chargebacks": {
+      "href": "https://api.mollie.com/v2/payments/tr_rich_123/chargebacks",
+      "type": "application/hal+json"
+    }
+  }
+}

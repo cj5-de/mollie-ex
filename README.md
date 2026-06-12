@@ -54,7 +54,7 @@ idempotency_key = "9f0f9a78-9d56-4d2b-a7b6-7fdb8cc7d5f3"
     idempotency_key: idempotency_key
   )
 
-checkout_url = payment.links["checkout"].href
+checkout_url = MollieEx.Payment.checkout_url(payment)
 ```
 
 Retrieve a payment by ID:
@@ -62,10 +62,10 @@ Retrieve a payment by ID:
 ```elixir
 {:ok, payment} = MollieEx.Payments.get(client, "tr_123")
 
-case payment.status do
-  "paid" -> :ok
-  "open" -> {:pending, payment.raw}
-  status -> {:payment_status, status}
+cond do
+  MollieEx.Payment.paid?(payment) -> :ok
+  MollieEx.Payment.open?(payment) -> {:pending, payment.raw}
+  true -> {:payment_status, payment.status}
 end
 ```
 
