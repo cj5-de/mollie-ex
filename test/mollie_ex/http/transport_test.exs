@@ -95,6 +95,42 @@ defmodule MollieEx.HTTP.TransportTest do
     refute rendered =~ marker
   end
 
+  test "does not send custom transport-owned headers" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert headers(conn, "authorization") == ["Bearer #{@api_key}"]
+      assert headers(conn, "accept") == ["application/json"]
+      assert headers(conn, "content-type") == ["application/json"]
+      assert headers(conn, "user-agent") == [header(conn, "user-agent")]
+      assert header(conn, "user-agent") =~ ~r/^mollie_ex\/.+ elixir\/.+ otp\/.+/
+      assert headers(conn, "idempotency-key") == ["order-123"]
+      assert header(conn, "x-request-trace") == "trace-123"
+      assert header(conn, "x-atom-trace") == "atom-trace"
+
+      Req.Test.json(conn, %{"id" => "tr_123"})
+    end)
+
+    request = %Request{
+      method: :post,
+      path: "/payments",
+      headers: [
+        {"authorization", "Bearer caller"},
+        {"Authorization", "Bearer caller-2"},
+        {:authorization, "Bearer atom-caller"},
+        {"accept", "text/plain"},
+        {"content-type", "text/plain"},
+        {:user_agent, "caller-agent"},
+        {"idempotency-key", "caller-key"},
+        {"x-request-trace", "trace-123"},
+        {:x_atom_trace, "atom-trace"}
+      ],
+      body: %{"description" => "Order #123"},
+      idempotency_key: "order-123",
+      idempotency_policy: :optional
+    }
+
+    assert {:ok, %Response{}} = Transport.request(client(), request)
+  end
+
   test "does not send unsupported idempotency keys" do
     Req.Test.expect(__MODULE__, fn conn ->
       assert header(conn, "idempotency-key") == nil

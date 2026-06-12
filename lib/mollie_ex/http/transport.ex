@@ -10,6 +10,7 @@ defmodule MollieEx.HTTP.Transport do
     {"accept", @json_content_type},
     {"content-type", @json_content_type}
   ]
+  @transport_owned_headers ~w(accept authorization content-type idempotency-key user-agent)
   @timeout_http_reasons [:timeout, :request_timeout]
 
   @spec request(Client.t(), Request.t(), keyword()) ::
@@ -112,9 +113,29 @@ defmodule MollieEx.HTTP.Transport do
   defp headers(client, request, token) do
     @default_headers
     |> Kernel.++([{"authorization", "Bearer " <> token}, {"user-agent", client.user_agent}])
-    |> Kernel.++(Idempotency.reject_custom_headers(request.headers))
+    |> Kernel.++(reject_transport_owned_headers(request.headers))
     |> Idempotency.put_header(request)
   end
+
+  defp reject_transport_owned_headers(headers) do
+    Enum.reject(headers, fn {name, _value} -> transport_owned_header?(name) end)
+  end
+
+  defp transport_owned_header?(name) when is_binary(name) do
+    name
+    |> String.downcase()
+    |> then(&(&1 in @transport_owned_headers))
+  end
+
+  defp transport_owned_header?(name) when is_atom(name) do
+    name
+    |> Atom.to_string()
+    |> String.replace("_", "-")
+    |> String.downcase()
+    |> then(&(&1 in @transport_owned_headers))
+  end
+
+  defp transport_owned_header?(_name), do: false
 
   defp response(client, request, %Req.Response{} = response) do
     case decode_response(response) do
