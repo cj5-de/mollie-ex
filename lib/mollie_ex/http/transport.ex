@@ -132,7 +132,7 @@ defmodule MollieEx.HTTP.Transport do
          %Req.Response{status: status} = response
        )
        when status in [429, 503] do
-    case Req.Response.get_retry_after(response) do
+    case retry_after(response) do
       delay when is_integer(delay) -> min(delay, client.max_retry_after)
       nil -> exponential_retry_delay(req)
     end
@@ -147,6 +147,12 @@ defmodule MollieEx.HTTP.Transport do
     |> Req.Request.get_private(:req_retry_count, 0)
     |> then(&(@retry_base_delay * Integer.pow(2, &1)))
     |> min(@retry_max_delay)
+  end
+
+  defp retry_after(%Req.Response{} = response) do
+    Req.Response.get_retry_after(response)
+  rescue
+    ArgumentError -> nil
   end
 
   defp maybe_put_finch(req_options, %Client{finch_name: nil, connect_timeout: connect_timeout}),
@@ -339,6 +345,7 @@ defmodule MollieEx.HTTP.Transport do
       method: request.method,
       path: request.path,
       operation: request.operation,
+      reason: :timeout,
       source: error
     )
   end
@@ -350,6 +357,29 @@ defmodule MollieEx.HTTP.Transport do
       method: request.method,
       path: request.path,
       operation: request.operation,
+      reason: reason,
+      source: error
+    )
+  end
+
+  defp transport_error(_client, request, %Req.TransportError{reason: reason} = error) do
+    Error.exception(
+      type: :transport,
+      method: request.method,
+      path: request.path,
+      operation: request.operation,
+      reason: reason,
+      source: error
+    )
+  end
+
+  defp transport_error(_client, request, %Req.HTTPError{reason: reason} = error) do
+    Error.exception(
+      type: :transport,
+      method: request.method,
+      path: request.path,
+      operation: request.operation,
+      reason: reason,
       source: error
     )
   end
