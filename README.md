@@ -69,6 +69,22 @@ case payment.status do
 end
 ```
 
+Update a payment with a caller-owned idempotency key:
+
+```elixir
+{:ok, payment} =
+  MollieEx.Payments.update(
+    client,
+    "tr_123",
+    %{
+      description: "Updated order #123",
+      redirect_url: "https://example.com/checkout/return",
+      metadata: %{"order_id" => "123"}
+    },
+    idempotency_key: "e1e6e0e2-4260-4f18-a11f-061f5a9d3ed7"
+  )
+```
+
 List payments with ordinary Mollie pagination:
 
 ```elixir
