@@ -15,6 +15,11 @@ defmodule MollieEx.MixProject do
       source_url: @source_url,
       aliases: aliases(),
       deps: [
+        {:req, "~> 0.5"},
+        {:finch, "~> 0.22"},
+        {:jason, "~> 1.4"},
+        {:telemetry, "~> 1.4"},
+        {:bypass, "~> 2.1", only: :test},
         {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
       ]
     ]
