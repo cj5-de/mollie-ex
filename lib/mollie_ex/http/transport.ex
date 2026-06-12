@@ -63,6 +63,7 @@ defmodule MollieEx.HTTP.Transport do
         params: request.query,
         headers: headers(client, request, token),
         decode_body: false,
+        redirect: false,
         pool_timeout: Keyword.get(opts, :pool_timeout, client.pool_timeout),
         receive_timeout: Keyword.get(opts, :receive_timeout, client.receive_timeout),
         finch_request: finch_request(Keyword.get(opts, :request_timeout, client.request_timeout))

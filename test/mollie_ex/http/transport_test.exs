@@ -109,6 +109,34 @@ defmodule MollieEx.HTTP.TransportTest do
              Transport.request(client, request)
   end
 
+  test "does not follow redirects for non-idempotent writes" do
+    body = %{"description" => "Order #123"}
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "POST"
+      assert conn.request_path == "/v2/payments"
+      assert header(conn, "idempotency-key") == nil
+      assert_json_body(conn, body)
+
+      conn
+      |> Plug.Conn.put_resp_header("location", "/v2/redirected-payments")
+      |> Plug.Conn.put_status(307)
+      |> Req.Test.json(%{"status" => 307})
+    end)
+
+    client = Client.new!(api_key: @api_key, transport: {:req_test, __MODULE__}, max_retries: 1)
+
+    request = %Request{
+      method: :post,
+      path: "/payments",
+      body: body,
+      idempotency_policy: :optional
+    }
+
+    assert {:error, %Error{type: :api_error, status: 307}} =
+             Transport.request(client, request)
+  end
+
   test "retries idempotent writes with the same key and body" do
     body = %{"description" => "Order #123"}
 
