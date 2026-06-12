@@ -139,6 +139,7 @@ Retrieve, list, and cancel payment refunds:
 ```elixir
 {:ok, refund} = MollieEx.Refunds.get(client, "tr_123", "re_123")
 {:ok, refunds} = MollieEx.Refunds.list(client, "tr_123", limit: 10)
+
 {:ok, :no_content} =
   MollieEx.Refunds.cancel(
     client,
@@ -148,11 +149,34 @@ Retrieve, list, and cancel payment refunds:
   )
 ```
 
+Create a capture for an authorized payment with a caller-owned idempotency key:
+
+```elixir
+{:ok, capture} =
+  MollieEx.Captures.create(
+    client,
+    "tr_123",
+    %{
+      description: "Capture order #123",
+      amount: %{currency: "EUR", value: "10.00"}
+    },
+    idempotency_key: "7da9444e-4360-4ab4-b411-73b33ac52b1f"
+  )
+```
+
+Retrieve and list payment captures:
+
+```elixir
+{:ok, capture} = MollieEx.Captures.get(client, "tr_123", "cpt_123")
+{:ok, captures} = MollieEx.Captures.list(client, "tr_123", limit: 10)
+```
+
 All public resource functions return result tuples:
 
 ```elixir
 {:ok, %MollieEx.Payment{}}
 {:ok, %MollieEx.Refund{}}
+{:ok, %MollieEx.Capture{}}
 {:ok, %MollieEx.List{}}
 {:ok, :no_content}
 {:ok, :accepted}

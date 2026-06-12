@@ -1,0 +1,50 @@
+{
+  "resource": "capture",
+  "id": "cpt_123",
+  "mode": "test",
+  "description": "Capture order #123",
+  "amount": {
+    "currency": "EUR",
+    "value": "10.00"
+  },
+  "settlementAmount": {
+    "currency": "EUR",
+    "value": "9.75"
+  },
+  "status": "pending",
+  "metadata": {
+    "order_id": "123",
+    "nested_meta": {
+      "line_id": "1"
+    }
+  },
+  "paymentId": "tr_123",
+  "shipmentId": "shp_123",
+  "settlementId": "stl_123",
+  "createdAt": "2026-06-12T11:20:00+00:00",
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/payments/tr_123/captures/cpt_123",
+      "type": "application/hal+json"
+    },
+    "payment": {
+      "href": "https://api.mollie.com/v2/payments/tr_123",
+      "type": "application/hal+json"
+    },
+    "shipment": {
+      "href": "https://api.mollie.com/v2/orders/ord_123/shipments/shp_123",
+      "type": "application/hal+json"
+    },
+    "settlement": {
+      "href": "https://api.mollie.com/v2/settlements/stl_123",
+      "type": "application/hal+json"
+    },
+    "documentation": {
+      "href": "https://docs.mollie.com/reference/get-capture",
+      "type": "text/html"
+    }
+  },
+  "unexpectedFutureField": {
+    "visible": true
+  }
+}
