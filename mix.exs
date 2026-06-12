@@ -20,7 +20,8 @@ defmodule MollieEx.MixProject do
         {:jason, "~> 1.4"},
         {:telemetry, "~> 1.4"},
         {:bypass, "~> 2.1", only: :test},
-        {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
+        {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+        {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
       ]
     ]
   end
