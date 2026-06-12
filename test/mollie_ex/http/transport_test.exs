@@ -151,6 +151,24 @@ defmodule MollieEx.HTTP.TransportTest do
              Transport.request(client, request)
   end
 
+  test "falls back to exponential retry delay for malformed Retry-After headers" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      conn
+      |> Plug.Conn.put_resp_header("retry-after", "not-a-date")
+      |> Plug.Conn.put_status(503)
+      |> Req.Test.json(%{"status" => 503})
+    end)
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      Req.Test.json(conn, %{"id" => "tr_123"})
+    end)
+
+    client = Client.new!(api_key: @api_key, transport: {:req_test, __MODULE__}, max_retries: 1)
+    request = %Request{method: :get, path: "/payments/tr_123"}
+
+    assert {:ok, %Response{body: %{"id" => "tr_123"}}} = Transport.request(client, request)
+  end
+
   test "rejects missing required idempotency keys before sending" do
     client =
       Client.new!(
@@ -269,6 +287,36 @@ defmodule MollieEx.HTTP.TransportTest do
 
     assert {:error, %Error{} = error} = Transport.request(client(), request)
     assert error.type == :timeout
+    assert error.path == "/payments/tr_123"
+  end
+
+  test "preserves Req transport error reasons" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      Req.Test.transport_error(conn, :econnrefused)
+    end)
+
+    request = %Request{method: :get, path: "/payments/tr_123", retry_policy: :disabled}
+
+    assert {:error, %Error{} = error} = Transport.request(client(), request)
+    assert error.type == :transport
+    assert error.reason == :econnrefused
+    assert error.path == "/payments/tr_123"
+  end
+
+  test "preserves Req HTTP error reasons" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      Plug.Conn.put_private(
+        conn,
+        :req_test_exception,
+        Req.HTTPError.exception(protocol: :http2, reason: :pool_not_available)
+      )
+    end)
+
+    request = %Request{method: :get, path: "/payments/tr_123", retry_policy: :disabled}
+
+    assert {:error, %Error{} = error} = Transport.request(client(), request)
+    assert error.type == :transport
+    assert error.reason == :pool_not_available
     assert error.path == "/payments/tr_123"
   end
 
