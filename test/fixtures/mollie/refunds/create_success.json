@@ -1,0 +1,58 @@
+{
+  "resource": "refund",
+  "id": "re_123",
+  "mode": "test",
+  "createdAt": "2026-06-12T10:20:00+00:00",
+  "description": "Refund order #123",
+  "amount": {
+    "currency": "EUR",
+    "value": "10.00"
+  },
+  "settlementAmount": {
+    "currency": "EUR",
+    "value": "-10.00"
+  },
+  "metadata": {
+    "order_id": "123",
+    "nested_meta": {
+      "line_id": "1"
+    }
+  },
+  "paymentId": "tr_123",
+  "orderId": "ord_123",
+  "settlementId": "stl_123",
+  "status": "pending",
+  "externalReference": {
+    "type": "acquirer-reference",
+    "id": "refund-ext-123"
+  },
+  "routingReversals": [
+    {
+      "amount": {
+        "currency": "EUR",
+        "value": "5.00"
+      },
+      "source": {
+        "type": "organization",
+        "organizationId": "org_123"
+      }
+    }
+  ],
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/payments/tr_123/refunds/re_123",
+      "type": "application/hal+json"
+    },
+    "payment": {
+      "href": "https://api.mollie.com/v2/payments/tr_123",
+      "type": "application/hal+json"
+    },
+    "documentation": {
+      "href": "https://docs.mollie.com/reference/get-refund",
+      "type": "text/html"
+    }
+  },
+  "unexpectedFutureField": {
+    "visible": true
+  }
+}

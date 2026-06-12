@@ -1,0 +1,51 @@
+{
+  "count": 1,
+  "_embedded": {
+    "refunds": [
+      {
+        "resource": "refund",
+        "id": "re_list_123",
+        "mode": "test",
+        "createdAt": "2026-06-12T10:30:00+00:00",
+        "description": "Refund list order #123",
+        "amount": {
+          "currency": "EUR",
+          "value": "7.50"
+        },
+        "settlementAmount": {
+          "currency": "EUR",
+          "value": "-7.50"
+        },
+        "metadata": {
+          "order_id": "123"
+        },
+        "paymentId": "tr_123",
+        "status": "queued",
+        "_links": {
+          "self": {
+            "href": "https://api.mollie.com/v2/payments/tr_123/refunds/re_list_123",
+            "type": "application/hal+json"
+          },
+          "payment": {
+            "href": "https://api.mollie.com/v2/payments/tr_123",
+            "type": "application/hal+json"
+          }
+        },
+        "unexpectedFutureField": {
+          "visible": true
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/payments/tr_123/refunds?limit=1",
+      "type": "application/hal+json"
+    },
+    "next": {
+      "href": "https://api.mollie.com/v2/payments/tr_123/refunds?from=re_next&limit=1",
+      "type": "application/hal+json"
+    },
+    "previous": null
+  }
+}

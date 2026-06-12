@@ -119,11 +119,42 @@ end
 next_page_url = payment_list.links["next"] && payment_list.links["next"].href
 ```
 
+Create a refund for a payment with a caller-owned idempotency key:
+
+```elixir
+{:ok, refund} =
+  MollieEx.Refunds.create(
+    client,
+    "tr_123",
+    %{
+      description: "Refund order #123",
+      amount: %{currency: "EUR", value: "10.00"}
+    },
+    idempotency_key: "f7f88f02-9a60-4a1f-bab8-8ef9e29cfeaf"
+  )
+```
+
+Retrieve, list, and cancel payment refunds:
+
+```elixir
+{:ok, refund} = MollieEx.Refunds.get(client, "tr_123", "re_123")
+{:ok, refunds} = MollieEx.Refunds.list(client, "tr_123", limit: 10)
+{:ok, :no_content} =
+  MollieEx.Refunds.cancel(
+    client,
+    "tr_123",
+    "re_123",
+    idempotency_key: "c3f6a4f9-2505-4374-8bb2-71dbfdf5a1ec"
+  )
+```
+
 All public resource functions return result tuples:
 
 ```elixir
 {:ok, %MollieEx.Payment{}}
+{:ok, %MollieEx.Refund{}}
 {:ok, %MollieEx.List{}}
+{:ok, :no_content}
 {:ok, :accepted}
 {:error, %MollieEx.Error{}}
 ```
