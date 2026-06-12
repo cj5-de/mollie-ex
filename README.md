@@ -96,6 +96,17 @@ Cancel a payment with a caller-owned idempotency key:
   )
 ```
 
+Release a payment authorization with a caller-owned idempotency key:
+
+```elixir
+{:ok, :accepted} =
+  MollieEx.Payments.release_authorization(
+    client,
+    "tr_123",
+    idempotency_key: "3f9e7465-dfac-4688-8840-f6814b0a16f5"
+  )
+```
+
 List payments with ordinary Mollie pagination:
 
 ```elixir
@@ -113,5 +124,6 @@ All public resource functions return result tuples:
 ```elixir
 {:ok, %MollieEx.Payment{}}
 {:ok, %MollieEx.List{}}
+{:ok, :accepted}
 {:error, %MollieEx.Error{}}
 ```

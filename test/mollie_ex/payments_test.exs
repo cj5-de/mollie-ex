@@ -426,6 +426,127 @@ defmodule MollieEx.PaymentsTest do
              Payments.cancel(client(max_retries: 1), "tr_123", idempotency_key: "cancel-123")
   end
 
+  test "releases a payment authorization with caller idempotency key" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "POST"
+      assert conn.request_path == "/v2/payments/tr_123/release-authorization"
+      assert conn.query_string == ""
+      assert header(conn, "authorization") == "Bearer #{@api_key}"
+      assert header(conn, "idempotency-key") == "release-123"
+      assert_empty_body(conn)
+
+      accepted_response(conn)
+    end)
+
+    assert {:ok, :accepted} =
+             Payments.release_authorization(client(), "tr_123", idempotency_key: "release-123")
+  end
+
+  test "adds profileId and testmode for OAuth release authorization requests" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "POST"
+
+      assert_json_body(conn, %{
+        "profileId" => "pfl_override",
+        "testmode" => false
+      })
+
+      accepted_response(conn)
+    end)
+
+    client =
+      Client.new!(
+        oauth_token: "access_test_secret",
+        profile_id: "pfl_default",
+        testmode: true,
+        transport: {:req_test, __MODULE__}
+      )
+
+    assert {:ok, :accepted} =
+             Payments.release_authorization(
+               client,
+               "tr_123",
+               profile_id: "pfl_override",
+               testmode: false
+             )
+  end
+
+  test "requires profileId for non-API-key release authorization requests" do
+    client = Client.new!(oauth_token: "access_test_secret", transport: {:req_test, __MODULE__})
+
+    assert {:error, %Error{} = error} = Payments.release_authorization(client, "tr_123")
+    assert error.type == :configuration
+    assert error.reason == :missing_profile_id
+  end
+
+  test "rejects profileId and testmode for release authorization API-key requests before sending" do
+    test_pid = self()
+
+    Req.Test.stub(__MODULE__, fn conn ->
+      send(test_pid, :request_sent)
+      Req.Test.json(conn, %{"status" => "accepted"})
+    end)
+
+    assert {:error, %Error{reason: :unsupported_profile_id}} =
+             Payments.release_authorization(client(), "tr_123", profile_id: "pfl_123")
+
+    assert {:error, %Error{reason: :unsupported_testmode}} =
+             Payments.release_authorization(client(), "tr_123", testmode: true)
+
+    refute_receive :request_sent, 10
+  end
+
+  test "does not retry payment release authorization without idempotency key" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "POST"
+      assert header(conn, "idempotency-key") == nil
+
+      conn
+      |> Plug.Conn.put_status(503)
+      |> Req.Test.json(%{"status" => 503})
+    end)
+
+    client = client(max_retries: 1)
+
+    assert {:error, %Error{type: :server_error, status: 503}} =
+             Payments.release_authorization(client, "tr_123")
+  end
+
+  test "retries payment release authorization with the same caller idempotency key and body" do
+    expected_body = %{"profileId" => "pfl_default", "testmode" => true}
+
+    client =
+      Client.new!(
+        organization_token: "org_test_secret",
+        profile_id: "pfl_default",
+        testmode: true,
+        transport: {:req_test, __MODULE__},
+        max_retries: 1
+      )
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "POST"
+      assert header(conn, "idempotency-key") == "release-123"
+      assert_json_body(conn, expected_body)
+
+      conn
+      |> Plug.Conn.put_resp_header("retry-after", "0")
+      |> Plug.Conn.put_status(503)
+      |> Req.Test.json(%{"status" => 503})
+    end)
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "POST"
+      assert header(conn, "idempotency-key") == "release-123"
+      assert_json_body(conn, expected_body)
+
+      accepted_response(conn)
+    end)
+
+    assert {:ok, :accepted} =
+             Payments.release_authorization(client, "tr_123", idempotency_key: "release-123")
+  end
+
   test "gets a payment with include and embed query params" do
     Req.Test.expect(__MODULE__, fn conn ->
       assert conn.method == "GET"
@@ -661,6 +782,36 @@ defmodule MollieEx.PaymentsTest do
     end
   end
 
+  test "maps payment release authorization API errors through the SDK error model" do
+    for {status, type} <- [
+          {401, :authentication},
+          {404, :not_found},
+          {422, :validation},
+          {429, :rate_limited},
+          {503, :server_error}
+        ] do
+      Req.Test.expect(__MODULE__, fn conn ->
+        conn
+        |> Plug.Conn.put_resp_header("x-request-id", "req_release_#{status}")
+        |> Plug.Conn.put_status(status)
+        |> Req.Test.json(%{
+          "status" => status,
+          "title" => "Mollie error",
+          "detail" => "Payment release authorization failed"
+        })
+      end)
+
+      assert {:error, %Error{} = error} =
+               Payments.release_authorization(client(max_retries: 0), "tr_#{status}")
+
+      assert error.type == type
+      assert error.status == status
+      assert error.operation == :payments_release_authorization
+      assert error.request_id == "req_release_#{status}"
+      assert error.raw["detail"] == "Payment release authorization failed"
+    end
+  end
+
   test "maps malformed payment JSON into decode errors" do
     Req.Test.expect(__MODULE__, fn conn ->
       conn
@@ -699,6 +850,21 @@ defmodule MollieEx.PaymentsTest do
     assert {:error, %Error{} = error} = Payments.cancel(client(max_retries: 0), "tr_123")
     assert error.type == :decode
     assert error.operation == :payments_cancel
+    assert error.raw == "{"
+  end
+
+  test "maps malformed release authorization JSON into decode errors" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      conn
+      |> Plug.Conn.put_resp_header("content-type", "application/json")
+      |> Plug.Conn.send_resp(202, "{")
+    end)
+
+    assert {:error, %Error{} = error} =
+             Payments.release_authorization(client(max_retries: 0), "tr_123")
+
+    assert error.type == :decode
+    assert error.operation == :payments_release_authorization
     assert error.raw == "{"
   end
 
@@ -749,6 +915,16 @@ defmodule MollieEx.PaymentsTest do
     assert {:error, %Error{} = error} = Payments.cancel(client(max_retries: 0), "tr_123")
     assert error.type == :timeout
     assert error.operation == :payments_cancel
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      Req.Test.transport_error(conn, :timeout)
+    end)
+
+    assert {:error, %Error{} = error} =
+             Payments.release_authorization(client(max_retries: 0), "tr_123")
+
+    assert error.type == :timeout
+    assert error.operation == :payments_release_authorization
   end
 
   test "rejects invalid local inputs before sending" do
@@ -769,6 +945,9 @@ defmodule MollieEx.PaymentsTest do
 
     assert {:error, %Error{reason: :invalid_payment_id}} = Payments.cancel(client(), "")
 
+    assert {:error, %Error{reason: :invalid_payment_id}} =
+             Payments.release_authorization(client(), "")
+
     assert {:error, %Error{reason: :invalid_payment_params}} =
              Payments.update(client(), "tr_123", "bad")
 
@@ -778,6 +957,9 @@ defmodule MollieEx.PaymentsTest do
     assert {:error, %Error{reason: :invalid_options}} =
              Payments.cancel(client(), "tr_123", "bad")
 
+    assert {:error, %Error{reason: :invalid_options}} =
+             Payments.release_authorization(client(), "tr_123", "bad")
+
     assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
              Payments.get(client(), "tr_123", unknown: true)
 
@@ -786,6 +968,9 @@ defmodule MollieEx.PaymentsTest do
 
     assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
              Payments.cancel(client(), "tr_123", unknown: true)
+
+    assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
+             Payments.release_authorization(client(), "tr_123", unknown: true)
 
     assert {:error, %Error{reason: :invalid_testmode}} =
              Payments.update(
@@ -806,6 +991,36 @@ defmodule MollieEx.PaymentsTest do
                ),
                "tr_123",
                testmode: "true"
+             )
+
+    assert {:error, %Error{reason: :invalid_testmode}} =
+             Payments.release_authorization(
+               Client.new!(
+                 oauth_token: "access_test_secret",
+                 profile_id: "pfl_123",
+                 transport: {:req_test, __MODULE__}
+               ),
+               "tr_123",
+               testmode: "true"
+             )
+
+    assert {:error, %Error{reason: :missing_profile_id}} =
+             Payments.release_authorization(
+               Client.new!(
+                 oauth_token: "access_test_secret",
+                 transport: {:req_test, __MODULE__}
+               ),
+               "tr_123"
+             )
+
+    assert {:error, %Error{reason: :invalid_profile_id}} =
+             Payments.release_authorization(
+               Client.new!(
+                 oauth_token: "access_test_secret",
+                 transport: {:req_test, __MODULE__}
+               ),
+               "tr_123",
+               profile_id: ""
              )
 
     assert {:error, %Error{reason: :unsupported_profile_id}} =
@@ -868,6 +1083,19 @@ defmodule MollieEx.PaymentsTest do
     assert error.reason == :invalid_payment_response
     assert error.operation == :payments_cancel
     assert error.raw == %{"status" => "open"}
+  end
+
+  test "returns decode errors for invalid release authorization response shapes" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      Plug.Conn.send_resp(conn, 200, "")
+    end)
+
+    assert {:error, %Error{} = error} = Payments.release_authorization(client(), "tr_123")
+    assert error.type == :decode
+    assert error.status == 200
+    assert error.reason == :invalid_accepted_response
+    assert error.operation == :payments_release_authorization
+    assert error.raw == nil
   end
 
   test "returns decode errors for invalid payment list response shapes" do
@@ -1045,6 +1273,54 @@ defmodule MollieEx.PaymentsTest do
     refute_receive {:telemetry, ^stop_event, _measurements, _metadata}, 20
   end
 
+  test "emits exception telemetry for invalid release authorization response shapes" do
+    prefix = [:mollie_payments_test_release_authorization_decode]
+
+    attach_telemetry(prefix, [
+      [:request, :start],
+      [:request, :stop],
+      [:request, :exception],
+      [:decode, :exception]
+    ])
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      Plug.Conn.send_resp(conn, 200, "")
+    end)
+
+    assert {:error, %Error{} = error} =
+             Payments.release_authorization(client(telemetry_prefix: prefix), "tr_123")
+
+    assert error.type == :decode
+    assert error.reason == :invalid_accepted_response
+
+    start_event = prefix ++ [:request, :start]
+    decode_event = prefix ++ [:decode, :exception]
+    request_exception_event = prefix ++ [:request, :exception]
+    stop_event = prefix ++ [:request, :stop]
+
+    assert_receive {:telemetry, ^start_event, %{system_time: system_time}, start_metadata}
+    assert is_integer(system_time)
+    assert start_metadata.operation == :payments_release_authorization
+    assert start_metadata.method == "POST"
+    assert start_metadata.path_template == "/payments/{paymentId}/release-authorization"
+
+    assert_receive {:telemetry, ^decode_event, %{duration: _duration}, decode_metadata}
+    assert decode_metadata.error_type == :decode
+    assert decode_metadata.reason == :invalid_accepted_response
+    assert decode_metadata.status == 200
+    assert decode_metadata.operation == :payments_release_authorization
+    assert decode_metadata.path_template == "/payments/{paymentId}/release-authorization"
+
+    assert_receive {:telemetry, ^request_exception_event, %{duration: _duration},
+                    exception_metadata}
+
+    assert exception_metadata.error_type == :decode
+    assert exception_metadata.reason == :invalid_accepted_response
+    assert exception_metadata.status == 200
+
+    refute_receive {:telemetry, ^stop_event, _measurements, _metadata}, 20
+  end
+
   test "emits exception telemetry for invalid hydrated payment list response shapes" do
     prefix = [:mollie_payments_test_list_hydration_decode]
 
@@ -1193,6 +1469,38 @@ defmodule MollieEx.PaymentsTest do
     refute telemetry_text =~ "authorization"
   end
 
+  test "emits safe request telemetry for successful release authorization calls" do
+    prefix = [:mollie_payments_test_release_authorization_success]
+    attach_telemetry(prefix, [[:request, :start], [:request, :stop]])
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      accepted_response(conn)
+    end)
+
+    assert {:ok, :accepted} =
+             client(telemetry_prefix: prefix)
+             |> Payments.release_authorization("tr_123", idempotency_key: "release-123")
+
+    start_event = prefix ++ [:request, :start]
+    stop_event = prefix ++ [:request, :stop]
+
+    assert_receive {:telemetry, ^start_event, %{system_time: system_time}, start_metadata}
+    assert is_integer(system_time)
+    assert start_metadata.operation == :payments_release_authorization
+    assert start_metadata.method == "POST"
+    assert start_metadata.path_template == "/payments/{paymentId}/release-authorization"
+
+    assert_receive {:telemetry, ^stop_event, %{duration: duration}, stop_metadata}
+    assert is_integer(duration)
+    assert stop_metadata.status == 202
+    assert stop_metadata.operation == :payments_release_authorization
+
+    telemetry_text = inspect([start_metadata, stop_metadata])
+    refute telemetry_text =~ @api_key
+    refute telemetry_text =~ "release-123"
+    refute telemetry_text =~ "Bearer"
+  end
+
   test "emits safe request telemetry for successful payment list calls" do
     prefix = [:mollie_payments_test_list_success]
     attach_telemetry(prefix, [[:request, :start], [:request, :stop]])
@@ -1300,6 +1608,10 @@ defmodule MollieEx.PaymentsTest do
     conn
     |> Plug.Conn.put_resp_header("content-type", "application/hal+json")
     |> Plug.Conn.send_resp(status, File.read!(@payment_list_fixture))
+  end
+
+  defp accepted_response(conn) do
+    Plug.Conn.send_resp(conn, 202, "")
   end
 
   defp assert_json_body(conn, expected) do
