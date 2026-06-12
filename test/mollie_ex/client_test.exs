@@ -63,7 +63,6 @@ defmodule MollieEx.ClientTest do
                api_key: " #{@api_key} ",
                base_url: " http://localhost:4002/v2/ ",
                user_agent_suffix: " my-shop/1.2.3 ",
-               finch_name: MyApp.MollieFinch,
                transport: {:req_test, __MODULE__},
                connect_timeout: 1_000,
                pool_timeout: 2_000,
@@ -78,7 +77,7 @@ defmodule MollieEx.ClientTest do
     assert client.base_url == "http://localhost:4002/v2"
     assert client.user_agent_suffix == "my-shop/1.2.3"
     assert client.user_agent =~ " my-shop/1.2.3"
-    assert client.finch_name == MyApp.MollieFinch
+    assert client.finch_name == nil
     assert client.transport == {:req_test, __MODULE__}
     assert client.connect_timeout == 1_000
     assert client.pool_timeout == 2_000
@@ -193,6 +192,25 @@ defmodule MollieEx.ClientTest do
       assert {:error, %Error{type: :configuration, reason: :invalid_finch_name}} =
                Client.new(api_key: @api_key, finch_name: finch_name)
     end
+  end
+
+  test "rejects unsupported connect timeout overrides with custom Finch" do
+    assert {:ok, %Client{finch_name: MyApp.MollieFinch, connect_timeout: 5_000}} =
+             Client.new(api_key: @api_key, finch_name: MyApp.MollieFinch)
+
+    assert {:ok, %Client{finch_name: MyApp.MollieFinch, connect_timeout: 5_000}} =
+             Client.new(
+               api_key: @api_key,
+               finch_name: MyApp.MollieFinch,
+               connect_timeout: 5_000
+             )
+
+    assert {:error, %Error{type: :configuration, reason: :unsupported_connect_timeout}} =
+             Client.new(
+               api_key: @api_key,
+               finch_name: MyApp.MollieFinch,
+               connect_timeout: 1_000
+             )
   end
 
   test "validates profile_id and testmode values" do
