@@ -9,6 +9,10 @@ defmodule MollieEx.HTTP.TransportTest do
 
   @api_key "test_transport_secret"
 
+  defmodule UnencodableBody do
+    defstruct [:marker]
+  end
+
   test "sends method path headers and JSON body through Req.Test" do
     Req.Test.expect(__MODULE__, fn conn ->
       assert conn.method == "POST"
@@ -43,6 +47,51 @@ defmodule MollieEx.HTTP.TransportTest do
     assert response.status == 200
     assert response.body == %{"id" => "tr_123", "status" => "open"}
     assert response.raw == response.body
+  end
+
+  test "maps JSON encoding failures into SDK errors before auth and transport" do
+    test_pid = self()
+    marker = "json-body-secret-marker"
+
+    Req.Test.stub(__MODULE__, fn conn ->
+      send(test_pid, :request_sent)
+      Req.Test.json(conn, %{"id" => "tr_123"})
+    end)
+
+    client =
+      Client.new!(
+        api_key: fn ->
+          send(test_pid, :auth_resolved)
+          @api_key
+        end,
+        transport: {:req_test, __MODULE__}
+      )
+
+    request = %Request{
+      method: :post,
+      path: "/payments",
+      body: %{"payload" => %UnencodableBody{marker: marker}},
+      idempotency_key: "order-123",
+      idempotency_policy: :optional,
+      operation: :payments_create
+    }
+
+    assert {:error, %Error{} = error} = Transport.request(client, request)
+    assert error.type == :configuration
+    assert error.reason == :invalid_json_body
+    assert error.method == :post
+    assert error.path == "/payments"
+    assert error.operation == :payments_create
+    assert error.body == nil
+    assert error.raw == nil
+
+    refute_receive :auth_resolved, 10
+    refute_receive :request_sent, 10
+
+    rendered =
+      Enum.join([inspect(error), Exception.message(error), inspect(Map.from_struct(error))], "\n")
+
+    refute rendered =~ marker
   end
 
   test "does not send unsupported idempotency keys" do
@@ -324,6 +373,50 @@ defmodule MollieEx.HTTP.TransportTest do
     refute rendered =~ "X-Leak"
   end
 
+  test "rejects non-ASCII optional idempotency keys before auth and transport" do
+    test_pid = self()
+    marker = "order-é"
+
+    Req.Test.stub(__MODULE__, fn conn ->
+      send(test_pid, :request_sent)
+      Req.Test.json(conn, %{"id" => "tr_123"})
+    end)
+
+    client =
+      Client.new!(
+        api_key: fn ->
+          send(test_pid, :auth_resolved)
+          @api_key
+        end,
+        transport: {:req_test, __MODULE__}
+      )
+
+    request = %Request{
+      method: :post,
+      path: "/payments",
+      body: %{"description" => "Order #123"},
+      idempotency_key: marker,
+      idempotency_policy: :optional,
+      operation: :payments_create
+    }
+
+    assert {:error, %Error{} = error} = Transport.request(client, request)
+    assert error.type == :configuration
+    assert error.reason == :invalid_idempotency_key
+    assert error.method == :post
+    assert error.path == "/payments"
+    assert error.operation == :payments_create
+    assert error.idempotency_key_fingerprint =~ ~r/^sha256:[0-9a-f]{16}$/
+
+    refute_receive :auth_resolved, 10
+    refute_receive :request_sent, 10
+
+    rendered =
+      Enum.join([inspect(error), Exception.message(error), inspect(Map.from_struct(error))], "\n")
+
+    refute rendered =~ marker
+  end
+
   test "rejects header-unsafe required idempotency keys before sending" do
     client =
       Client.new!(
@@ -331,7 +424,12 @@ defmodule MollieEx.HTTP.TransportTest do
         transport: {:req_test, __MODULE__}
       )
 
-    for key <- ["order-123\t", "order-123" <> <<0>>, "order-123" <> <<255>>] do
+    for {key, marker} <- [
+          {"order-123\t", "order-123"},
+          {"order-123" <> <<0>>, "order-123"},
+          {"order-123" <> <<255>>, "order-123"},
+          {"order-é", "order-é"}
+        ] do
       request = %Request{
         method: :post,
         path: "/transfers",
@@ -348,8 +446,8 @@ defmodule MollieEx.HTTP.TransportTest do
       assert error.operation == :transfers_create
       assert error.idempotency_key_fingerprint =~ ~r/^sha256:[0-9a-f]{16}$/
 
-      refute inspect(error) =~ "order-123"
-      refute Exception.message(error) =~ "order-123"
+      refute inspect(error) =~ marker
+      refute Exception.message(error) =~ marker
     end
   end
 
@@ -443,6 +541,7 @@ defmodule MollieEx.HTTP.TransportTest do
       {401, :authentication},
       {403, :authorization},
       {404, :not_found},
+      {408, :timeout},
       {429, :rate_limited},
       {504, :timeout},
       {500, :server_error}
