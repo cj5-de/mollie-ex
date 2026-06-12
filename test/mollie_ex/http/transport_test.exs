@@ -62,6 +62,44 @@ defmodule MollieEx.HTTP.TransportTest do
     assert {:ok, %Response{}} = Transport.request(client(), request)
   end
 
+  test "decodes HAL JSON successful responses" do
+    body = %{
+      "id" => "tr_123",
+      "_links" => %{
+        "self" => %{
+          "href" => "https://api.mollie.com/v2/payments/tr_123",
+          "type" => "application/hal+json"
+        }
+      }
+    }
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      conn
+      |> Plug.Conn.put_resp_header("content-type", "application/hal+json")
+      |> Plug.Conn.send_resp(200, Jason.encode!(body))
+    end)
+
+    request = %Request{method: :get, path: "/payments/tr_123"}
+
+    assert {:ok, %Response{} = response} = Transport.request(client(), request)
+    assert response.body == body
+    assert response.raw == body
+  end
+
+  test "keeps non-JSON response bodies raw" do
+    body = ~s({"id":"tr_123"})
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      conn
+      |> Plug.Conn.put_resp_header("content-type", "text/plain")
+      |> Plug.Conn.send_resp(200, body)
+    end)
+
+    request = %Request{method: :get, path: "/payments/tr_123"}
+
+    assert {:ok, %Response{body: ^body, raw: ^body}} = Transport.request(client(), request)
+  end
+
   test "retries safe GET requests on transient server errors" do
     Req.Test.expect(__MODULE__, fn conn ->
       transient_json(conn, 503)
@@ -281,6 +319,48 @@ defmodule MollieEx.HTTP.TransportTest do
 
     assert error.raw["detail"] == "api_key=[REDACTED]"
     assert error.raw["extra"] == "preserved"
+  end
+
+  test "maps HAL JSON API errors into SDK errors with response diagnostics" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      conn
+      |> Plug.Conn.put_resp_header("content-type", "Application/Hal+Json; charset=utf-8")
+      |> Plug.Conn.put_resp_header("x-request-id", "req_hal_123")
+      |> Plug.Conn.put_status(422)
+      |> Plug.Conn.send_resp(
+        422,
+        Jason.encode!(%{
+          "title" => "Unprocessable Entity",
+          "detail" => "The amount is invalid.",
+          "field" => "amount.value",
+          "_links" => %{
+            "documentation" => %{
+              "href" => "https://docs.mollie.com/reference/error-handling",
+              "type" => "text/html"
+            }
+          }
+        })
+      )
+    end)
+
+    request = %Request{method: :get, path: "/payments/tr_123", operation: :payments_get}
+
+    assert {:error, %Error{} = error} = Transport.request(client(), request)
+    assert error.type == :validation
+    assert error.status == 422
+    assert error.request_id == "req_hal_123"
+    assert error.title == "Unprocessable Entity"
+    assert error.detail == "The amount is invalid."
+    assert error.field == "amount.value"
+
+    assert error.links == %{
+             "documentation" => %{
+               "href" => "https://docs.mollie.com/reference/error-handling",
+               "type" => "text/html"
+             }
+           }
+
+    assert error.raw["_links"] == error.links
   end
 
   test "maps common API status codes" do
