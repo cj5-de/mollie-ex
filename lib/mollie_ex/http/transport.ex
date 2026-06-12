@@ -40,24 +40,68 @@ defmodule MollieEx.HTTP.Transport do
   end
 
   defp validate_request(%Request{idempotency_policy: :required} = request) do
-    if valid_idempotency_key?(request.idempotency_key) do
-      :ok
-    else
-      {:error,
-       Error.exception(
-         type: :configuration,
-         reason: :missing_idempotency_key,
-         method: request.method,
-         path: request.path,
-         operation: request.operation
-       )}
+    case idempotency_key_status(request.idempotency_key) do
+      :valid -> :ok
+      :missing -> missing_idempotency_key_error(request)
+      :invalid -> invalid_idempotency_key_error(request)
+    end
+  end
+
+  defp validate_request(%Request{idempotency_policy: :optional, idempotency_key: key} = request)
+       when is_binary(key) do
+    case idempotency_key_status(key) do
+      :valid -> :ok
+      :missing -> :ok
+      :invalid -> invalid_idempotency_key_error(request)
     end
   end
 
   defp validate_request(%Request{}), do: :ok
 
-  defp valid_idempotency_key?(key) when is_binary(key), do: String.trim(key) != ""
+  defp valid_idempotency_key?(key) when is_binary(key), do: idempotency_key_status(key) == :valid
   defp valid_idempotency_key?(_key), do: false
+
+  defp idempotency_key_status(key) when is_binary(key) do
+    cond do
+      not String.valid?(key) or contains_header_control_byte?(key) -> :invalid
+      String.trim(key) == "" -> :missing
+      true -> :valid
+    end
+  end
+
+  defp idempotency_key_status(_key), do: :missing
+
+  defp missing_idempotency_key_error(%Request{} = request) do
+    {:error,
+     Error.exception(
+       type: :configuration,
+       reason: :missing_idempotency_key,
+       method: request.method,
+       path: request.path,
+       operation: request.operation
+     )}
+  end
+
+  defp invalid_idempotency_key_error(%Request{} = request) do
+    {:error,
+     Error.exception(
+       type: :configuration,
+       reason: :invalid_idempotency_key,
+       method: request.method,
+       path: request.path,
+       operation: request.operation,
+       idempotency_key_fingerprint: request.idempotency_key
+     )}
+  end
+
+  defp contains_header_control_byte?(<<>>), do: false
+
+  defp contains_header_control_byte?(<<byte, _rest::binary>>)
+       when byte < 32 or byte == 127,
+       do: true
+
+  defp contains_header_control_byte?(<<_byte, rest::binary>>),
+    do: contains_header_control_byte?(rest)
 
   defp req_options(client, request, token, opts) do
     req_options =
