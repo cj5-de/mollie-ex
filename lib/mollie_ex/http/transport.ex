@@ -14,7 +14,14 @@ defmodule MollieEx.HTTP.Transport do
   @retry_max_delay 5_000
   @retryable_statuses [408, 429, 500, 502, 503, 504]
   @retryable_transport_reasons [:timeout, :econnrefused, :closed]
-  @retryable_http2_reasons [:unprocessed, :pool_not_available, :timeout, :request_timeout]
+  @retryable_http2_reasons [
+    :unprocessed,
+    :pool_not_available,
+    :timeout,
+    :request_timeout,
+    :connection_closed,
+    :disconnected
+  ]
   @timeout_http_reasons [:timeout, :request_timeout]
 
   @spec request(Client.t(), Request.t(), keyword()) ::
@@ -151,9 +158,17 @@ defmodule MollieEx.HTTP.Transport do
   end
 
   defp retry_after(%Req.Response{} = response) do
+    case Req.Response.get_header(response, "retry-after") do
+      [_delay] -> parse_retry_after(response)
+      _zero_or_multiple_values -> nil
+    end
+  end
+
+  defp parse_retry_after(%Req.Response{} = response) do
     Req.Response.get_retry_after(response)
   rescue
-    ArgumentError -> nil
+    ArgumentError ->
+      nil
   end
 
   defp maybe_put_finch(req_options, %Client{finch_name: nil, connect_timeout: connect_timeout}),
@@ -199,12 +214,35 @@ defmodule MollieEx.HTTP.Transport do
     fn req, finch_request, finch_name, finch_options ->
       finch_options = Keyword.put(finch_options, :request_timeout, request_timeout)
 
-      case Finch.request(finch_request, finch_name, finch_options) do
+      case request_finch(finch_request, finch_name, finch_options) do
         {:ok, finch_response} -> {req, Req.Response.new(finch_response)}
         {:error, exception} -> {req, normalize_finch_error(exception)}
       end
     end
   end
+
+  defp request_finch(finch_request, finch_name, finch_options) do
+    Finch.request(finch_request, finch_name, finch_options)
+  rescue
+    exception in RuntimeError ->
+      if finch_checkout_timeout?(exception) do
+        {:error, Req.TransportError.exception(reason: :timeout)}
+      else
+        reraise exception, __STACKTRACE__
+      end
+  catch
+    :exit, {:timeout, {NimblePool, :checkout, _affected_pids}} ->
+      {:error, Req.TransportError.exception(reason: :timeout)}
+  end
+
+  defp finch_checkout_timeout?(%RuntimeError{} = exception) do
+    exception
+    |> Exception.message()
+    |> String.contains?("Finch was unable to provide a connection within the timeout")
+  end
+
+  defp normalize_finch_error(%Req.TransportError{} = error), do: error
+  defp normalize_finch_error(%Req.HTTPError{} = error), do: error
 
   defp normalize_finch_error(%Finch.Error{reason: reason})
        when reason in @timeout_http_reasons,
