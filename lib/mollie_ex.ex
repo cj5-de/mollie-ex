@@ -5,6 +5,6 @@ defmodule MollieEx do
   This package is reserved for a community driven Elixir SDK for the Mollie API.
   SDK modules use the `MollieEx.*` namespace.
 
-  It does not include resource APIs that call Mollie yet.
+  The first supported resource API is `MollieEx.Payments`.
   """
 end

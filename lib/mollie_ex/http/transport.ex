@@ -3,7 +3,7 @@ defmodule MollieEx.HTTP.Transport do
 
   alias MollieEx.Client
   alias MollieEx.Error
-  alias MollieEx.HTTP.{FinchAdapter, Idempotency, Request, Response, RetryPolicy}
+  alias MollieEx.HTTP.{FinchAdapter, Idempotency, Request, Response, RetryPolicy, Telemetry}
 
   @json_content_type "application/json"
   @default_headers [
@@ -16,6 +16,18 @@ defmodule MollieEx.HTTP.Transport do
   @spec request(Client.t(), Request.t(), keyword()) ::
           {:ok, Response.t()} | {:error, Error.t()}
   def request(%Client{} = client, %Request{} = request, opts \\ []) do
+    {telemetry?, opts} = Keyword.pop(opts, :telemetry, true)
+    start_time = if telemetry?, do: Telemetry.start(client, request)
+    result = do_request(client, request, opts)
+
+    if telemetry? do
+      Telemetry.emit_result(client, request, result, start_time)
+    end
+
+    result
+  end
+
+  defp do_request(%Client{} = client, %Request{} = request, opts) do
     with :ok <- Idempotency.validate_request(request),
          {:ok, body} <- encode_body(request),
          {:ok, token} <- auth_token(client.auth),

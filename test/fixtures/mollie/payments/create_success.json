@@ -1,0 +1,32 @@
+{
+  "resource": "payment",
+  "id": "tr_123",
+  "mode": "test",
+  "createdAt": "2026-06-12T10:00:00+00:00",
+  "status": "open",
+  "isCancelable": true,
+  "amount": {
+    "currency": "EUR",
+    "value": "10.00"
+  },
+  "description": "Order #123",
+  "method": "ideal",
+  "metadata": {
+    "order_id": "123"
+  },
+  "profileId": "pfl_123",
+  "sequenceType": "oneoff",
+  "unexpectedFutureField": {
+    "visible": true
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/payments/tr_123",
+      "type": "application/hal+json"
+    },
+    "checkout": {
+      "href": "https://www.mollie.com/checkout/select-method/tr_123",
+      "type": "text/html"
+    }
+  }
+}
