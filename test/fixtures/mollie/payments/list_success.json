@@ -1,0 +1,55 @@
+{
+  "count": 1,
+  "_embedded": {
+    "payments": [
+      {
+        "resource": "payment",
+        "id": "tr_list_123",
+        "mode": "test",
+        "createdAt": "2026-06-12T10:15:00+00:00",
+        "status": "open",
+        "isCancelable": false,
+        "amount": {
+          "currency": "EUR",
+          "value": "75.00"
+        },
+        "description": "Order #12345",
+        "method": "ideal",
+        "metadata": {
+          "order_id": "12345"
+        },
+        "details": null,
+        "profileId": "pfl_123",
+        "redirectUrl": "https://webshop.example.org/order/12345/",
+        "unexpectedFutureField": {
+          "visible": true
+        },
+        "_links": {
+          "self": {
+            "href": "https://api.mollie.com/v2/payments/tr_list_123",
+            "type": "application/hal+json"
+          },
+          "checkout": {
+            "href": "https://www.mollie.com/checkout/select-method/tr_list_123",
+            "type": "text/html"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/payments?limit=1",
+      "type": "application/hal+json"
+    },
+    "previous": null,
+    "next": {
+      "href": "https://api.mollie.com/v2/payments?from=tr_next&limit=1",
+      "type": "application/hal+json"
+    },
+    "documentation": {
+      "href": "https://docs.mollie.com/reference/list-payments",
+      "type": "text/html"
+    }
+  }
+}
