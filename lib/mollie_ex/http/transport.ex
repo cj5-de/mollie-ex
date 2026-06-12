@@ -56,26 +56,54 @@ defmodule MollieEx.HTTP.Transport do
   end
 
   defp req_options(client, request, token, opts, body) do
-    req_options =
-      [
-        method: request.method,
-        base_url: client.base_url,
-        url: request.path,
-        params: request.query,
-        headers: headers(client, request, token),
-        decode_body: false,
-        redirect: false,
-        pool_timeout: Keyword.get(opts, :pool_timeout, client.pool_timeout),
-        receive_timeout: Keyword.get(opts, :receive_timeout, client.receive_timeout)
-      ]
-      |> Keyword.merge(RetryPolicy.options(client, request))
-      |> maybe_put_body(body)
-      |> FinchAdapter.put_options(
-        client,
-        Keyword.get(opts, :request_timeout, client.request_timeout)
-      )
+    with {:ok, pool_timeout} <- timeout_option(client, opts, :pool_timeout),
+         {:ok, receive_timeout} <- timeout_option(client, opts, :receive_timeout),
+         {:ok, request_timeout} <- timeout_option(client, opts, :request_timeout) do
+      req_options =
+        [
+          method: request.method,
+          base_url: client.base_url,
+          url: request.path,
+          params: request.query,
+          headers: headers(client, request, token),
+          decode_body: false,
+          redirect: false,
+          pool_timeout: pool_timeout,
+          receive_timeout: receive_timeout
+        ]
+        |> Keyword.merge(RetryPolicy.options(client, request))
+        |> maybe_put_body(body)
+        |> FinchAdapter.put_options(client, request_timeout)
 
-    {:ok, req_options}
+      {:ok, req_options}
+    else
+      :error -> invalid_timeout_error(request)
+    end
+  end
+
+  defp timeout_option(%Client{} = client, opts, key) do
+    value =
+      if Keyword.has_key?(opts, key) do
+        Keyword.fetch!(opts, key)
+      else
+        Map.fetch!(client, key)
+      end
+
+    case value do
+      timeout when is_integer(timeout) and timeout > 0 -> {:ok, timeout}
+      _timeout -> :error
+    end
+  end
+
+  defp invalid_timeout_error(%Request{} = request) do
+    {:error,
+     Error.exception(
+       type: :configuration,
+       reason: :invalid_timeout,
+       method: request.method,
+       path: request.path,
+       operation: request.operation
+     )}
   end
 
   defp maybe_put_body(req_options, nil), do: req_options

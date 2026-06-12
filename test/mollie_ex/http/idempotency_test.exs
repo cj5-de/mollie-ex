@@ -52,6 +52,23 @@ defmodule MollieEx.HTTP.IdempotencyTest do
     end
   end
 
+  test "rejects non-binary optional idempotency keys" do
+    for key <- [123, :order_key, %{key: "order-123"}] do
+      request = %Request{
+        method: :post,
+        path: "/payments",
+        idempotency_key: key,
+        idempotency_policy: :optional,
+        operation: :payments_create
+      }
+
+      assert {:error, %Error{} = error} = Idempotency.validate_request(request)
+      assert error.type == :configuration
+      assert error.reason == :invalid_idempotency_key
+      assert error.idempotency_key_fingerprint =~ ~r/^sha256:[0-9a-f]{16}$/
+    end
+  end
+
   test "allows missing optional idempotency keys" do
     request = %Request{
       method: :post,

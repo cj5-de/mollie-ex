@@ -13,8 +13,7 @@ defmodule MollieEx.HTTP.Idempotency do
     end
   end
 
-  def validate_request(%Request{idempotency_policy: :optional, idempotency_key: key} = request)
-      when is_binary(key) do
+  def validate_request(%Request{idempotency_policy: :optional, idempotency_key: key} = request) do
     case key_status(key) do
       :valid -> :ok
       :missing -> :ok
@@ -55,7 +54,8 @@ defmodule MollieEx.HTTP.Idempotency do
     end
   end
 
-  defp key_status(_key), do: :missing
+  defp key_status(nil), do: :missing
+  defp key_status(_key), do: :invalid
 
   defp missing_key_error(%Request{} = request) do
     {:error,
