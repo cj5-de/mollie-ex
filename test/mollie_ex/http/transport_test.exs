@@ -447,6 +447,46 @@ defmodule MollieEx.HTTP.TransportTest do
     refute rendered =~ marker
   end
 
+  test "rejects non-binary optional idempotency keys before auth and transport" do
+    test_pid = self()
+
+    Req.Test.stub(__MODULE__, fn conn ->
+      send(test_pid, :request_sent)
+      Req.Test.json(conn, %{"id" => "tr_123"})
+    end)
+
+    client =
+      Client.new!(
+        api_key: fn ->
+          send(test_pid, :auth_resolved)
+          @api_key
+        end,
+        transport: {:req_test, __MODULE__}
+      )
+
+    for key <- [123, :order_key, %{key: "order-123"}] do
+      request = %Request{
+        method: :post,
+        path: "/payments",
+        body: %{"description" => "Order #123"},
+        idempotency_key: key,
+        idempotency_policy: :optional,
+        operation: :payments_create
+      }
+
+      assert {:error, %Error{} = error} = Transport.request(client, request)
+      assert error.type == :configuration
+      assert error.reason == :invalid_idempotency_key
+      assert error.method == :post
+      assert error.path == "/payments"
+      assert error.operation == :payments_create
+      assert error.idempotency_key_fingerprint =~ ~r/^sha256:[0-9a-f]{16}$/
+    end
+
+    refute_receive :auth_resolved, 10
+    refute_receive :request_sent, 10
+  end
+
   test "rejects header-unsafe required idempotency keys before sending" do
     client =
       Client.new!(
@@ -618,6 +658,37 @@ defmodule MollieEx.HTTP.TransportTest do
     assert {:error, %Error{} = error} = Transport.request(client(), request)
     assert error.type == :timeout
     assert error.path == "/payments/tr_123"
+  end
+
+  test "rejects invalid per-call timeout overrides before Req" do
+    test_pid = self()
+
+    Req.Test.stub(__MODULE__, fn conn ->
+      send(test_pid, :request_sent)
+      Req.Test.json(conn, %{"id" => "tr_123"})
+    end)
+
+    request = %Request{
+      method: :get,
+      path: "/payments/tr_123",
+      operation: :payments_get,
+      retry_policy: :disabled
+    }
+
+    for opts <- [
+          [pool_timeout: nil],
+          [receive_timeout: "1000"],
+          [request_timeout: 0]
+        ] do
+      assert {:error, %Error{} = error} = Transport.request(client(), request, opts)
+      assert error.type == :configuration
+      assert error.reason == :invalid_timeout
+      assert error.method == :get
+      assert error.path == "/payments/tr_123"
+      assert error.operation == :payments_get
+    end
+
+    refute_receive :request_sent, 10
   end
 
   test "preserves Req transport error reasons" do
