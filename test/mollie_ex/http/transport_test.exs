@@ -848,8 +848,14 @@ defmodule MollieEx.HTTP.TransportTest do
   test "uses a caller supplied Finch instance" do
     bypass = Bypass.open()
     finch_name = :"#{__MODULE__}.Finch.#{System.unique_integer([:positive])}"
-    start_supervised!({Finch, name: finch_name})
-    connect_timeout = 1_234
+
+    start_supervised!(
+      {Finch,
+       name: finch_name,
+       pools: %{
+         :default => [size: 1, count: 2]
+       }}
+    )
 
     Bypass.expect(bypass, "GET", "/v2/payments/tr_123", fn conn ->
       assert header(conn, "authorization") == "Bearer #{@api_key}"
@@ -863,7 +869,6 @@ defmodule MollieEx.HTTP.TransportTest do
       Client.new!(
         api_key: @api_key,
         base_url: "http://localhost:#{bypass.port}/v2",
-        connect_timeout: connect_timeout,
         finch_name: finch_name
       )
 
@@ -871,18 +876,14 @@ defmodule MollieEx.HTTP.TransportTest do
 
     assert {:ok, %Response{body: %{"id" => "tr_123"}}} = Transport.request(client, request)
 
-    assert {_pid, _pool_name, _pool_mod, _pool_count, pool_config} =
+    assert {_pid, _pool_name, _pool_mod, pool_count, pool_config} =
              FinchPoolManager.get_pool_supervisor(
                finch_name,
                Finch.Pool.new("http://localhost:#{bypass.port}/v2")
              )
 
-    transport_opts =
-      pool_config
-      |> Map.fetch!(:conn_opts)
-      |> Keyword.fetch!(:transport_opts)
-
-    assert Keyword.fetch!(transport_opts, :timeout) == connect_timeout
+    assert pool_count == 2
+    assert pool_config.size == 1
   end
 
   defp client do

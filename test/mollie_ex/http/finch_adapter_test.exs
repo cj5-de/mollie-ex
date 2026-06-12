@@ -1,6 +1,7 @@
 defmodule MollieEx.HTTP.FinchAdapterTest do
   use ExUnit.Case, async: true
 
+  alias Finch.Pool.Manager, as: FinchPoolManager
   alias MollieEx.Client
   alias MollieEx.HTTP.FinchAdapter
 
@@ -43,6 +44,25 @@ defmodule MollieEx.HTTP.FinchAdapterTest do
   test "skips pool startup for Req.Test and default Finch clients" do
     assert :ok = FinchAdapter.ensure_pool(client())
     assert :ok = FinchAdapter.ensure_pool(client(transport: {:req_test, __MODULE__}))
+  end
+
+  test "checks custom Finch supervisors without starting destination pools" do
+    finch_name = :"#{__MODULE__}.LazyFinch.#{System.unique_integer([:positive])}"
+
+    start_supervised!(
+      {Finch,
+       name: finch_name,
+       pools: %{
+         :default => [size: 1, count: 2]
+       }}
+    )
+
+    client = client(finch_name: finch_name)
+    pool = Finch.Pool.new(client.base_url)
+
+    assert FinchPoolManager.get_pool_supervisor(finch_name, pool) == :not_found
+    assert :ok = FinchAdapter.ensure_pool(client)
+    assert FinchPoolManager.get_pool_supervisor(finch_name, pool) == :not_found
   end
 
   test "maps missing custom Finch supervisors to transport errors" do
