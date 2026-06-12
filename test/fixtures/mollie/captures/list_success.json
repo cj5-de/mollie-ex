@@ -1,0 +1,53 @@
+{
+  "count": 1,
+  "_embedded": {
+    "captures": [
+      {
+        "resource": "capture",
+        "id": "cpt_list_123",
+        "mode": "test",
+        "description": "Capture order #123",
+        "amount": {
+          "currency": "EUR",
+          "value": "10.00"
+        },
+        "settlementAmount": {
+          "currency": "EUR",
+          "value": "9.75"
+        },
+        "status": "succeeded",
+        "metadata": {
+          "order_id": "123"
+        },
+        "paymentId": "tr_123",
+        "settlementId": "stl_123",
+        "createdAt": "2026-06-12T11:20:00+00:00",
+        "_links": {
+          "self": {
+            "href": "https://api.mollie.com/v2/payments/tr_123/captures/cpt_list_123",
+            "type": "application/hal+json"
+          },
+          "payment": {
+            "href": "https://api.mollie.com/v2/payments/tr_123",
+            "type": "application/hal+json"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/payments/tr_123/captures?limit=1",
+      "type": "application/hal+json"
+    },
+    "previous": null,
+    "next": {
+      "href": "https://api.mollie.com/v2/payments/tr_123/captures?from=cpt_next&limit=1",
+      "type": "application/hal+json"
+    },
+    "documentation": {
+      "href": "https://docs.mollie.com/reference/list-captures",
+      "type": "text/html"
+    }
+  }
+}
