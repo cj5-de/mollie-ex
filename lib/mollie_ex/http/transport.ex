@@ -3,32 +3,22 @@ defmodule MollieEx.HTTP.Transport do
 
   alias MollieEx.Client
   alias MollieEx.Error
-  alias MollieEx.HTTP.{Request, Response, RetryDelay}
+  alias MollieEx.HTTP.{FinchAdapter, Idempotency, Request, Response, RetryPolicy}
 
   @json_content_type "application/json"
   @default_headers [
     {"accept", @json_content_type},
     {"content-type", @json_content_type}
   ]
-  @retryable_statuses [408, 429, 500, 502, 503, 504]
-  @retryable_transport_reasons [:timeout, :econnrefused, :closed]
-  @retryable_http2_reasons [
-    :unprocessed,
-    :pool_not_available,
-    :timeout,
-    :request_timeout,
-    :connection_closed,
-    :disconnected
-  ]
   @timeout_http_reasons [:timeout, :request_timeout]
 
   @spec request(Client.t(), Request.t(), keyword()) ::
           {:ok, Response.t()} | {:error, Error.t()}
   def request(%Client{} = client, %Request{} = request, opts \\ []) do
-    with :ok <- validate_request(request),
+    with :ok <- Idempotency.validate_request(request),
          {:ok, body} <- encode_body(request),
          {:ok, token} <- auth_token(client.auth),
-         :ok <- ensure_custom_finch_pool(client),
+         :ok <- FinchAdapter.ensure_pool(client),
          {:ok, req_options} <- req_options(client, request, token, opts, body),
          {:ok, response} <- Req.request(req_options) do
       response(client, request, response)
@@ -40,70 +30,6 @@ defmodule MollieEx.HTTP.Transport do
         {:error, transport_error(client, request, exception)}
     end
   end
-
-  defp validate_request(%Request{idempotency_policy: :required} = request) do
-    case idempotency_key_status(request.idempotency_key) do
-      :valid -> :ok
-      :missing -> missing_idempotency_key_error(request)
-      :invalid -> invalid_idempotency_key_error(request)
-    end
-  end
-
-  defp validate_request(%Request{idempotency_policy: :optional, idempotency_key: key} = request)
-       when is_binary(key) do
-    case idempotency_key_status(key) do
-      :valid -> :ok
-      :missing -> :ok
-      :invalid -> invalid_idempotency_key_error(request)
-    end
-  end
-
-  defp validate_request(%Request{}), do: :ok
-
-  defp valid_idempotency_key?(key) when is_binary(key), do: idempotency_key_status(key) == :valid
-  defp valid_idempotency_key?(_key), do: false
-
-  defp idempotency_key_status(key) when is_binary(key) do
-    cond do
-      not String.valid?(key) or contains_header_unsafe_byte?(key) -> :invalid
-      String.trim(key) == "" -> :missing
-      true -> :valid
-    end
-  end
-
-  defp idempotency_key_status(_key), do: :missing
-
-  defp missing_idempotency_key_error(%Request{} = request) do
-    {:error,
-     Error.exception(
-       type: :configuration,
-       reason: :missing_idempotency_key,
-       method: request.method,
-       path: request.path,
-       operation: request.operation
-     )}
-  end
-
-  defp invalid_idempotency_key_error(%Request{} = request) do
-    {:error,
-     Error.exception(
-       type: :configuration,
-       reason: :invalid_idempotency_key,
-       method: request.method,
-       path: request.path,
-       operation: request.operation,
-       idempotency_key_fingerprint: request.idempotency_key
-     )}
-  end
-
-  defp contains_header_unsafe_byte?(<<>>), do: false
-
-  defp contains_header_unsafe_byte?(<<byte, _rest::binary>>)
-       when byte < 32 or byte > 126,
-       do: true
-
-  defp contains_header_unsafe_byte?(<<_byte, rest::binary>>),
-    do: contains_header_unsafe_byte?(rest)
 
   defp encode_body(%Request{body: nil}), do: {:ok, nil}
 
@@ -140,13 +66,14 @@ defmodule MollieEx.HTTP.Transport do
         decode_body: false,
         redirect: false,
         pool_timeout: Keyword.get(opts, :pool_timeout, client.pool_timeout),
-        receive_timeout: Keyword.get(opts, :receive_timeout, client.receive_timeout),
-        finch_request: finch_request(Keyword.get(opts, :request_timeout, client.request_timeout))
+        receive_timeout: Keyword.get(opts, :receive_timeout, client.receive_timeout)
       ]
-      |> Keyword.merge(retry_options(client, request))
+      |> Keyword.merge(RetryPolicy.options(client, request))
       |> maybe_put_body(body)
-      |> maybe_put_finch(client)
-      |> maybe_put_req_test(client)
+      |> FinchAdapter.put_options(
+        client,
+        Keyword.get(opts, :request_timeout, client.request_timeout)
+      )
 
     {:ok, req_options}
   end
@@ -154,218 +81,12 @@ defmodule MollieEx.HTTP.Transport do
   defp maybe_put_body(req_options, nil), do: req_options
   defp maybe_put_body(req_options, body), do: Keyword.put(req_options, :body, body)
 
-  defp retry_options(_client, %Request{retry_policy: :disabled}), do: [retry: false]
-
-  defp retry_options(%Client{} = client, %Request{} = request) do
-    [
-      retry: retry_policy(client, request),
-      max_retries: client.max_retries,
-      retry_log_level: false
-    ]
-  end
-
-  defp retry_policy(%Client{} = client, %Request{} = request) do
-    fn req, response_or_exception ->
-      if retryable?(request, response_or_exception) do
-        {:delay, retry_delay(client, req, response_or_exception)}
-      else
-        false
-      end
-    end
-  end
-
-  defp retryable?(%Request{} = request, response_or_exception) do
-    retryable_request?(request) and retryable_failure?(response_or_exception)
-  end
-
-  defp retryable_request?(%Request{method: method}) when method in [:get, :head], do: true
-
-  defp retryable_request?(%Request{idempotency_policy: policy, idempotency_key: key})
-       when policy in [:optional, :required] do
-    valid_idempotency_key?(key)
-  end
-
-  defp retryable_request?(%Request{}), do: false
-
-  defp retryable_failure?(%Req.Response{status: status}) when status in @retryable_statuses,
-    do: true
-
-  defp retryable_failure?(%Req.Response{}), do: false
-
-  defp retryable_failure?(%Req.TransportError{reason: reason})
-       when reason in @retryable_transport_reasons,
-       do: true
-
-  defp retryable_failure?(%Req.HTTPError{protocol: :http2, reason: reason})
-       when reason in @retryable_http2_reasons,
-       do: true
-
-  defp retryable_failure?(_response_or_exception), do: false
-
-  defp retry_delay(
-         %Client{} = client,
-         %Req.Request{} = req,
-         %Req.Response{status: status} = response
-       )
-       when status in [429, 503] do
-    case retry_after(response) do
-      delay when is_integer(delay) -> min(delay, client.max_retry_after)
-      nil -> exponential_retry_delay(req)
-    end
-  end
-
-  defp retry_delay(_client, %Req.Request{} = req, _response_or_exception) do
-    exponential_retry_delay(req)
-  end
-
-  defp exponential_retry_delay(%Req.Request{} = req) do
-    req
-    |> Req.Request.get_private(:req_retry_count, 0)
-    |> RetryDelay.jittered_exponential()
-  end
-
-  defp retry_after(%Req.Response{} = response) do
-    case Req.Response.get_header(response, "retry-after") do
-      [_delay] -> parse_retry_after(response)
-      _zero_or_multiple_values -> nil
-    end
-  end
-
-  defp parse_retry_after(%Req.Response{} = response) do
-    Req.Response.get_retry_after(response)
-  rescue
-    ArgumentError ->
-      nil
-  end
-
-  defp maybe_put_finch(req_options, %Client{finch_name: nil, connect_timeout: connect_timeout}),
-    do: Keyword.put(req_options, :connect_options, timeout: connect_timeout)
-
-  defp maybe_put_finch(req_options, %Client{finch_name: finch}),
-    do: Keyword.put(req_options, :finch, finch)
-
-  defp maybe_put_req_test(req_options, %Client{transport: {:req_test, name}}) do
-    req_options
-    |> Keyword.delete(:finch_request)
-    |> Keyword.delete(:finch)
-    |> Keyword.delete(:connect_options)
-    |> Keyword.put(:plug, {Req.Test, name})
-  end
-
-  defp maybe_put_req_test(req_options, %Client{transport: :finch}), do: req_options
-
-  defp ensure_custom_finch_pool(%Client{transport: {:req_test, _name}}), do: :ok
-  defp ensure_custom_finch_pool(%Client{finch_name: nil}), do: :ok
-
-  defp ensure_custom_finch_pool(%Client{} = client) do
-    client.finch_name
-    |> Finch.start_pool(
-      Finch.Pool.new(client.base_url),
-      conn_opts: [transport_opts: [timeout: client.connect_timeout]]
-    )
-  rescue
-    exception in ArgumentError ->
-      if finch_unknown_registry?(exception) do
-        {:error, Req.TransportError.exception(reason: :finch_not_started)}
-      else
-        reraise exception, __STACKTRACE__
-      end
-  end
-
   defp headers(client, request, token) do
     @default_headers
     |> Kernel.++([{"authorization", "Bearer " <> token}, {"user-agent", client.user_agent}])
-    |> Kernel.++(safe_custom_headers(request.headers))
-    |> maybe_add_idempotency_key(request)
+    |> Kernel.++(Idempotency.reject_custom_headers(request.headers))
+    |> Idempotency.put_header(request)
   end
-
-  defp safe_custom_headers(headers) do
-    Enum.reject(headers, fn {name, _value} -> idempotency_key_header?(name) end)
-  end
-
-  defp idempotency_key_header?(name) when is_binary(name),
-    do: String.downcase(name) == "idempotency-key"
-
-  defp idempotency_key_header?(_name), do: false
-
-  defp maybe_add_idempotency_key(headers, %Request{
-         idempotency_policy: policy,
-         idempotency_key: key
-       })
-       when policy in [:optional, :required] and is_binary(key) do
-    key = String.trim(key)
-
-    if key == "" do
-      headers
-    else
-      [{"idempotency-key", key} | headers]
-    end
-  end
-
-  defp maybe_add_idempotency_key(headers, _request), do: headers
-
-  defp finch_request(request_timeout) do
-    fn req, finch_request, finch_name, finch_options ->
-      finch_options = Keyword.put(finch_options, :request_timeout, request_timeout)
-
-      case request_finch(finch_request, finch_name, finch_options) do
-        {:ok, finch_response} -> {req, Req.Response.new(finch_response)}
-        {:error, exception} -> {req, normalize_finch_error(exception)}
-      end
-    end
-  end
-
-  defp request_finch(finch_request, finch_name, finch_options) do
-    Finch.request(finch_request, finch_name, finch_options)
-  rescue
-    exception in RuntimeError ->
-      if finch_checkout_timeout?(exception) do
-        {:error, Req.TransportError.exception(reason: :timeout)}
-      else
-        reraise exception, __STACKTRACE__
-      end
-
-    exception in ArgumentError ->
-      if finch_unknown_registry?(exception) do
-        {:error, Req.TransportError.exception(reason: :finch_not_started)}
-      else
-        reraise exception, __STACKTRACE__
-      end
-  catch
-    :exit, {:timeout, {NimblePool, :checkout, _affected_pids}} ->
-      {:error, Req.TransportError.exception(reason: :timeout)}
-  end
-
-  defp finch_checkout_timeout?(%RuntimeError{} = exception) do
-    exception
-    |> Exception.message()
-    |> String.contains?("Finch was unable to provide a connection within the timeout")
-  end
-
-  defp finch_unknown_registry?(%ArgumentError{} = exception) do
-    exception
-    |> Exception.message()
-    |> String.contains?(["unknown registry:", "is not running"])
-  end
-
-  defp normalize_finch_error(%Req.TransportError{} = error), do: error
-  defp normalize_finch_error(%Req.HTTPError{} = error), do: error
-
-  defp normalize_finch_error(%Finch.Error{reason: reason})
-       when reason in @timeout_http_reasons,
-       do: Req.TransportError.exception(reason: :timeout)
-
-  defp normalize_finch_error(%Finch.Error{reason: reason}),
-    do: Req.HTTPError.exception(protocol: :http2, reason: reason)
-
-  defp normalize_finch_error(%Finch.TransportError{reason: reason}),
-    do: Req.TransportError.exception(reason: reason)
-
-  defp normalize_finch_error(%Finch.HTTPError{module: Mint.HTTP2, reason: reason}),
-    do: Req.HTTPError.exception(protocol: :http2, reason: reason)
-
-  defp normalize_finch_error(%Finch.HTTPError{reason: reason}),
-    do: Req.HTTPError.exception(protocol: :http1, reason: reason)
 
   defp response(client, request, %Req.Response{} = response) do
     case decode_response(response) do
