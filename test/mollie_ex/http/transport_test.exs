@@ -197,6 +197,24 @@ defmodule MollieEx.HTTP.TransportTest do
     assert {:ok, %Response{body: %{"id" => "tr_123"}}} = Transport.request(client, request)
   end
 
+  test "falls back to exponential retry delay for duplicate Retry-After headers" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      conn
+      |> Plug.Conn.prepend_resp_headers([{"retry-after", "0"}, {"retry-after", "1"}])
+      |> Plug.Conn.put_status(503)
+      |> Req.Test.json(%{"status" => 503})
+    end)
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      Req.Test.json(conn, %{"id" => "tr_123"})
+    end)
+
+    client = Client.new!(api_key: @api_key, transport: {:req_test, __MODULE__}, max_retries: 1)
+    request = %Request{method: :get, path: "/payments/tr_123"}
+
+    assert {:ok, %Response{body: %{"id" => "tr_123"}}} = Transport.request(client, request)
+  end
+
   test "rejects missing required idempotency keys before sending" do
     client =
       Client.new!(
@@ -348,6 +366,75 @@ defmodule MollieEx.HTTP.TransportTest do
     assert error.path == "/payments/tr_123"
   end
 
+  test "retries safe GET requests on HTTP/2 connection closed errors" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      http2_error(conn, :connection_closed)
+    end)
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      Req.Test.json(conn, %{"id" => "tr_123"})
+    end)
+
+    client = Client.new!(api_key: @api_key, transport: {:req_test, __MODULE__}, max_retries: 1)
+    request = %Request{method: :get, path: "/payments/tr_123"}
+
+    assert {:ok, %Response{body: %{"id" => "tr_123"}}} = Transport.request(client, request)
+  end
+
+  test "retries idempotent writes on HTTP/2 disconnected errors" do
+    body = %{"description" => "Order #123"}
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == "order-123"
+      assert_json_body(conn, body)
+
+      http2_error(conn, :disconnected)
+    end)
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == "order-123"
+      assert_json_body(conn, body)
+
+      Req.Test.json(conn, %{"id" => "tr_123"})
+    end)
+
+    client = Client.new!(api_key: @api_key, transport: {:req_test, __MODULE__}, max_retries: 1)
+
+    request = %Request{
+      method: :post,
+      path: "/payments",
+      body: body,
+      idempotency_key: "order-123",
+      idempotency_policy: :optional
+    }
+
+    assert {:ok, %Response{body: %{"id" => "tr_123"}}} = Transport.request(client, request)
+  end
+
+  test "does not retry non-idempotent writes on HTTP/2 disconnected errors" do
+    body = %{"description" => "Order #123"}
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == nil
+      assert_json_body(conn, body)
+
+      http2_error(conn, :disconnected)
+    end)
+
+    client = Client.new!(api_key: @api_key, transport: {:req_test, __MODULE__}, max_retries: 1)
+
+    request = %Request{
+      method: :post,
+      path: "/payments",
+      body: body,
+      idempotency_policy: :optional
+    }
+
+    assert {:error, %Error{} = error} = Transport.request(client, request)
+    assert error.type == :transport
+    assert error.reason == :disconnected
+  end
+
   test "maps live Finch receive timeouts into timeout errors" do
     {:ok, listen_socket} =
       :gen_tcp.listen(0, [
@@ -394,6 +481,60 @@ defmodule MollieEx.HTTP.TransportTest do
     assert_receive :slow_server_accepted
     assert error.type == :timeout
     assert error.path == "/slow"
+  end
+
+  test "maps live Finch pool checkout timeouts into timeout errors" do
+    bypass = Bypass.open()
+    test_pid = self()
+    finch_name = :"#{__MODULE__}.PoolTimeoutFinch.#{System.unique_integer([:positive])}"
+
+    start_supervised!(
+      {Finch,
+       name: finch_name,
+       pools: %{
+         :default => [size: 1, count: 1]
+       }}
+    )
+
+    Bypass.expect(bypass, "GET", "/v2/hold", fn conn ->
+      send(test_pid, :pool_connection_checked_out)
+      Process.sleep(500)
+
+      conn
+      |> Plug.Conn.put_resp_content_type("application/json")
+      |> Plug.Conn.send_resp(200, Jason.encode!(%{"id" => "held"}))
+    end)
+
+    holder =
+      Task.async(fn ->
+        Req.get!(
+          "http://localhost:#{bypass.port}/v2/hold",
+          finch: finch_name,
+          receive_timeout: 1_000,
+          pool_timeout: 100
+        )
+      end)
+
+    assert_receive :pool_connection_checked_out, 1_000
+
+    client =
+      Client.new!(
+        api_key: @api_key,
+        base_url: "http://localhost:#{bypass.port}/v2",
+        finch_name: finch_name,
+        pool_timeout: 10,
+        receive_timeout: 1_000,
+        request_timeout: 1_000,
+        max_retries: 0
+      )
+
+    request = %Request{method: :get, path: "/payments/tr_123", retry_policy: :disabled}
+
+    assert {:error, %Error{} = error} = Transport.request(client, request)
+    assert error.type == :timeout
+    assert error.reason == :timeout
+
+    assert %Req.Response{status: 200} = Task.await(holder, 2_000)
   end
 
   test "resolves function credentials at the transport boundary" do
@@ -445,6 +586,14 @@ defmodule MollieEx.HTTP.TransportTest do
       {^name, value} -> value
       nil -> nil
     end
+  end
+
+  defp http2_error(conn, reason) do
+    Plug.Conn.put_private(
+      conn,
+      :req_test_exception,
+      Req.HTTPError.exception(protocol: :http2, reason: reason)
+    )
   end
 
   defp transient_json(conn, status) do
