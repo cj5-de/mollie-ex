@@ -23,11 +23,10 @@ defmodule MollieEx.Captures do
   alias MollieEx.Capture
   alias MollieEx.Client
   alias MollieEx.Error
-  alias MollieEx.HTTP.{Telemetry, Transport}
   alias MollieEx.List, as: MollieList
   alias MollieEx.Resources.Captures.{Create, Get}
   alias MollieEx.Resources.Captures.List, as: ListRequest
-  alias MollieEx.Resources.ListDecoder
+  alias MollieEx.Resources.RequestRunner
 
   @type create_params :: map()
   @type create_option ::
@@ -129,53 +128,17 @@ defmodule MollieEx.Captures do
   end
 
   defp request_capture(%Client{} = client, request, transport_opts, operation) do
-    start_time = Telemetry.start(client, request)
-    transport_opts = Keyword.put(transport_opts, :telemetry, false)
-
-    case Transport.request(client, request, transport_opts) do
-      {:ok, response} ->
-        result = Capture.from_response(response, operation)
-        emit_capture_result(client, request, response, result, start_time)
-        result
-
-      {:error, %Error{} = error} = result ->
-        Telemetry.emit_result(client, request, result, start_time)
-        {:error, error}
-    end
+    RequestRunner.decode(client, request, transport_opts, &Capture.from_response(&1, operation))
   end
 
   defp request_capture_list(%Client{} = client, request, transport_opts) do
-    start_time = Telemetry.start(client, request)
-    transport_opts = Keyword.put(transport_opts, :telemetry, false)
-
-    case Transport.request(client, request, transport_opts) do
-      {:ok, response} ->
-        result =
-          ListDecoder.from_response(
-            response,
-            "captures",
-            :captures_list,
-            &Capture.from_response(&1, :captures_list)
-          )
-
-        emit_capture_result(client, request, response, result, start_time)
-        result
-
-      {:error, %Error{} = error} = result ->
-        Telemetry.emit_result(client, request, result, start_time)
-        {:error, error}
-    end
-  end
-
-  defp emit_capture_result(client, request, response, {:ok, %Capture{}}, start_time) do
-    Telemetry.emit_result(client, request, {:ok, response}, start_time)
-  end
-
-  defp emit_capture_result(client, request, response, {:ok, %MollieList{}}, start_time) do
-    Telemetry.emit_result(client, request, {:ok, response}, start_time)
-  end
-
-  defp emit_capture_result(client, request, _response, {:error, %Error{} = error}, start_time) do
-    Telemetry.emit_result(client, request, {:error, error}, start_time)
+    RequestRunner.decode_list(
+      client,
+      request,
+      transport_opts,
+      "captures",
+      :captures_list,
+      &Capture.from_response(&1, :captures_list)
+    )
   end
 end
