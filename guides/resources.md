@@ -159,6 +159,28 @@ Create, retrieve, and list delayed payment routes:
 {:ok, routes} = MollieEx.PaymentRoutes.list(client, "tr_123")
 ```
 
+## Payment links
+
+Create, retrieve, and list payment links:
+
+```elixir
+{:ok, payment_link} =
+  MollieEx.PaymentLinks.create(
+    client,
+    %{
+      description: "Order #123",
+      amount: %{currency: "EUR", value: "10.00"},
+      redirect_url: "https://example.com/checkout/return"
+    },
+    idempotency_key: "fc1693c0-b788-46f5-9d08-61eac31d5ab8"
+  )
+
+checkout_url = MollieEx.PaymentLink.checkout_url(payment_link)
+
+{:ok, payment_link} = MollieEx.PaymentLinks.get(client, "pl_123")
+{:ok, payment_links} = MollieEx.PaymentLinks.list(client, limit: 10)
+```
+
 ## Idempotency
 
 MollieEx accepts idempotency keys for write operations, but does not generate
