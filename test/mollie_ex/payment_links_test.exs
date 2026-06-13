@@ -164,6 +164,65 @@ defmodule MollieEx.PaymentLinksTest do
              payment_link_list.links["next"]
   end
 
+  test "updates a payment link with camelCased body and caller idempotency key" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "PATCH"
+      assert conn.request_path == "/v2/payment-links/pl_123"
+      assert conn.query_string == ""
+      assert header(conn, "authorization") == "Bearer #{@api_key}"
+      assert header(conn, "idempotency-key") == "payment-link-update-123"
+      assert_json_body(conn, expected_update_body())
+
+      payment_link_fixture_response(conn, 200)
+    end)
+
+    assert {:ok, %PaymentLink{} = payment_link} =
+             PaymentLinks.update(
+               client(),
+               "pl_123",
+               update_params(),
+               idempotency_key: "payment-link-update-123"
+             )
+
+    assert payment_link.id == "pl_123"
+    assert payment_link.description == "Order #123"
+  end
+
+  test "adds testmode for OAuth update requests" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert_json_body(conn, %{
+        "description" => "Order #456",
+        "testmode" => false
+      })
+
+      payment_link_fixture_response(conn, 200)
+    end)
+
+    client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
+
+    assert {:ok, %PaymentLink{id: "pl_123"}} =
+             PaymentLinks.update(client, "pl_123", %{description: "Order #456"}, testmode: false)
+  end
+
+  test "honors params-level testmode for OAuth update requests" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert_json_body(conn, %{
+        "description" => "Order #456",
+        "testmode" => false
+      })
+
+      payment_link_fixture_response(conn, 200)
+    end)
+
+    client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
+
+    assert {:ok, %PaymentLink{id: "pl_123"}} =
+             PaymentLinks.update(client, "pl_123", %{
+               description: "Order #456",
+               testmode: false
+             })
+  end
+
   test "rejects scoped fields for API-key payment link requests before sending" do
     test_pid = self()
 
@@ -189,6 +248,19 @@ defmodule MollieEx.PaymentLinksTest do
 
     assert {:error, %Error{reason: :unsupported_testmode}} =
              PaymentLinks.list(client(), testmode: true)
+
+    assert {:error, %Error{reason: :unsupported_testmode}} =
+             PaymentLinks.update(client(), "pl_123", update_params(), testmode: true)
+
+    assert {:error, %Error{reason: :unsupported_testmode}} =
+             PaymentLinks.update(client(), "pl_123", Map.put(update_params(), :testmode, true))
+
+    assert {:error, %Error{reason: :unsupported_profile_id}} =
+             PaymentLinks.update(
+               client(),
+               "pl_123",
+               Map.put(update_params(), :profile_id, "pfl_123")
+             )
 
     refute_receive :request_sent, 10
   end
@@ -242,6 +314,47 @@ defmodule MollieEx.PaymentLinksTest do
              )
   end
 
+  test "does not retry payment link update without idempotency key" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == nil
+      assert_json_body(conn, expected_update_body())
+
+      conn
+      |> Plug.Conn.put_status(503)
+      |> Req.Test.json(%{"status" => 503})
+    end)
+
+    assert {:error, %Error{type: :server_error, status: 503}} =
+             PaymentLinks.update(client(max_retries: 1), "pl_123", update_params())
+  end
+
+  test "retries payment link update with the same caller idempotency key and body" do
+    expected_body = expected_update_body()
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == "payment-link-update-123"
+      assert_json_body(conn, expected_body)
+
+      conn
+      |> Plug.Conn.put_status(503)
+      |> Req.Test.json(%{"status" => 503})
+    end)
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == "payment-link-update-123"
+      assert_json_body(conn, expected_body)
+      payment_link_fixture_response(conn, 200)
+    end)
+
+    assert {:ok, %PaymentLink{id: "pl_123"}} =
+             PaymentLinks.update(
+               client(max_retries: 1),
+               "pl_123",
+               update_params(),
+               idempotency_key: "payment-link-update-123"
+             )
+  end
+
   test "retries safe payment link get and list requests without idempotency key" do
     for operation <- [:get, :list] do
       Req.Test.expect(__MODULE__, fn conn ->
@@ -265,7 +378,8 @@ defmodule MollieEx.PaymentLinksTest do
     cases = [
       {:create, 422, :validation},
       {:get, 404, :not_found},
-      {:list, 429, :rate_limited}
+      {:list, 429, :rate_limited},
+      {:update, 422, :validation}
     ]
 
     for {operation, status, type} <- cases do
@@ -290,7 +404,8 @@ defmodule MollieEx.PaymentLinksTest do
     for {operation, expected_operation} <- [
           {:create, :payment_links_create},
           {:get, :payment_links_get},
-          {:list, :payment_links_list}
+          {:list, :payment_links_list},
+          {:update, :payment_links_update}
         ] do
       Req.Test.expect(__MODULE__, fn conn ->
         Req.Test.transport_error(conn, :timeout)
@@ -377,6 +492,21 @@ defmodule MollieEx.PaymentLinksTest do
     assert {:error, %Error{reason: :invalid_payment_link_params}} =
              PaymentLinks.create(client(), "bad")
 
+    assert {:error, %Error{reason: :invalid_client}} =
+             PaymentLinks.update("bad", "pl_123", update_params())
+
+    assert {:error, %Error{reason: :invalid_payment_link_id}} =
+             PaymentLinks.update(client(), "", update_params())
+
+    assert {:error, %Error{reason: :invalid_payment_link_params}} =
+             PaymentLinks.update(client(), "pl_123", "bad")
+
+    assert {:error, %Error{reason: :invalid_options}} =
+             PaymentLinks.update(client(), "pl_123", update_params(), "bad")
+
+    assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
+             PaymentLinks.update(client(), "pl_123", update_params(), unknown: true)
+
     assert {:error, %Error{reason: :missing_description}} =
              PaymentLinks.create(client(), %{amount: %{currency: "EUR", value: "10.00"}})
 
@@ -412,6 +542,14 @@ defmodule MollieEx.PaymentLinksTest do
              PaymentLinks.get(
                TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
                "pl_123",
+               testmode: "true"
+             )
+
+    assert {:error, %Error{reason: :invalid_testmode}} =
+             PaymentLinks.update(
+               TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
+               "pl_123",
+               update_params(),
                testmode: "true"
              )
 
@@ -455,6 +593,27 @@ defmodule MollieEx.PaymentLinksTest do
       "/payment-links/{paymentLinkId}",
       200,
       [@api_key, "pl_123", "authorization"]
+    )
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      payment_link_fixture_response(conn, 200)
+    end)
+
+    assert {:ok, %PaymentLink{}} =
+             PaymentLinks.update(
+               client(telemetry_prefix: prefix),
+               "pl_123",
+               update_params(),
+               idempotency_key: "payment-link-update-123"
+             )
+
+    assert_success_telemetry(
+      prefix,
+      :payment_links_update,
+      "PATCH",
+      "/payment-links/{paymentLinkId}",
+      200,
+      [@api_key, "pl_123", "payment-link-update-123", "authorization"]
     )
 
     Req.Test.expect(__MODULE__, fn conn ->
@@ -535,6 +694,7 @@ defmodule MollieEx.PaymentLinksTest do
   defp call_operation(:create, client), do: PaymentLinks.create(client, create_params())
   defp call_operation(:get, client), do: PaymentLinks.get(client, "pl_123")
   defp call_operation(:list, client), do: PaymentLinks.list(client)
+  defp call_operation(:update, client), do: PaymentLinks.update(client, "pl_123", update_params())
 
   defp client(opts \\ []) do
     [api_key: @api_key]
@@ -553,6 +713,72 @@ defmodule MollieEx.PaymentLinksTest do
         amount: %{currency: "EUR", value: "1.00"},
         description: "Platform fee"
       }
+    }
+  end
+
+  defp update_params do
+    %{
+      description: "Order #456",
+      minimum_amount: %{currency: "EUR", value: "7.50"},
+      archived: true,
+      allowed_methods: ["ideal"],
+      lines: [
+        %{
+          description: "Order line",
+          quantity: 1,
+          unit_price: %{currency: "EUR", value: "7.50"},
+          total_amount: %{currency: "EUR", value: "7.50"},
+          vat_rate: "21.00",
+          vat_amount: %{currency: "EUR", value: "1.30"}
+        }
+      ],
+      billing_address: address_params(),
+      shipping_address: address_params()
+    }
+  end
+
+  defp expected_update_body do
+    %{
+      "description" => "Order #456",
+      "minimumAmount" => %{"currency" => "EUR", "value" => "7.50"},
+      "archived" => true,
+      "allowedMethods" => ["ideal"],
+      "lines" => [
+        %{
+          "description" => "Order line",
+          "quantity" => 1,
+          "unitPrice" => %{"currency" => "EUR", "value" => "7.50"},
+          "totalAmount" => %{"currency" => "EUR", "value" => "7.50"},
+          "vatRate" => "21.00",
+          "vatAmount" => %{"currency" => "EUR", "value" => "1.30"}
+        }
+      ],
+      "billingAddress" => expected_address_body(),
+      "shippingAddress" => expected_address_body()
+    }
+  end
+
+  defp address_params do
+    %{
+      given_name: "Ada",
+      family_name: "Lovelace",
+      email: "ada@example.com",
+      street_and_number: "Main Street 1",
+      postal_code: "1000 AA",
+      city: "Amsterdam",
+      country: "NL"
+    }
+  end
+
+  defp expected_address_body do
+    %{
+      "givenName" => "Ada",
+      "familyName" => "Lovelace",
+      "email" => "ada@example.com",
+      "streetAndNumber" => "Main Street 1",
+      "postalCode" => "1000 AA",
+      "city" => "Amsterdam",
+      "country" => "NL"
     }
   end
 
