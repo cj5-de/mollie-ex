@@ -181,6 +181,25 @@ checkout_url = MollieEx.PaymentLink.checkout_url(payment_link)
 {:ok, payment_links} = MollieEx.PaymentLinks.list(client, limit: 10)
 ```
 
+## Customers
+
+Create and retrieve customers:
+
+```elixir
+{:ok, customer} =
+  MollieEx.Customers.create(
+    client,
+    %{
+      name: "Jane Doe",
+      email: "jane@example.org",
+      metadata: %{"crm_id" => "customer-123"}
+    },
+    idempotency_key: "0e4f812e-5d50-4fcb-8c42-153f17e52147"
+  )
+
+{:ok, customer} = MollieEx.Customers.get(client, customer.id)
+```
+
 ## Idempotency
 
 MollieEx accepts idempotency keys for write operations, but does not generate

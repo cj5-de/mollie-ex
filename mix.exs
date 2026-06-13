@@ -98,7 +98,8 @@ defmodule MollieEx.MixProject do
           MollieEx.Captures,
           MollieEx.Chargebacks,
           MollieEx.PaymentRoutes,
-          MollieEx.PaymentLinks
+          MollieEx.PaymentLinks,
+          MollieEx.Customers
         ],
         Structs: [
           MollieEx.Payment,
@@ -107,6 +108,7 @@ defmodule MollieEx.MixProject do
           MollieEx.Chargeback,
           MollieEx.Route,
           MollieEx.PaymentLink,
+          MollieEx.Customer,
           MollieEx.List
         ],
         Types: [

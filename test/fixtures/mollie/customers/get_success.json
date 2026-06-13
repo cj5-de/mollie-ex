@@ -1,0 +1,50 @@
+{
+  "resource": "customer",
+  "id": "cst_123",
+  "mode": "test",
+  "name": "Jane Doe",
+  "email": "jane@example.org",
+  "locale": "en_US",
+  "metadata": {
+    "crm_id": "customer-123",
+    "nested_value": {
+      "kept_value": true
+    }
+  },
+  "createdAt": "2026-06-13T10:15:30+00:00",
+  "events": [
+    {
+      "type": "customer.created",
+      "createdAt": "2026-06-13T10:15:30+00:00"
+    }
+  ],
+  "unexpectedFutureField": {
+    "visible": true
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/customers/cst_123",
+      "type": "application/hal+json"
+    },
+    "dashboard": {
+      "href": "https://www.mollie.com/dashboard/org_123/customers/cst_123",
+      "type": "text/html"
+    },
+    "payments": {
+      "href": "https://api.mollie.com/v2/customers/cst_123/payments",
+      "type": "application/hal+json"
+    },
+    "mandates": {
+      "href": "https://api.mollie.com/v2/customers/cst_123/mandates",
+      "type": "application/hal+json"
+    },
+    "subscriptions": {
+      "href": "https://api.mollie.com/v2/customers/cst_123/subscriptions",
+      "type": "application/hal+json"
+    },
+    "documentation": {
+      "href": "https://docs.mollie.com/reference/get-customer",
+      "type": "text/html"
+    }
+  }
+}

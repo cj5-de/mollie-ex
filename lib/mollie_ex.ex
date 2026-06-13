@@ -13,6 +13,7 @@ defmodule MollieEx do
   Payment-scoped delayed routes are available through
   `MollieEx.PaymentRoutes`.
   Payment links are available through `MollieEx.PaymentLinks`.
+  Customers are available through `MollieEx.Customers`.
 
   Full usage guides are available in the HexDocs sidebar:
 
