@@ -23,7 +23,7 @@ defmodule MollieEx.Resources.Customers.List do
          :ok <- Options.reject_unknown(opts, @allowed_options),
          {:ok, from} <- Options.string_query_option(opts, :from),
          {:ok, limit} <- Options.limit(opts),
-         {:ok, sort} <- sort(opts),
+         {:ok, sort} <- Options.sort(opts),
          {:ok, testmode} <- Options.effective_testmode(client, opts) do
       request = %Request{
         method: :get,
@@ -40,17 +40,6 @@ defmodule MollieEx.Resources.Customers.List do
   end
 
   def build(%Client{}, _opts), do: configuration_error(:invalid_options)
-
-  defp sort(opts) do
-    case Keyword.get(opts, :sort) do
-      nil -> {:ok, nil}
-      :asc -> {:ok, "asc"}
-      :desc -> {:ok, "desc"}
-      "asc" -> {:ok, "asc"}
-      "desc" -> {:ok, "desc"}
-      _sort -> configuration_error({:invalid_option, :sort})
-    end
-  end
 
   defp query(from, limit, sort, testmode) do
     []

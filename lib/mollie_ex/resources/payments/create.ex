@@ -86,21 +86,8 @@ defmodule MollieEx.Resources.Payments.Create do
       :error ->
         param_or_default(params, [:profile_id, "profile_id", "profileId"], client.profile_id)
     end
-    |> profile_id()
+    |> Options.profile_id()
   end
-
-  defp profile_id(profile_id) when is_binary(profile_id) do
-    profile_id = String.trim(profile_id)
-
-    if profile_id == "" do
-      configuration_error(:invalid_profile_id)
-    else
-      {:ok, profile_id}
-    end
-  end
-
-  defp profile_id(nil), do: configuration_error(:missing_profile_id)
-  defp profile_id(_profile_id), do: configuration_error(:invalid_profile_id)
 
   defp effective_testmode(%Client{auth: {:api_key, _credential}}, _params, _opts), do: {:ok, nil}
 
@@ -109,12 +96,8 @@ defmodule MollieEx.Resources.Payments.Create do
       {:ok, testmode} -> testmode
       :error -> param_or_default(params, [:testmode, "testmode"], client.testmode)
     end
-    |> testmode()
+    |> Options.testmode()
   end
-
-  defp testmode(testmode) when is_boolean(testmode), do: {:ok, testmode}
-  defp testmode(nil), do: {:ok, nil}
-  defp testmode(_testmode), do: configuration_error(:invalid_testmode)
 
   defp param_or_default(params, keys, default) do
     case fetch_param(params, keys) do

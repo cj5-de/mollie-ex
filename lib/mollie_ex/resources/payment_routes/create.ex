@@ -80,12 +80,8 @@ defmodule MollieEx.Resources.PaymentRoutes.Create do
       {:ok, testmode} -> testmode
       :error -> param_or_default(params, [:testmode, "testmode"], client.testmode)
     end
-    |> testmode()
+    |> Options.testmode()
   end
-
-  defp testmode(testmode) when is_boolean(testmode), do: {:ok, testmode}
-  defp testmode(nil), do: {:ok, nil}
-  defp testmode(_testmode), do: configuration_error(:invalid_testmode)
 
   defp param_or_default(params, keys, default) do
     case fetch_param(params, keys) do

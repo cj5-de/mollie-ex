@@ -23,7 +23,7 @@ defmodule MollieEx.Resources.Payments.Get do
          {:ok, payment_id} <- payment_id(payment_id),
          {:ok, include} <- Options.string_option(opts, :include),
          {:ok, embed} <- Options.string_option(opts, :embed),
-         {:ok, testmode} <- effective_testmode(client, opts) do
+         {:ok, testmode} <- Options.effective_testmode(client, opts) do
       request = %Request{
         method: :get,
         path: "/payments/" <> encode_path_segment(payment_id),
@@ -49,24 +49,6 @@ defmodule MollieEx.Resources.Payments.Get do
       {:ok, payment_id}
     end
   end
-
-  defp effective_testmode(%Client{auth: {:api_key, _credential}}, opts) do
-    if Keyword.has_key?(opts, :testmode) do
-      configuration_error(:unsupported_testmode)
-    else
-      {:ok, nil}
-    end
-  end
-
-  defp effective_testmode(%Client{} = client, opts) do
-    opts
-    |> Keyword.get(:testmode, client.testmode)
-    |> testmode()
-  end
-
-  defp testmode(testmode) when is_boolean(testmode), do: {:ok, testmode}
-  defp testmode(nil), do: {:ok, nil}
-  defp testmode(_testmode), do: configuration_error(:invalid_testmode)
 
   defp query(include, embed, testmode) do
     []
