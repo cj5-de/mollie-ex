@@ -1,6 +1,6 @@
 defmodule MollieEx.Customers do
   @moduledoc """
-  Create, retrieve, list, update, and delete Mollie customers.
+  Create, retrieve, list, update, delete, and inspect payments for Mollie customers.
 
   All functions return result tuples. They do not raise for ordinary API,
   transport, or validation failures.
@@ -26,7 +26,8 @@ defmodule MollieEx.Customers do
   alias MollieEx.Customer
   alias MollieEx.Error
   alias MollieEx.List, as: MollieList
-  alias MollieEx.Resources.Customers.{Create, Delete, Get, Update}
+  alias MollieEx.Payment
+  alias MollieEx.Resources.Customers.{Create, Delete, Get, ListPayments, Update}
   alias MollieEx.Resources.Customers.List, as: ListRequest
   alias MollieEx.Resources.RequestRunner
 
@@ -47,6 +48,15 @@ defmodule MollieEx.Customers do
           {:from, String.t()}
           | {:limit, pos_integer()}
           | {:sort, :asc | :desc | String.t()}
+          | {:testmode, boolean()}
+          | {:pool_timeout, pos_integer()}
+          | {:receive_timeout, pos_integer()}
+          | {:request_timeout, pos_integer()}
+  @type list_payments_option ::
+          {:from, String.t()}
+          | {:limit, pos_integer()}
+          | {:sort, :asc | :desc | String.t()}
+          | {:profile_id, String.t()}
           | {:testmode, boolean()}
           | {:pool_timeout, pos_integer()}
           | {:receive_timeout, pos_integer()}
@@ -127,6 +137,27 @@ defmodule MollieEx.Customers do
   def list(_client, _opts), do: configuration_error(:invalid_client)
 
   @doc """
+  Lists payments linked to a Mollie customer.
+  """
+  @doc since: "0.1.0"
+  @spec list_payments(Client.t(), String.t(), [list_payments_option()]) ::
+          {:ok, MollieList.t(Payment.t())} | {:error, Error.t()}
+  def list_payments(client, customer_id, opts \\ [])
+
+  def list_payments(%Client{} = client, customer_id, opts)
+      when is_binary(customer_id) and is_list(opts) do
+    with {:ok, request, transport_opts} <- ListPayments.build(client, customer_id, opts) do
+      request_payment_list(client, request, transport_opts)
+    end
+  end
+
+  def list_payments(%Client{}, _customer_id, opts) when not is_list(opts),
+    do: configuration_error(:invalid_options)
+
+  def list_payments(%Client{}, _customer_id, _opts), do: configuration_error(:invalid_customer_id)
+  def list_payments(_client, _customer_id, _opts), do: configuration_error(:invalid_client)
+
+  @doc """
   Updates a Mollie customer by ID.
 
   Customer updates support caller-owned idempotency keys. The SDK never
@@ -195,6 +226,17 @@ defmodule MollieEx.Customers do
       "customers",
       :customers_list,
       &Customer.from_response(&1, :customers_list)
+    )
+  end
+
+  defp request_payment_list(%Client{} = client, request, transport_opts) do
+    RequestRunner.decode_list(
+      client,
+      request,
+      transport_opts,
+      "payments",
+      :customers_list_payments,
+      &Payment.from_response(&1, :customers_list_payments)
     )
   end
 
