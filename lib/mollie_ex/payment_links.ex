@@ -1,6 +1,6 @@
 defmodule MollieEx.PaymentLinks do
   @moduledoc """
-  Create, retrieve, list, update, and delete Mollie payment links.
+  Create, retrieve, list, update, delete, and inspect payments for Mollie payment links.
 
   All functions return result tuples. They do not raise for ordinary API,
   transport, or validation failures.
@@ -25,8 +25,9 @@ defmodule MollieEx.PaymentLinks do
   alias MollieEx.Client
   alias MollieEx.Error
   alias MollieEx.List, as: MollieList
+  alias MollieEx.Payment
   alias MollieEx.PaymentLink
-  alias MollieEx.Resources.PaymentLinks.{Create, Delete, Get, Update}
+  alias MollieEx.Resources.PaymentLinks.{Create, Delete, Get, ListPayments, Update}
   alias MollieEx.Resources.PaymentLinks.List, as: ListRequest
   alias MollieEx.Resources.RequestRunner
 
@@ -46,6 +47,14 @@ defmodule MollieEx.PaymentLinks do
   @type list_option ::
           {:from, String.t()}
           | {:limit, pos_integer()}
+          | {:testmode, boolean()}
+          | {:pool_timeout, pos_integer()}
+          | {:receive_timeout, pos_integer()}
+          | {:request_timeout, pos_integer()}
+  @type list_payments_option ::
+          {:from, String.t()}
+          | {:limit, pos_integer()}
+          | {:sort, :asc | :desc | String.t()}
           | {:testmode, boolean()}
           | {:pool_timeout, pos_integer()}
           | {:receive_timeout, pos_integer()}
@@ -128,6 +137,29 @@ defmodule MollieEx.PaymentLinks do
   def list(_client, _opts), do: configuration_error(:invalid_client)
 
   @doc """
+  Lists payments created for a Mollie payment link.
+  """
+  @doc since: "0.1.0"
+  @spec list_payments(Client.t(), String.t(), [list_payments_option()]) ::
+          {:ok, MollieList.t(Payment.t())} | {:error, Error.t()}
+  def list_payments(client, payment_link_id, opts \\ [])
+
+  def list_payments(%Client{} = client, payment_link_id, opts)
+      when is_binary(payment_link_id) and is_list(opts) do
+    with {:ok, request, transport_opts} <- ListPayments.build(client, payment_link_id, opts) do
+      request_payment_list(client, request, transport_opts)
+    end
+  end
+
+  def list_payments(%Client{}, _payment_link_id, opts) when not is_list(opts),
+    do: configuration_error(:invalid_options)
+
+  def list_payments(%Client{}, _payment_link_id, _opts),
+    do: configuration_error(:invalid_payment_link_id)
+
+  def list_payments(_client, _payment_link_id, _opts), do: configuration_error(:invalid_client)
+
+  @doc """
   Updates a Mollie payment link by ID.
 
   Payment link updates support caller-owned idempotency keys. The SDK never
@@ -204,6 +236,17 @@ defmodule MollieEx.PaymentLinks do
       "payment_links",
       :payment_links_list,
       &PaymentLink.from_response(&1, :payment_links_list)
+    )
+  end
+
+  defp request_payment_list(%Client{} = client, request, transport_opts) do
+    RequestRunner.decode_list(
+      client,
+      request,
+      transport_opts,
+      "payments",
+      :payment_links_list_payments,
+      &Payment.from_response(&1, :payment_links_list_payments)
     )
   end
 
