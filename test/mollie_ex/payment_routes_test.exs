@@ -112,6 +112,53 @@ defmodule MollieEx.PaymentRoutesTest do
              PaymentRoutes.get(client(), "tr_123", "crt_123")
   end
 
+  test "updates a payment route release date with caller idempotency key" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "PATCH"
+      assert conn.request_path == "/v2/payments/tr_123/routes/crt_123"
+      assert conn.query_string == ""
+      assert header(conn, "authorization") == "Bearer #{@api_key}"
+      assert header(conn, "idempotency-key") == "route-release-123"
+      assert_json_body(conn, %{"releaseDate" => release_date()})
+
+      route_fixture_response(conn, 200)
+    end)
+
+    assert {:ok, %Route{id: "crt_123"} = route} =
+             PaymentRoutes.update_release_date(
+               client(),
+               "tr_123",
+               "crt_123",
+               release_date(),
+               idempotency_key: "route-release-123"
+             )
+
+    assert route.payment_id == "tr_123"
+    assert route.release_date == "2026-06-20"
+  end
+
+  test "adds testmode for OAuth route release date update requests" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert_json_body(conn, %{
+        "releaseDate" => release_date(),
+        "testmode" => false
+      })
+
+      route_fixture_response(conn, 200)
+    end)
+
+    client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
+
+    assert {:ok, %Route{id: "crt_123"}} =
+             PaymentRoutes.update_release_date(
+               client,
+               "tr_123",
+               "crt_123",
+               release_date(),
+               testmode: false
+             )
+  end
+
   test "lists payment routes" do
     Req.Test.expect(__MODULE__, fn conn ->
       assert conn.method == "GET"
@@ -161,6 +208,15 @@ defmodule MollieEx.PaymentRoutesTest do
     assert {:error, %Error{reason: {:unsupported_option, :testmode}}} =
              PaymentRoutes.get(client(), "tr_123", "crt_123", testmode: true)
 
+    assert {:error, %Error{reason: :unsupported_testmode}} =
+             PaymentRoutes.update_release_date(
+               client(),
+               "tr_123",
+               "crt_123",
+               release_date(),
+               testmode: true
+             )
+
     refute_receive :request_sent, 10
   end
 
@@ -175,6 +231,24 @@ defmodule MollieEx.PaymentRoutesTest do
 
     assert {:error, %Error{type: :server_error, status: 503}} =
              PaymentRoutes.create(client(max_retries: 1), "tr_123", valid_params())
+  end
+
+  test "does not retry route release date update without idempotency key" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == nil
+
+      conn
+      |> Plug.Conn.put_status(503)
+      |> Req.Test.json(%{"status" => 503})
+    end)
+
+    assert {:error, %Error{type: :server_error, status: 503}} =
+             PaymentRoutes.update_release_date(
+               client(max_retries: 1),
+               "tr_123",
+               "crt_123",
+               release_date()
+             )
   end
 
   test "retries route create with the same caller idempotency key and body" do
@@ -207,6 +281,34 @@ defmodule MollieEx.PaymentRoutesTest do
              )
   end
 
+  test "retries route release date update with the same caller idempotency key and body" do
+    expected_body = %{"releaseDate" => release_date()}
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == "route-release-123"
+      assert_json_body(conn, expected_body)
+
+      conn
+      |> Plug.Conn.put_status(503)
+      |> Req.Test.json(%{"status" => 503})
+    end)
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == "route-release-123"
+      assert_json_body(conn, expected_body)
+      route_fixture_response(conn, 200)
+    end)
+
+    assert {:ok, %Route{id: "crt_123"}} =
+             PaymentRoutes.update_release_date(
+               client(max_retries: 1),
+               "tr_123",
+               "crt_123",
+               release_date(),
+               idempotency_key: "route-release-123"
+             )
+  end
+
   test "retries safe route get and list requests without idempotency key" do
     for operation <- [:get, :list] do
       Req.Test.expect(__MODULE__, fn conn ->
@@ -230,6 +332,7 @@ defmodule MollieEx.PaymentRoutesTest do
     cases = [
       {:create, 422, :validation},
       {:get, 404, :not_found},
+      {:update_release_date, 422, :validation},
       {:list, 429, :rate_limited}
     ]
 
@@ -255,6 +358,7 @@ defmodule MollieEx.PaymentRoutesTest do
     for {operation, expected_operation} <- [
           {:create, :payment_routes_create},
           {:get, :payment_routes_get},
+          {:update_release_date, :payment_routes_update_release_date},
           {:list, :payment_routes_list}
         ] do
       Req.Test.expect(__MODULE__, fn conn ->
@@ -335,8 +439,14 @@ defmodule MollieEx.PaymentRoutesTest do
     assert {:error, %Error{reason: :invalid_client}} =
              PaymentRoutes.create("bad", "tr_123", valid_params())
 
+    assert {:error, %Error{reason: :invalid_client}} =
+             PaymentRoutes.update_release_date("bad", "tr_123", "crt_123", release_date())
+
     assert {:error, %Error{reason: :invalid_payment_id}} =
              PaymentRoutes.create(client(), "", valid_params())
+
+    assert {:error, %Error{reason: :invalid_payment_id}} =
+             PaymentRoutes.update_release_date(client(), "", "crt_123", release_date())
 
     assert {:error, %Error{reason: :invalid_route_params}} =
              PaymentRoutes.create(client(), "tr_123", "bad")
@@ -350,16 +460,63 @@ defmodule MollieEx.PaymentRoutesTest do
     assert {:error, %Error{reason: :invalid_route_id}} =
              PaymentRoutes.get(client(), "tr_123", "")
 
+    assert {:error, %Error{reason: :invalid_route_id}} =
+             PaymentRoutes.update_release_date(client(), "tr_123", "", release_date())
+
+    assert {:error, %Error{reason: :invalid_release_date}} =
+             PaymentRoutes.update_release_date(client(), "tr_123", "crt_123", "")
+
+    assert {:error, %Error{reason: :invalid_release_date}} =
+             PaymentRoutes.update_release_date(
+               client(),
+               "tr_123",
+               "crt_123",
+               "2026-07-01T12:00:00Z"
+             )
+
+    assert {:error, %Error{reason: :invalid_release_date}} =
+             PaymentRoutes.update_release_date(client(), "tr_123", "crt_123", "2026-02-31")
+
+    assert {:error, %Error{reason: :invalid_release_date}} =
+             PaymentRoutes.update_release_date(client(), "tr_123", "crt_123", :tomorrow)
+
     assert {:error, %Error{reason: :invalid_options}} =
              PaymentRoutes.list(client(), "tr_123", "bad")
 
+    assert {:error, %Error{reason: :invalid_options}} =
+             PaymentRoutes.update_release_date(
+               client(),
+               "tr_123",
+               "crt_123",
+               release_date(),
+               "bad"
+             )
+
     assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
              PaymentRoutes.list(client(), "tr_123", unknown: true)
+
+    assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
+             PaymentRoutes.update_release_date(
+               client(),
+               "tr_123",
+               "crt_123",
+               release_date(),
+               unknown: true
+             )
 
     assert {:error, %Error{reason: :invalid_testmode}} =
              PaymentRoutes.list(
                TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
                "tr_123",
+               testmode: "true"
+             )
+
+    assert {:error, %Error{reason: :invalid_testmode}} =
+             PaymentRoutes.update_release_date(
+               TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
+               "tr_123",
+               "crt_123",
+               release_date(),
                testmode: "true"
              )
 
@@ -402,6 +559,28 @@ defmodule MollieEx.PaymentRoutesTest do
       prefix,
       :payment_routes_get,
       "GET",
+      "/payments/{paymentId}/routes/{routeId}",
+      200,
+      [@api_key, "crt_123", "authorization"]
+    )
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      route_fixture_response(conn, 200)
+    end)
+
+    assert {:ok, %Route{}} =
+             PaymentRoutes.update_release_date(
+               client(telemetry_prefix: prefix),
+               "tr_123",
+               "crt_123",
+               release_date(),
+               idempotency_key: "route-release-123"
+             )
+
+    assert_success_telemetry(
+      prefix,
+      :payment_routes_update_release_date,
+      "PATCH",
       "/payments/{paymentId}/routes/{routeId}",
       200,
       [@api_key, "crt_123", "authorization"]
@@ -489,6 +668,10 @@ defmodule MollieEx.PaymentRoutesTest do
 
   defp call_operation(:create, client), do: PaymentRoutes.create(client, "tr_123", valid_params())
   defp call_operation(:get, client), do: PaymentRoutes.get(client, "tr_123", "crt_123")
+
+  defp call_operation(:update_release_date, client),
+    do: PaymentRoutes.update_release_date(client, "tr_123", "crt_123", release_date())
+
   defp call_operation(:list, client), do: PaymentRoutes.list(client, "tr_123")
 
   defp client(opts \\ []) do
@@ -503,6 +686,8 @@ defmodule MollieEx.PaymentRoutesTest do
       destination: %{type: "organization", organization_id: "org_123"}
     }
   end
+
+  defp release_date, do: "2026-07-01"
 
   defp route_response(:list, conn), do: route_list_fixture_response(conn, 200)
   defp route_response(_operation, conn), do: route_fixture_response(conn, 200)
