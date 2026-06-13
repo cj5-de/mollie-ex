@@ -65,10 +65,27 @@ defmodule MollieEx.MixProject do
 
   defp docs do
     [
-      main: "readme",
+      main: "overview",
       source_ref: "v#{@version}",
       source_url: @source_url,
-      extras: ["README.md", "CHANGELOG.md", "LICENSE"],
+      extras: [
+        "guides/overview.md",
+        "guides/getting-started.md",
+        "guides/resources.md",
+        "CHANGELOG.md",
+        "LICENSE"
+      ],
+      groups_for_extras: [
+        Guides: [
+          "guides/overview.md",
+          "guides/getting-started.md",
+          "guides/resources.md"
+        ],
+        Reference: [
+          "CHANGELOG.md",
+          "LICENSE"
+        ]
+      ],
       groups_for_modules: [
         Client: [
           MollieEx,

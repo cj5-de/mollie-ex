@@ -4,7 +4,24 @@ defmodule MollieEx.Payments do
 
   All functions return result tuples. They do not raise for ordinary API,
   transport, or validation failures.
+
+  Write operations accept caller-owned idempotency keys. The SDK never
+  generates idempotency keys implicitly.
+
+  ```elixir
+  {:ok, payment} =
+    MollieEx.Payments.create(
+      client,
+      %{
+        description: "Order #123",
+        amount: %{currency: "EUR", value: "10.00"},
+        redirect_url: "https://example.com/checkout/return"
+      },
+      idempotency_key: "9f0f9a78-9d56-4d2b-a7b6-7fdb8cc7d5f3"
+    )
+  ```
   """
+  @moduledoc since: "0.1.0"
 
   alias MollieEx.Client
   alias MollieEx.Error
@@ -67,6 +84,7 @@ defmodule MollieEx.Payments do
   Payment creation supports caller-owned idempotency keys. The SDK never
   generates idempotency keys implicitly.
   """
+  @doc since: "0.1.0"
   @spec create(Client.t(), create_params(), [create_option()]) ::
           {:ok, Payment.t()} | {:error, Error.t()}
   def create(client, params, opts \\ [])
@@ -86,6 +104,7 @@ defmodule MollieEx.Payments do
   @doc """
   Retrieves a Mollie payment by payment ID.
   """
+  @doc since: "0.1.0"
   @spec get(Client.t(), String.t(), [get_option()]) :: {:ok, Payment.t()} | {:error, Error.t()}
   def get(client, payment_id, opts \\ [])
 
@@ -104,6 +123,7 @@ defmodule MollieEx.Payments do
   @doc """
   Lists Mollie payments.
   """
+  @doc since: "0.1.0"
   @spec list(Client.t(), [list_option()]) ::
           {:ok, MollieList.t(Payment.t())} | {:error, Error.t()}
   def list(client, opts \\ [])
@@ -123,6 +143,7 @@ defmodule MollieEx.Payments do
   Payment updates support caller-owned idempotency keys. The SDK never
   generates idempotency keys implicitly.
   """
+  @doc since: "0.1.0"
   @spec update(Client.t(), String.t(), update_params(), [update_option()]) ::
           {:ok, Payment.t()} | {:error, Error.t()}
   def update(client, payment_id, params, opts \\ [])
@@ -149,6 +170,7 @@ defmodule MollieEx.Payments do
   Payment cancellation supports caller-owned idempotency keys. The SDK never
   generates idempotency keys implicitly.
   """
+  @doc since: "0.1.0"
   @spec cancel(Client.t(), String.t(), [cancel_option()]) ::
           {:ok, Payment.t()} | {:error, Error.t()}
   def cancel(client, payment_id, opts \\ [])
@@ -171,6 +193,7 @@ defmodule MollieEx.Payments do
   Authorization release supports caller-owned idempotency keys. The SDK never
   generates idempotency keys implicitly.
   """
+  @doc since: "0.1.0"
   @spec release_authorization(Client.t(), String.t(), [release_authorization_option()]) ::
           {:ok, :accepted} | {:error, Error.t()}
   def release_authorization(client, payment_id, opts \\ [])

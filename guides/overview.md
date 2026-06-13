@@ -1,9 +1,9 @@
-# mollie_ex
+# MollieEx
 
-Community driven Elixir SDK for [Mollie](https://www.mollie.com/de/).
+`mollie_ex` is a community driven Elixir SDK for the Mollie API.
 
-Hex package and Mix application name: `:mollie_ex`.
-Public SDK module namespace: `MollieEx.*`.
+The Hex package and Mix application name is `:mollie_ex`. Public SDK modules
+use the `MollieEx.*` namespace.
 
 ## Requirements
 
@@ -25,8 +25,8 @@ end
 
 ## Basic usage
 
-Build an explicit client. The library does not read credentials from the
-environment by itself.
+Build an explicit `MollieEx.Client`. The library does not read credentials from
+the environment by itself.
 
 ```elixir
 client =
@@ -48,7 +48,11 @@ client =
 checkout_url = MollieEx.Payment.checkout_url(payment)
 ```
 
-## Documentation
+## Next steps
 
-Full guides and API reference are available on
-[HexDocs](https://hexdocs.pm/mollie_ex/).
+- [Getting started](guides/getting-started.md) covers installation, client
+  setup, payment creation, and result handling.
+- [Resources](guides/resources.md) covers payments, refunds, captures,
+  pagination, and idempotency.
+- `MollieEx.Client`, `MollieEx.Payments`, `MollieEx.Refunds`, and
+  `MollieEx.Captures` provide the API reference.

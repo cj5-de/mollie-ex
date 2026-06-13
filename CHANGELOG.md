@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Changed
+
+- Move detailed usage documentation from README into HexDocs guide and API
+  documentation.
+
 ## 0.1.0 - 2026-06-12
 
 ### Added
