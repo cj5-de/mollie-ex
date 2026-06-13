@@ -1,12 +1,14 @@
 defmodule MollieEx.PaymentsTest do
   use ExUnit.Case, async: false
 
-  alias MollieEx.Client
   alias MollieEx.Error
   alias MollieEx.List, as: MollieList
   alias MollieEx.Payment
   alias MollieEx.Payments
+  alias MollieEx.TestSupport
   alias MollieEx.Types.{Link, Money}
+
+  import MollieEx.TestSupport, except: [client: 2]
 
   setup {Req.Test, :verify_on_exit!}
 
@@ -94,11 +96,10 @@ defmodule MollieEx.PaymentsTest do
     end)
 
     client =
-      Client.new!(
+      TestSupport.client(__MODULE__,
         oauth_token: "access_test_secret",
         profile_id: "pfl_default",
-        testmode: true,
-        transport: {:req_test, __MODULE__}
+        testmode: true
       )
 
     assert {:ok, %Payment{id: "tr_123"}} =
@@ -128,11 +129,10 @@ defmodule MollieEx.PaymentsTest do
     end)
 
     client =
-      Client.new!(
+      TestSupport.client(__MODULE__,
         oauth_token: "access_test_secret",
         profile_id: "pfl_default",
-        testmode: true,
-        transport: {:req_test, __MODULE__}
+        testmode: true
       )
 
     assert {:ok, %Payment{id: "tr_123"}} =
@@ -145,7 +145,7 @@ defmodule MollieEx.PaymentsTest do
   end
 
   test "requires profileId for non-API-key create requests" do
-    client = Client.new!(oauth_token: "access_test_secret", transport: {:req_test, __MODULE__})
+    client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret")
 
     assert {:error, %Error{} = error} =
              Payments.create(client, %{description: "Order #123"})
@@ -248,11 +248,10 @@ defmodule MollieEx.PaymentsTest do
     end)
 
     client =
-      Client.new!(
+      TestSupport.client(__MODULE__,
         oauth_token: "access_test_secret",
         profile_id: "pfl_default",
-        testmode: true,
-        transport: {:req_test, __MODULE__}
+        testmode: true
       )
 
     assert {:ok, %Payment{id: "tr_123"}} =
@@ -361,11 +360,10 @@ defmodule MollieEx.PaymentsTest do
     end)
 
     client =
-      Client.new!(
+      TestSupport.client(__MODULE__,
         oauth_token: "access_test_secret",
         profile_id: "pfl_default",
-        testmode: true,
-        transport: {:req_test, __MODULE__}
+        testmode: true
       )
 
     assert {:ok, %Payment{id: "tr_123"}} =
@@ -435,7 +433,7 @@ defmodule MollieEx.PaymentsTest do
       assert header(conn, "idempotency-key") == "release-123"
       assert_empty_body(conn)
 
-      accepted_response(conn)
+      empty_response(conn, 202)
     end)
 
     assert {:ok, :accepted} =
@@ -451,15 +449,14 @@ defmodule MollieEx.PaymentsTest do
         "testmode" => false
       })
 
-      accepted_response(conn)
+      empty_response(conn, 202)
     end)
 
     client =
-      Client.new!(
+      TestSupport.client(__MODULE__,
         oauth_token: "access_test_secret",
         profile_id: "pfl_default",
-        testmode: true,
-        transport: {:req_test, __MODULE__}
+        testmode: true
       )
 
     assert {:ok, :accepted} =
@@ -472,7 +469,7 @@ defmodule MollieEx.PaymentsTest do
   end
 
   test "requires profileId for non-API-key release authorization requests" do
-    client = Client.new!(oauth_token: "access_test_secret", transport: {:req_test, __MODULE__})
+    client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret")
 
     assert {:error, %Error{} = error} = Payments.release_authorization(client, "tr_123")
     assert error.type == :configuration
@@ -516,11 +513,10 @@ defmodule MollieEx.PaymentsTest do
     expected_body = %{"profileId" => "pfl_default", "testmode" => true}
 
     client =
-      Client.new!(
+      TestSupport.client(__MODULE__,
         organization_token: "org_test_secret",
         profile_id: "pfl_default",
         testmode: true,
-        transport: {:req_test, __MODULE__},
         max_retries: 1
       )
 
@@ -540,7 +536,7 @@ defmodule MollieEx.PaymentsTest do
       assert header(conn, "idempotency-key") == "release-123"
       assert_json_body(conn, expected_body)
 
-      accepted_response(conn)
+      empty_response(conn, 202)
     end)
 
     assert {:ok, :accepted} =
@@ -577,11 +573,10 @@ defmodule MollieEx.PaymentsTest do
     end)
 
     client =
-      Client.new!(
+      TestSupport.client(__MODULE__,
         organization_token: "org_test_secret",
         profile_id: "pfl_123",
-        testmode: true,
-        transport: {:req_test, __MODULE__}
+        testmode: true
       )
 
     assert {:ok, %Payment{id: "tr_123"}} = Payments.get(client, "tr_123")
@@ -629,11 +624,10 @@ defmodule MollieEx.PaymentsTest do
     end)
 
     client =
-      Client.new!(
+      TestSupport.client(__MODULE__,
         organization_token: "org_test_secret",
         profile_id: "pfl_default",
-        testmode: true,
-        transport: {:req_test, __MODULE__}
+        testmode: true
       )
 
     assert {:ok, %MollieList{data: [%Payment{id: "tr_list_123"}]}} =
@@ -641,7 +635,7 @@ defmodule MollieEx.PaymentsTest do
   end
 
   test "requires profileId for non-API-key list requests" do
-    client = Client.new!(oauth_token: "access_test_secret", transport: {:req_test, __MODULE__})
+    client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret")
 
     assert {:error, %Error{} = error} = Payments.list(client)
     assert error.type == :configuration
@@ -974,10 +968,7 @@ defmodule MollieEx.PaymentsTest do
 
     assert {:error, %Error{reason: :invalid_testmode}} =
              Payments.update(
-               Client.new!(
-                 oauth_token: "access_test_secret",
-                 transport: {:req_test, __MODULE__}
-               ),
+               TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
                "tr_123",
                %{description: "Updated"},
                testmode: "true"
@@ -985,20 +976,16 @@ defmodule MollieEx.PaymentsTest do
 
     assert {:error, %Error{reason: :invalid_testmode}} =
              Payments.cancel(
-               Client.new!(
-                 oauth_token: "access_test_secret",
-                 transport: {:req_test, __MODULE__}
-               ),
+               TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
                "tr_123",
                testmode: "true"
              )
 
     assert {:error, %Error{reason: :invalid_testmode}} =
              Payments.release_authorization(
-               Client.new!(
+               TestSupport.client(__MODULE__,
                  oauth_token: "access_test_secret",
-                 profile_id: "pfl_123",
-                 transport: {:req_test, __MODULE__}
+                 profile_id: "pfl_123"
                ),
                "tr_123",
                testmode: "true"
@@ -1006,19 +993,13 @@ defmodule MollieEx.PaymentsTest do
 
     assert {:error, %Error{reason: :missing_profile_id}} =
              Payments.release_authorization(
-               Client.new!(
-                 oauth_token: "access_test_secret",
-                 transport: {:req_test, __MODULE__}
-               ),
+               TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
                "tr_123"
              )
 
     assert {:error, %Error{reason: :invalid_profile_id}} =
              Payments.release_authorization(
-               Client.new!(
-                 oauth_token: "access_test_secret",
-                 transport: {:req_test, __MODULE__}
-               ),
+               TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
                "tr_123",
                profile_id: ""
              )
@@ -1381,25 +1362,12 @@ defmodule MollieEx.PaymentsTest do
     assert {:ok, %Payment{}} =
              Payments.create(client, %{description: "Order #123"}, idempotency_key: "order-123")
 
-    start_event = prefix ++ [:request, :start]
-    stop_event = prefix ++ [:request, :stop]
-
-    assert_receive {:telemetry, ^start_event, %{system_time: system_time}, start_metadata}
-    assert is_integer(system_time)
-    assert start_metadata.operation == :payments_create
-    assert start_metadata.method == "POST"
-    assert start_metadata.path_template == "/payments"
-
-    assert_receive {:telemetry, ^stop_event, %{duration: duration}, stop_metadata}
-    assert is_integer(duration)
-    assert stop_metadata.status == 201
-    assert stop_metadata.operation == :payments_create
-
-    telemetry_text = inspect([start_metadata, stop_metadata])
-    refute telemetry_text =~ @api_key
-    refute telemetry_text =~ "order-123"
-    refute telemetry_text =~ "Order #123"
-    refute telemetry_text =~ "authorization"
+    assert_success_telemetry(prefix, :payments_create, "POST", "/payments", 201, [
+      @api_key,
+      "order-123",
+      "Order #123",
+      "authorization"
+    ])
   end
 
   test "emits safe request telemetry for successful payment update calls" do
@@ -1416,25 +1384,12 @@ defmodule MollieEx.PaymentsTest do
                idempotency_key: "update-123"
              )
 
-    start_event = prefix ++ [:request, :start]
-    stop_event = prefix ++ [:request, :stop]
-
-    assert_receive {:telemetry, ^start_event, %{system_time: system_time}, start_metadata}
-    assert is_integer(system_time)
-    assert start_metadata.operation == :payments_update
-    assert start_metadata.method == "PATCH"
-    assert start_metadata.path_template == "/payments/{paymentId}"
-
-    assert_receive {:telemetry, ^stop_event, %{duration: duration}, stop_metadata}
-    assert is_integer(duration)
-    assert stop_metadata.status == 200
-    assert stop_metadata.operation == :payments_update
-
-    telemetry_text = inspect([start_metadata, stop_metadata])
-    refute telemetry_text =~ @api_key
-    refute telemetry_text =~ "update-123"
-    refute telemetry_text =~ "Updated order #123"
-    refute telemetry_text =~ "authorization"
+    assert_success_telemetry(prefix, :payments_update, "PATCH", "/payments/{paymentId}", 200, [
+      @api_key,
+      "update-123",
+      "Updated order #123",
+      "authorization"
+    ])
   end
 
   test "emits safe request telemetry for successful payment cancel calls" do
@@ -1449,24 +1404,11 @@ defmodule MollieEx.PaymentsTest do
              client(telemetry_prefix: prefix)
              |> Payments.cancel("tr_123", idempotency_key: "cancel-123")
 
-    start_event = prefix ++ [:request, :start]
-    stop_event = prefix ++ [:request, :stop]
-
-    assert_receive {:telemetry, ^start_event, %{system_time: system_time}, start_metadata}
-    assert is_integer(system_time)
-    assert start_metadata.operation == :payments_cancel
-    assert start_metadata.method == "DELETE"
-    assert start_metadata.path_template == "/payments/{paymentId}"
-
-    assert_receive {:telemetry, ^stop_event, %{duration: duration}, stop_metadata}
-    assert is_integer(duration)
-    assert stop_metadata.status == 200
-    assert stop_metadata.operation == :payments_cancel
-
-    telemetry_text = inspect([start_metadata, stop_metadata])
-    refute telemetry_text =~ @api_key
-    refute telemetry_text =~ "cancel-123"
-    refute telemetry_text =~ "authorization"
+    assert_success_telemetry(prefix, :payments_cancel, "DELETE", "/payments/{paymentId}", 200, [
+      @api_key,
+      "cancel-123",
+      "authorization"
+    ])
   end
 
   test "emits safe request telemetry for successful release authorization calls" do
@@ -1474,31 +1416,21 @@ defmodule MollieEx.PaymentsTest do
     attach_telemetry(prefix, [[:request, :start], [:request, :stop]])
 
     Req.Test.expect(__MODULE__, fn conn ->
-      accepted_response(conn)
+      empty_response(conn, 202)
     end)
 
     assert {:ok, :accepted} =
              client(telemetry_prefix: prefix)
              |> Payments.release_authorization("tr_123", idempotency_key: "release-123")
 
-    start_event = prefix ++ [:request, :start]
-    stop_event = prefix ++ [:request, :stop]
-
-    assert_receive {:telemetry, ^start_event, %{system_time: system_time}, start_metadata}
-    assert is_integer(system_time)
-    assert start_metadata.operation == :payments_release_authorization
-    assert start_metadata.method == "POST"
-    assert start_metadata.path_template == "/payments/{paymentId}/release-authorization"
-
-    assert_receive {:telemetry, ^stop_event, %{duration: duration}, stop_metadata}
-    assert is_integer(duration)
-    assert stop_metadata.status == 202
-    assert stop_metadata.operation == :payments_release_authorization
-
-    telemetry_text = inspect([start_metadata, stop_metadata])
-    refute telemetry_text =~ @api_key
-    refute telemetry_text =~ "release-123"
-    refute telemetry_text =~ "Bearer"
+    assert_success_telemetry(
+      prefix,
+      :payments_release_authorization,
+      "POST",
+      "/payments/{paymentId}/release-authorization",
+      202,
+      [@api_key, "release-123", "Bearer"]
+    )
   end
 
   test "emits safe request telemetry for successful payment list calls" do
@@ -1513,23 +1445,10 @@ defmodule MollieEx.PaymentsTest do
              client(telemetry_prefix: prefix)
              |> Payments.list(limit: 1, sort: "desc")
 
-    start_event = prefix ++ [:request, :start]
-    stop_event = prefix ++ [:request, :stop]
-
-    assert_receive {:telemetry, ^start_event, %{system_time: system_time}, start_metadata}
-    assert is_integer(system_time)
-    assert start_metadata.operation == :payments_list
-    assert start_metadata.method == "GET"
-    assert start_metadata.path_template == "/payments"
-
-    assert_receive {:telemetry, ^stop_event, %{duration: duration}, stop_metadata}
-    assert is_integer(duration)
-    assert stop_metadata.status == 200
-    assert stop_metadata.operation == :payments_list
-
-    telemetry_text = inspect([start_metadata, stop_metadata])
-    refute telemetry_text =~ @api_key
-    refute telemetry_text =~ "authorization"
+    assert_success_telemetry(prefix, :payments_list, "GET", "/payments", 200, [
+      @api_key,
+      "authorization"
+    ])
   end
 
   test "emits safe decode exception and rate limit telemetry" do
@@ -1593,65 +1512,15 @@ defmodule MollieEx.PaymentsTest do
   end
 
   defp client(opts \\ []) do
-    [api_key: @api_key, transport: {:req_test, __MODULE__}]
+    [api_key: @api_key]
     |> Keyword.merge(opts)
-    |> Client.new!()
+    |> then(&TestSupport.client(__MODULE__, &1))
   end
 
-  defp payment_fixture_response(conn, status) do
-    conn
-    |> Plug.Conn.put_resp_header("content-type", "application/hal+json")
-    |> Plug.Conn.send_resp(status, File.read!(@payment_fixture))
-  end
+  defp payment_fixture_response(conn, status),
+    do: fixture_response(conn, @payment_fixture, status)
 
   defp payment_list_fixture_response(conn, status) do
-    conn
-    |> Plug.Conn.put_resp_header("content-type", "application/hal+json")
-    |> Plug.Conn.send_resp(status, File.read!(@payment_list_fixture))
-  end
-
-  defp accepted_response(conn) do
-    Plug.Conn.send_resp(conn, 202, "")
-  end
-
-  defp assert_json_body(conn, expected) do
-    assert {:ok, decoded} =
-             conn
-             |> Req.Test.raw_body()
-             |> IO.iodata_to_binary()
-             |> Jason.decode()
-
-    assert decoded == expected
-  end
-
-  defp assert_empty_body(conn) do
-    assert conn |> Req.Test.raw_body() |> IO.iodata_to_binary() == ""
-  end
-
-  defp header(conn, name) do
-    conn.req_headers
-    |> List.keyfind(name, 0)
-    |> case do
-      {^name, value} -> value
-      nil -> nil
-    end
-  end
-
-  defp attach_telemetry(prefix, suffixes) do
-    handler_id = {__MODULE__, self(), make_ref()}
-    events = Enum.map(suffixes, &(prefix ++ &1))
-
-    :telemetry.attach_many(
-      handler_id,
-      events,
-      &__MODULE__.handle_telemetry/4,
-      self()
-    )
-
-    on_exit(fn -> :telemetry.detach(handler_id) end)
-  end
-
-  def handle_telemetry(event, measurements, metadata, test_pid) do
-    send(test_pid, {:telemetry, event, measurements, metadata})
+    fixture_response(conn, @payment_list_fixture, status)
   end
 end

@@ -3,10 +3,12 @@ defmodule MollieEx.ChargebacksTest do
 
   alias MollieEx.Chargeback
   alias MollieEx.Chargebacks
-  alias MollieEx.Client
   alias MollieEx.Error
   alias MollieEx.List, as: MollieList
+  alias MollieEx.TestSupport
   alias MollieEx.Types.{Link, Money}
+
+  import MollieEx.TestSupport, except: [client: 2]
 
   setup {Req.Test, :verify_on_exit!}
 
@@ -67,12 +69,7 @@ defmodule MollieEx.ChargebacksTest do
       chargeback_fixture_response(conn, 200)
     end)
 
-    client =
-      Client.new!(
-        oauth_token: "access_test_secret",
-        testmode: true,
-        transport: {:req_test, __MODULE__}
-      )
+    client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
 
     assert {:ok, %Chargeback{id: "chb_123"}} =
              Chargebacks.get(client, "tr_123", "chb_123", embed: "payment", testmode: false)
@@ -111,12 +108,7 @@ defmodule MollieEx.ChargebacksTest do
       chargeback_list_fixture_response(conn, 200)
     end)
 
-    client =
-      Client.new!(
-        oauth_token: "access_test_secret",
-        testmode: true,
-        transport: {:req_test, __MODULE__}
-      )
+    client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
 
     assert {:ok, %MollieList{}} = Chargebacks.list(client, "tr_123", testmode: false)
   end
@@ -292,7 +284,7 @@ defmodule MollieEx.ChargebacksTest do
 
     assert {:error, %Error{reason: :invalid_testmode}} =
              Chargebacks.get(
-               Client.new!(oauth_token: "access_test_secret", transport: {:req_test, __MODULE__}),
+               TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
                "tr_123",
                "chb_123",
                testmode: "true"
@@ -300,7 +292,7 @@ defmodule MollieEx.ChargebacksTest do
 
     assert {:error, %Error{reason: :invalid_testmode}} =
              Chargebacks.list(
-               Client.new!(oauth_token: "access_test_secret", transport: {:req_test, __MODULE__}),
+               TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
                "tr_123",
                testmode: "true"
              )
@@ -324,7 +316,8 @@ defmodule MollieEx.ChargebacksTest do
       :chargebacks_get,
       "GET",
       "/payments/{paymentId}/chargebacks/{chargebackId}",
-      200
+      200,
+      [@api_key, "chb_123", "authorization"]
     )
 
     Req.Test.expect(__MODULE__, fn conn ->
@@ -339,7 +332,8 @@ defmodule MollieEx.ChargebacksTest do
       :chargebacks_list,
       "GET",
       "/payments/{paymentId}/chargebacks",
-      200
+      200,
+      [@api_key, "chb_123", "authorization"]
     )
   end
 
@@ -410,72 +404,15 @@ defmodule MollieEx.ChargebacksTest do
   defp call_operation(:list, client), do: Chargebacks.list(client, "tr_123")
 
   defp client(opts \\ []) do
-    [api_key: @api_key, transport: {:req_test, __MODULE__}]
+    [api_key: @api_key]
     |> Keyword.merge(opts)
-    |> Client.new!()
+    |> then(&TestSupport.client(__MODULE__, &1))
   end
 
-  defp chargeback_fixture_response(conn, status) do
-    conn
-    |> Plug.Conn.put_resp_header("content-type", "application/hal+json")
-    |> Plug.Conn.send_resp(status, File.read!(@chargeback_fixture))
-  end
+  defp chargeback_fixture_response(conn, status),
+    do: fixture_response(conn, @chargeback_fixture, status)
 
   defp chargeback_list_fixture_response(conn, status) do
-    conn
-    |> Plug.Conn.put_resp_header("content-type", "application/hal+json")
-    |> Plug.Conn.send_resp(status, File.read!(@chargeback_list_fixture))
-  end
-
-  defp assert_empty_body(conn) do
-    assert conn |> Req.Test.raw_body() |> IO.iodata_to_binary() == ""
-  end
-
-  defp header(conn, name) do
-    conn.req_headers
-    |> List.keyfind(name, 0)
-    |> case do
-      {^name, value} -> value
-      nil -> nil
-    end
-  end
-
-  defp assert_success_telemetry(prefix, operation, method, path_template, status) do
-    start_event = prefix ++ [:request, :start]
-    stop_event = prefix ++ [:request, :stop]
-
-    assert_receive {:telemetry, ^start_event, %{system_time: system_time}, start_metadata}
-    assert is_integer(system_time)
-    assert start_metadata.operation == operation
-    assert start_metadata.method == method
-    assert start_metadata.path_template == path_template
-
-    assert_receive {:telemetry, ^stop_event, %{duration: duration}, stop_metadata}
-    assert is_integer(duration)
-    assert stop_metadata.status == status
-    assert stop_metadata.operation == operation
-
-    telemetry_text = inspect([start_metadata, stop_metadata])
-    refute telemetry_text =~ @api_key
-    refute telemetry_text =~ "chb_123"
-    refute telemetry_text =~ "authorization"
-  end
-
-  defp attach_telemetry(prefix, suffixes) do
-    handler_id = {__MODULE__, self(), make_ref()}
-    events = Enum.map(suffixes, &(prefix ++ &1))
-
-    :telemetry.attach_many(
-      handler_id,
-      events,
-      &__MODULE__.handle_telemetry/4,
-      self()
-    )
-
-    on_exit(fn -> :telemetry.detach(handler_id) end)
-  end
-
-  def handle_telemetry(event, measurements, metadata, test_pid) do
-    send(test_pid, {:telemetry, event, measurements, metadata})
+    fixture_response(conn, @chargeback_list_fixture, status)
   end
 end

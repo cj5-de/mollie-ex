@@ -47,12 +47,11 @@ defmodule MollieEx.TestSupport do
     |> Plug.Conn.send_resp(status, File.read!(fixture_path))
   end
 
+  @spec empty_response(Plug.Conn.t(), non_neg_integer()) :: Plug.Conn.t()
+  def empty_response(conn, status), do: Plug.Conn.send_resp(conn, status, "")
+
   @spec no_content_response(Plug.Conn.t()) :: Plug.Conn.t()
-  def no_content_response(conn) do
-    conn
-    |> Plug.Conn.put_resp_header("content-type", "application/json")
-    |> Plug.Conn.send_resp(204, "")
-  end
+  def no_content_response(conn), do: empty_response(conn, 204)
 
   def attach_telemetry(prefix, suffixes) when is_list(prefix) and is_list(suffixes) do
     handler_id = {__MODULE__, self(), make_ref()}
