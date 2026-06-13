@@ -4,7 +4,7 @@ defmodule MollieEx.Resources.Refunds.Cancel do
   alias MollieEx.Client
   alias MollieEx.Error
   alias MollieEx.HTTP.Request
-  alias MollieEx.Resources.Refunds.Options
+  alias MollieEx.Resources.Options
 
   @allowed_options [
     :idempotency_key,

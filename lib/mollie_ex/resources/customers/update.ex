@@ -5,7 +5,7 @@ defmodule MollieEx.Resources.Customers.Update do
   alias MollieEx.Error
   alias MollieEx.HTTP.Request
   alias MollieEx.Resources.Casing
-  alias MollieEx.Resources.Customers.Options
+  alias MollieEx.Resources.Options
 
   @allowed_options [
     :idempotency_key,

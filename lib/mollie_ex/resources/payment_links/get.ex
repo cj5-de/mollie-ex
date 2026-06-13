@@ -4,7 +4,7 @@ defmodule MollieEx.Resources.PaymentLinks.Get do
   alias MollieEx.Client
   alias MollieEx.Error
   alias MollieEx.HTTP.Request
-  alias MollieEx.Resources.PaymentLinks.Options
+  alias MollieEx.Resources.Options
 
   @allowed_options [
     :testmode,

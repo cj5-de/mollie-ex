@@ -4,7 +4,7 @@ defmodule MollieEx.Resources.Captures.List do
   alias MollieEx.Client
   alias MollieEx.Error
   alias MollieEx.HTTP.Request
-  alias MollieEx.Resources.Captures.Options
+  alias MollieEx.Resources.Options
 
   @allowed_options [
     :from,

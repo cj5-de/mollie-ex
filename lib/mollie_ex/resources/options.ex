@@ -96,6 +96,28 @@ defmodule MollieEx.Resources.Options do
     end
   end
 
+  @spec payment_id(String.t()) :: {:ok, String.t()} | {:error, Error.t()}
+  def payment_id(payment_id), do: resource_id(payment_id, :invalid_payment_id)
+
+  @spec customer_id(String.t()) :: {:ok, String.t()} | {:error, Error.t()}
+  def customer_id(customer_id), do: resource_id(customer_id, :invalid_customer_id)
+
+  @spec refund_id(String.t()) :: {:ok, String.t()} | {:error, Error.t()}
+  def refund_id(refund_id), do: resource_id(refund_id, :invalid_refund_id)
+
+  @spec capture_id(String.t()) :: {:ok, String.t()} | {:error, Error.t()}
+  def capture_id(capture_id), do: resource_id(capture_id, :invalid_capture_id)
+
+  @spec chargeback_id(String.t()) :: {:ok, String.t()} | {:error, Error.t()}
+  def chargeback_id(chargeback_id), do: resource_id(chargeback_id, :invalid_chargeback_id)
+
+  @spec route_id(String.t()) :: {:ok, String.t()} | {:error, Error.t()}
+  def route_id(route_id), do: resource_id(route_id, :invalid_route_id)
+
+  @spec payment_link_id(String.t()) :: {:ok, String.t()} | {:error, Error.t()}
+  def payment_link_id(payment_link_id),
+    do: resource_id(payment_link_id, :invalid_payment_link_id)
+
   @spec profile_id(term()) :: {:ok, String.t()} | {:error, Error.t()}
   def profile_id(profile_id) when is_binary(profile_id) do
     profile_id = String.trim(profile_id)
