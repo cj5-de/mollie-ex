@@ -1,0 +1,87 @@
+{
+  "resource": "payment-link",
+  "id": "pl_123",
+  "mode": "live",
+  "description": "Order #123",
+  "amount": {
+    "currency": "EUR",
+    "value": "10.00"
+  },
+  "minimumAmount": {
+    "currency": "EUR",
+    "value": "5.00"
+  },
+  "archived": false,
+  "redirectUrl": "https://example.com/checkout/return",
+  "webhookUrl": "https://example.com/webhooks/mollie",
+  "profileId": "pfl_123",
+  "reusable": false,
+  "createdAt": "2026-06-13T11:20:00+00:00",
+  "paidAt": null,
+  "updatedAt": "2026-06-13T11:21:00+00:00",
+  "expiresAt": "2026-07-13T11:20:00+00:00",
+  "allowedMethods": ["ideal", "creditcard"],
+  "applicationFee": {
+    "amount": {
+      "currency": "EUR",
+      "value": "1.00"
+    },
+    "description": "Platform fee"
+  },
+  "sequenceType": "oneoff",
+  "customerId": "cst_123",
+  "lines": [
+    {
+      "description": "Order line",
+      "quantity": 1,
+      "unitPrice": {
+        "currency": "EUR",
+        "value": "10.00"
+      },
+      "totalAmount": {
+        "currency": "EUR",
+        "value": "10.00"
+      },
+      "vatRate": "21.00",
+      "vatAmount": {
+        "currency": "EUR",
+        "value": "1.74"
+      }
+    }
+  ],
+  "billingAddress": {
+    "givenName": "Ada",
+    "familyName": "Lovelace",
+    "email": "ada@example.com",
+    "streetAndNumber": "Main Street 1",
+    "postalCode": "1000 AA",
+    "city": "Amsterdam",
+    "country": "NL"
+  },
+  "shippingAddress": {
+    "givenName": "Ada",
+    "familyName": "Lovelace",
+    "email": "ada@example.com",
+    "streetAndNumber": "Main Street 1",
+    "postalCode": "1000 AA",
+    "city": "Amsterdam",
+    "country": "NL"
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/payment-links/pl_123",
+      "type": "application/hal+json"
+    },
+    "paymentLink": {
+      "href": "https://payment-links.mollie.com/payment/pl_123",
+      "type": "text/html"
+    },
+    "documentation": {
+      "href": "https://docs.mollie.com/reference/get-payment-link",
+      "type": "text/html"
+    }
+  },
+  "unexpectedFutureField": {
+    "visible": true
+  }
+}

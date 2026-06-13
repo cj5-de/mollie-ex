@@ -12,6 +12,7 @@ defmodule MollieEx do
   Payment-scoped chargebacks are available through `MollieEx.Chargebacks`.
   Payment-scoped delayed routes are available through
   `MollieEx.PaymentRoutes`.
+  Payment links are available through `MollieEx.PaymentLinks`.
 
   Full usage guides are available in the HexDocs sidebar:
 

@@ -1,0 +1,51 @@
+{
+  "count": 1,
+  "_embedded": {
+    "payment_links": [
+      {
+        "resource": "payment-link",
+        "id": "pl_list_123",
+        "mode": "live",
+        "description": "Order #123",
+        "amount": {
+          "currency": "EUR",
+          "value": "10.00"
+        },
+        "archived": false,
+        "redirectUrl": "https://example.com/checkout/return",
+        "webhookUrl": "https://example.com/webhooks/mollie",
+        "profileId": "pfl_123",
+        "reusable": false,
+        "createdAt": "2026-06-13T11:20:00+00:00",
+        "paidAt": null,
+        "expiresAt": null,
+        "allowedMethods": null,
+        "_links": {
+          "self": {
+            "href": "https://api.mollie.com/v2/payment-links/pl_list_123",
+            "type": "application/hal+json"
+          },
+          "paymentLink": {
+            "href": "https://payment-links.mollie.com/payment/pl_list_123",
+            "type": "text/html"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/payment-links?limit=1",
+      "type": "application/hal+json"
+    },
+    "previous": null,
+    "next": {
+      "href": "https://api.mollie.com/v2/payment-links?from=pl_next&limit=1",
+      "type": "application/hal+json"
+    },
+    "documentation": {
+      "href": "https://docs.mollie.com/reference/list-payment-links",
+      "type": "text/html"
+    }
+  }
+}
