@@ -140,7 +140,7 @@ Retrieve and list payment chargebacks:
 
 ## Payment routes
 
-Create, retrieve, and list delayed payment routes:
+Create, retrieve, update, and list delayed payment routes:
 
 ```elixir
 {:ok, route} =
@@ -156,6 +156,16 @@ Create, retrieve, and list delayed payment routes:
   )
 
 {:ok, route} = MollieEx.PaymentRoutes.get(client, "tr_123", "crt_123")
+
+{:ok, route} =
+  MollieEx.PaymentRoutes.update_release_date(
+    client,
+    "tr_123",
+    "crt_123",
+    "2026-07-01",
+    idempotency_key: "2d5d68d4-c729-435f-8e8a-a1ef45ae8801"
+  )
+
 {:ok, routes} = MollieEx.PaymentRoutes.list(client, "tr_123")
 ```
 
