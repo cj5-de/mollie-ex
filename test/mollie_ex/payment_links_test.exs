@@ -3,6 +3,7 @@ defmodule MollieEx.PaymentLinksTest do
 
   alias MollieEx.Error
   alias MollieEx.List, as: MollieList
+  alias MollieEx.Payment
   alias MollieEx.PaymentLink
   alias MollieEx.PaymentLinks
   alias MollieEx.TestSupport
@@ -18,6 +19,7 @@ defmodule MollieEx.PaymentLinksTest do
                                "../fixtures/mollie/payment_links/list_success.json",
                                __DIR__
                              )
+  @payment_list_fixture Path.expand("../fixtures/mollie/payments/list_success.json", __DIR__)
 
   test "creates a payment link with camelCased body and caller idempotency key" do
     Req.Test.expect(__MODULE__, fn conn ->
@@ -164,6 +166,41 @@ defmodule MollieEx.PaymentLinksTest do
              payment_link_list.links["next"]
   end
 
+  test "lists payments for a payment link with pagination, sort, and OAuth testmode" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/v2/payment-links/pl_123/payments"
+
+      assert URI.decode_query(conn.query_string) == %{
+               "from" => "tr_from",
+               "limit" => "1",
+               "sort" => "desc",
+               "testmode" => "false"
+             }
+
+      assert header(conn, "idempotency-key") == nil
+      assert_empty_body(conn)
+
+      payment_list_fixture_response(conn, 200)
+    end)
+
+    client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
+
+    assert {:ok, %MollieList{} = payment_list} =
+             PaymentLinks.list_payments(client, "pl_123",
+               from: "tr_from",
+               limit: 1,
+               sort: :desc,
+               testmode: false
+             )
+
+    assert payment_list.count == 1
+    assert [%Payment{id: "tr_list_123", description: "Order #12345"}] = payment_list.data
+
+    assert %Link{href: "https://api.mollie.com/v2/payments?from=tr_next&limit=1"} =
+             payment_list.links["next"]
+  end
+
   test "updates a payment link with camelCased body and caller idempotency key" do
     Req.Test.expect(__MODULE__, fn conn ->
       assert conn.method == "PATCH"
@@ -289,6 +326,9 @@ defmodule MollieEx.PaymentLinksTest do
 
     assert {:error, %Error{reason: :unsupported_testmode}} =
              PaymentLinks.list(client(), testmode: true)
+
+    assert {:error, %Error{reason: :unsupported_testmode}} =
+             PaymentLinks.list_payments(client(), "pl_123", testmode: true)
 
     assert {:error, %Error{reason: :unsupported_testmode}} =
              PaymentLinks.update(client(), "pl_123", update_params(), testmode: true)
@@ -435,7 +475,7 @@ defmodule MollieEx.PaymentLinksTest do
   end
 
   test "retries safe payment link get and list requests without idempotency key" do
-    for operation <- [:get, :list] do
+    for operation <- [:get, :list, :list_payments] do
       Req.Test.expect(__MODULE__, fn conn ->
         assert header(conn, "idempotency-key") == nil
 
@@ -458,6 +498,7 @@ defmodule MollieEx.PaymentLinksTest do
       {:create, 422, :validation},
       {:get, 404, :not_found},
       {:list, 429, :rate_limited},
+      {:list_payments, 429, :rate_limited},
       {:update, 422, :validation},
       {:delete, 404, :not_found}
     ]
@@ -485,6 +526,7 @@ defmodule MollieEx.PaymentLinksTest do
           {:create, :payment_links_create},
           {:get, :payment_links_get},
           {:list, :payment_links_list},
+          {:list_payments, :payment_links_list_payments},
           {:update, :payment_links_update},
           {:delete, :payment_links_delete}
         ] do
@@ -559,6 +601,22 @@ defmodule MollieEx.PaymentLinksTest do
     assert error.raw == invalid_payment_link
   end
 
+  test "returns decode errors for invalid payment link payments list response shapes" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      Req.Test.json(conn, %{
+        "count" => 1,
+        "_embedded" => %{"payments" => %{}},
+        "_links" => %{}
+      })
+    end)
+
+    assert {:error, %Error{} = error} = PaymentLinks.list_payments(client(), "pl_123")
+    assert error.type == :decode
+    assert error.status == 200
+    assert error.reason == :invalid_list_response
+    assert error.operation == :payment_links_list_payments
+  end
+
   test "returns decode errors for invalid payment link delete responses" do
     Req.Test.expect(__MODULE__, fn conn ->
       payment_link_fixture_response(conn, 200)
@@ -589,6 +647,9 @@ defmodule MollieEx.PaymentLinksTest do
              PaymentLinks.delete("bad", "pl_123")
 
     assert {:error, %Error{reason: :invalid_client}} =
+             PaymentLinks.list_payments("bad", "pl_123")
+
+    assert {:error, %Error{reason: :invalid_client}} =
              PaymentLinks.update("bad", "pl_123", update_params())
 
     assert {:error, %Error{reason: :invalid_payment_link_id}} =
@@ -596,6 +657,9 @@ defmodule MollieEx.PaymentLinksTest do
 
     assert {:error, %Error{reason: :invalid_payment_link_id}} =
              PaymentLinks.delete(client(), "")
+
+    assert {:error, %Error{reason: :invalid_payment_link_id}} =
+             PaymentLinks.list_payments(client(), "")
 
     assert {:error, %Error{reason: :invalid_payment_link_params}} =
              PaymentLinks.update(client(), "pl_123", "bad")
@@ -609,8 +673,14 @@ defmodule MollieEx.PaymentLinksTest do
     assert {:error, %Error{reason: :invalid_options}} =
              PaymentLinks.delete(client(), "pl_123", "bad")
 
+    assert {:error, %Error{reason: :invalid_options}} =
+             PaymentLinks.list_payments(client(), "pl_123", "bad")
+
     assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
              PaymentLinks.delete(client(), "pl_123", unknown: true)
+
+    assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
+             PaymentLinks.list_payments(client(), "pl_123", unknown: true)
 
     assert {:error, %Error{reason: :missing_description}} =
              PaymentLinks.create(client(), %{amount: %{currency: "EUR", value: "10.00"}})
@@ -629,6 +699,15 @@ defmodule MollieEx.PaymentLinksTest do
 
     assert {:error, %Error{reason: {:invalid_option, :limit}}} =
              PaymentLinks.list(client(), limit: 251)
+
+    assert {:error, %Error{reason: {:invalid_option, :from}}} =
+             PaymentLinks.list_payments(client(), "pl_123", from: "")
+
+    assert {:error, %Error{reason: {:invalid_option, :limit}}} =
+             PaymentLinks.list_payments(client(), "pl_123", limit: 251)
+
+    assert {:error, %Error{reason: {:invalid_option, :sort}}} =
+             PaymentLinks.list_payments(client(), "pl_123", sort: "newest")
 
     assert {:error, %Error{reason: :missing_profile_id}} =
              PaymentLinks.create(
@@ -660,6 +739,13 @@ defmodule MollieEx.PaymentLinksTest do
 
     assert {:error, %Error{reason: :invalid_testmode}} =
              PaymentLinks.delete(
+               TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
+               "pl_123",
+               testmode: "true"
+             )
+
+    assert {:error, %Error{reason: :invalid_testmode}} =
+             PaymentLinks.list_payments(
                TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
                "pl_123",
                testmode: "true"
@@ -762,6 +848,22 @@ defmodule MollieEx.PaymentLinksTest do
       200,
       [@api_key, "pl_123", "authorization"]
     )
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      payment_list_fixture_response(conn, 200)
+    end)
+
+    assert {:ok, %MollieList{}} =
+             PaymentLinks.list_payments(client(telemetry_prefix: prefix), "pl_123")
+
+    assert_success_telemetry(
+      prefix,
+      :payment_links_list_payments,
+      "GET",
+      "/payment-links/{paymentLinkId}/payments",
+      200,
+      [@api_key, "pl_123", "authorization"]
+    )
   end
 
   test "emits safe decode exception and rate limit telemetry" do
@@ -826,6 +928,7 @@ defmodule MollieEx.PaymentLinksTest do
   defp call_operation(:create, client), do: PaymentLinks.create(client, create_params())
   defp call_operation(:get, client), do: PaymentLinks.get(client, "pl_123")
   defp call_operation(:list, client), do: PaymentLinks.list(client)
+  defp call_operation(:list_payments, client), do: PaymentLinks.list_payments(client, "pl_123")
   defp call_operation(:update, client), do: PaymentLinks.update(client, "pl_123", update_params())
   defp call_operation(:delete, client), do: PaymentLinks.delete(client, "pl_123")
 
@@ -917,6 +1020,7 @@ defmodule MollieEx.PaymentLinksTest do
 
   defp payment_link_response(:delete, conn), do: no_content_response(conn)
   defp payment_link_response(:list, conn), do: payment_link_list_fixture_response(conn, 200)
+  defp payment_link_response(:list_payments, conn), do: payment_list_fixture_response(conn, 200)
   defp payment_link_response(_operation, conn), do: payment_link_fixture_response(conn, 200)
 
   defp payment_link_fixture_response(conn, status),
@@ -924,5 +1028,9 @@ defmodule MollieEx.PaymentLinksTest do
 
   defp payment_link_list_fixture_response(conn, status) do
     fixture_response(conn, @payment_link_list_fixture, status)
+  end
+
+  defp payment_list_fixture_response(conn, status) do
+    fixture_response(conn, @payment_list_fixture, status)
   end
 end
