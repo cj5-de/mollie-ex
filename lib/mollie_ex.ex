@@ -10,6 +10,8 @@ defmodule MollieEx do
   `MollieEx.Captures`.
 
   Payment-scoped chargebacks are available through `MollieEx.Chargebacks`.
+  Payment-scoped delayed routes are available through
+  `MollieEx.PaymentRoutes`.
 
   Full usage guides are available in the HexDocs sidebar:
 

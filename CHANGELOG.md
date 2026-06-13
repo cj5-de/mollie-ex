@@ -6,6 +6,8 @@
 
 - Add payment-scoped `MollieEx.Chargebacks.get/4` and
   `MollieEx.Chargebacks.list/3`.
+- Add payment-scoped `MollieEx.PaymentRoutes.create/4`,
+  `MollieEx.PaymentRoutes.get/4`, and `MollieEx.PaymentRoutes.list/3`.
 
 ### Changed
 

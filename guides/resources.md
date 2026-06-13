@@ -138,6 +138,27 @@ Retrieve and list payment chargebacks:
 {:ok, chargebacks} = MollieEx.Chargebacks.list(client, "tr_123", limit: 10)
 ```
 
+## Payment routes
+
+Create, retrieve, and list delayed payment routes:
+
+```elixir
+{:ok, route} =
+  MollieEx.PaymentRoutes.create(
+    client,
+    "tr_123",
+    %{
+      amount: %{currency: "EUR", value: "10.00"},
+      destination: %{type: "organization", organization_id: "org_123"},
+      description: "Payment for order #123"
+    },
+    idempotency_key: "1de10c6a-8b87-4e0c-9c88-52f4c8936d5d"
+  )
+
+{:ok, route} = MollieEx.PaymentRoutes.get(client, "tr_123", "crt_123")
+{:ok, routes} = MollieEx.PaymentRoutes.list(client, "tr_123")
+```
+
 ## Idempotency
 
 MollieEx accepts idempotency keys for write operations, but does not generate
