@@ -26,7 +26,7 @@ defmodule MollieEx.Resources.Customers.Delete do
         method: :delete,
         path: "/customers/" <> Options.encode_path_segment(customer_id),
         path_template: "/customers/{customerId}",
-        body: body(testmode),
+        body: Options.body_testmode(testmode),
         idempotency_key: Keyword.get(opts, :idempotency_key),
         idempotency_policy: :optional,
         operation: :customers_delete,
@@ -41,9 +41,6 @@ defmodule MollieEx.Resources.Customers.Delete do
     do: configuration_error(:invalid_options)
 
   def build(%Client{}, _customer_id, _opts), do: configuration_error(:invalid_customer_id)
-
-  defp body(nil), do: nil
-  defp body(testmode), do: %{"testmode" => testmode}
 
   defp configuration_error(reason), do: Options.configuration_error(reason)
 end

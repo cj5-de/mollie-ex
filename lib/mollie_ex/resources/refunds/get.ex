@@ -57,12 +57,9 @@ defmodule MollieEx.Resources.Refunds.Get do
 
   defp query(embed, testmode) do
     []
-    |> maybe_put(:embed, embed)
-    |> maybe_put(:testmode, testmode)
+    |> Options.put_query(:embed, embed)
+    |> Options.put_query(:testmode, testmode)
   end
-
-  defp maybe_put(query, _key, nil), do: query
-  defp maybe_put(query, key, value), do: Keyword.put(query, key, value)
 
   defp configuration_error(reason), do: Options.configuration_error(reason)
 end

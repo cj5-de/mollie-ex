@@ -53,12 +53,9 @@ defmodule MollieEx.Resources.Payments.Cancel do
 
   defp body(%Client{} = client, opts) do
     with {:ok, testmode} <- Options.effective_testmode(client, opts) do
-      {:ok, body(testmode), testmode}
+      {:ok, Options.body_testmode(testmode), testmode}
     end
   end
-
-  defp body(nil), do: nil
-  defp body(testmode), do: %{"testmode" => testmode}
 
   defp encode_path_segment(value), do: URI.encode(value, &URI.char_unreserved?/1)
 

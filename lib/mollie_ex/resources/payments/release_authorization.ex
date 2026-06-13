@@ -73,8 +73,8 @@ defmodule MollieEx.Resources.Payments.ReleaseAuthorization do
          {:ok, testmode} <- effective_testmode(client, opts) do
       body =
         %{}
-        |> maybe_put("profileId", profile_id)
-        |> maybe_put("testmode", testmode)
+        |> Options.put_body("profileId", profile_id)
+        |> Options.put_body("testmode", testmode)
         |> empty_to_nil()
 
       {:ok, body, testmode}
@@ -99,9 +99,6 @@ defmodule MollieEx.Resources.Payments.ReleaseAuthorization do
     |> Keyword.get(:testmode, client.testmode)
     |> Options.testmode()
   end
-
-  defp maybe_put(map, _key, nil), do: map
-  defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
   defp empty_to_nil(map) when map_size(map) == 0, do: nil
   defp empty_to_nil(map), do: map

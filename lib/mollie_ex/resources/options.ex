@@ -70,6 +70,21 @@ defmodule MollieEx.Resources.Options do
   @spec timeout_options(keyword()) :: keyword()
   def timeout_options(opts), do: Keyword.take(opts, @timeout_options)
 
+  @spec put_query(keyword(), atom(), term()) :: keyword()
+  def put_query(query, _key, nil), do: query
+  def put_query(query, key, value), do: Keyword.put(query, key, value)
+
+  @spec put_body(map(), String.t(), term()) :: map()
+  def put_body(body, _key, nil), do: body
+  def put_body(body, key, value), do: Map.put(body, key, value)
+
+  @spec body_testmode(boolean() | nil) :: map() | nil
+  def body_testmode(nil), do: nil
+  def body_testmode(testmode) when is_boolean(testmode), do: %{"testmode" => testmode}
+
+  @spec drop_testmode(map()) :: map()
+  def drop_testmode(body), do: Map.drop(body, ["testmode", :testmode])
+
   @spec resource_id(String.t(), atom()) :: {:ok, String.t()} | {:error, Error.t()}
   def resource_id(id, reason) do
     id = String.trim(id)

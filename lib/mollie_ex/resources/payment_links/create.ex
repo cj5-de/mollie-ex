@@ -69,8 +69,8 @@ defmodule MollieEx.Resources.PaymentLinks.Create do
         params
         |> encode_body_params()
         |> Map.drop(["profileId", "profile_id", :profile_id, "testmode", :testmode])
-        |> maybe_put("profileId", profile_id)
-        |> maybe_put("testmode", testmode)
+        |> Options.put_body("profileId", profile_id)
+        |> Options.put_body("testmode", testmode)
 
       {:ok, body, testmode}
     end
@@ -136,9 +136,6 @@ defmodule MollieEx.Resources.PaymentLinks.Create do
       end
     end)
   end
-
-  defp maybe_put(map, _key, nil), do: map
-  defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
   defp configuration_error(reason), do: Options.configuration_error(reason)
 end

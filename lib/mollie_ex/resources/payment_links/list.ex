@@ -41,13 +41,10 @@ defmodule MollieEx.Resources.PaymentLinks.List do
 
   defp query(from, limit, testmode) do
     []
-    |> maybe_put(:from, from)
-    |> maybe_put(:limit, limit)
-    |> maybe_put(:testmode, testmode)
+    |> Options.put_query(:from, from)
+    |> Options.put_query(:limit, limit)
+    |> Options.put_query(:testmode, testmode)
   end
-
-  defp maybe_put(query, _key, nil), do: query
-  defp maybe_put(query, key, value), do: Keyword.put(query, key, value)
 
   defp configuration_error(reason), do: Options.configuration_error(reason)
 end
