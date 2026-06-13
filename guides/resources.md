@@ -129,6 +129,15 @@ Retrieve and list payment captures:
 {:ok, captures} = MollieEx.Captures.list(client, "tr_123", limit: 10)
 ```
 
+## Chargebacks
+
+Retrieve and list payment chargebacks:
+
+```elixir
+{:ok, chargeback} = MollieEx.Chargebacks.get(client, "tr_123", "chb_123")
+{:ok, chargebacks} = MollieEx.Chargebacks.list(client, "tr_123", limit: 10)
+```
+
 ## Idempotency
 
 MollieEx accepts idempotency keys for write operations, but does not generate
