@@ -39,6 +39,15 @@ defmodule MollieEx.Resources.Customers.Options do
   @spec timeout_options(keyword()) :: keyword()
   def timeout_options(opts), do: Keyword.take(opts, @timeout_options)
 
+  @spec limit(keyword()) :: {:ok, pos_integer() | nil} | {:error, Error.t()}
+  def limit(opts) do
+    case Keyword.get(opts, :limit) do
+      nil -> {:ok, nil}
+      limit when is_integer(limit) and limit > 0 and limit <= 250 -> {:ok, limit}
+      _limit -> configuration_error({:invalid_option, :limit})
+    end
+  end
+
   @spec customer_id(String.t()) :: {:ok, String.t()} | {:error, Error.t()}
   def customer_id(customer_id), do: resource_id(customer_id, :invalid_customer_id)
 
