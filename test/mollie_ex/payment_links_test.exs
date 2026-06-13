@@ -223,6 +223,47 @@ defmodule MollieEx.PaymentLinksTest do
              })
   end
 
+  test "deletes a payment link and returns no content" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "DELETE"
+      assert conn.request_path == "/v2/payment-links/pl_123"
+      assert conn.query_string == ""
+      assert header(conn, "idempotency-key") == "payment-link-delete-123"
+      assert_empty_body(conn)
+
+      no_content_response(conn)
+    end)
+
+    assert {:ok, :no_content} =
+             PaymentLinks.delete(client(), "pl_123", idempotency_key: "payment-link-delete-123")
+  end
+
+  test "sends testmode in the body for OAuth delete requests" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "DELETE"
+      assert conn.request_path == "/v2/payment-links/pl_123"
+      assert conn.query_string == ""
+      assert_json_body(conn, %{"testmode" => false})
+
+      no_content_response(conn)
+    end)
+
+    client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
+
+    assert {:ok, :no_content} = PaymentLinks.delete(client, "pl_123", testmode: false)
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "DELETE"
+      assert conn.request_path == "/v2/payment-links/pl_123"
+      assert conn.query_string == ""
+      assert_json_body(conn, %{"testmode" => true})
+
+      no_content_response(conn)
+    end)
+
+    assert {:ok, :no_content} = PaymentLinks.delete(client, "pl_123")
+  end
+
   test "rejects scoped fields for API-key payment link requests before sending" do
     test_pid = self()
 
@@ -261,6 +302,9 @@ defmodule MollieEx.PaymentLinksTest do
                "pl_123",
                Map.put(update_params(), :profile_id, "pfl_123")
              )
+
+    assert {:error, %Error{reason: :unsupported_testmode}} =
+             PaymentLinks.delete(client(), "pl_123", testmode: true)
 
     refute_receive :request_sent, 10
   end
@@ -355,6 +399,41 @@ defmodule MollieEx.PaymentLinksTest do
              )
   end
 
+  test "does not retry payment link delete without idempotency key" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == nil
+
+      conn
+      |> Plug.Conn.put_status(503)
+      |> Req.Test.json(%{"status" => 503})
+    end)
+
+    assert {:error, %Error{type: :server_error, status: 503}} =
+             PaymentLinks.delete(client(max_retries: 1), "pl_123")
+  end
+
+  test "retries payment link delete with the same caller idempotency key" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == "payment-link-delete-123"
+
+      conn
+      |> Plug.Conn.put_status(503)
+      |> Req.Test.json(%{"status" => 503})
+    end)
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == "payment-link-delete-123"
+      no_content_response(conn)
+    end)
+
+    assert {:ok, :no_content} =
+             PaymentLinks.delete(
+               client(max_retries: 1),
+               "pl_123",
+               idempotency_key: "payment-link-delete-123"
+             )
+  end
+
   test "retries safe payment link get and list requests without idempotency key" do
     for operation <- [:get, :list] do
       Req.Test.expect(__MODULE__, fn conn ->
@@ -379,7 +458,8 @@ defmodule MollieEx.PaymentLinksTest do
       {:create, 422, :validation},
       {:get, 404, :not_found},
       {:list, 429, :rate_limited},
-      {:update, 422, :validation}
+      {:update, 422, :validation},
+      {:delete, 404, :not_found}
     ]
 
     for {operation, status, type} <- cases do
@@ -405,7 +485,8 @@ defmodule MollieEx.PaymentLinksTest do
           {:create, :payment_links_create},
           {:get, :payment_links_get},
           {:list, :payment_links_list},
-          {:update, :payment_links_update}
+          {:update, :payment_links_update},
+          {:delete, :payment_links_delete}
         ] do
       Req.Test.expect(__MODULE__, fn conn ->
         Req.Test.transport_error(conn, :timeout)
@@ -478,6 +559,18 @@ defmodule MollieEx.PaymentLinksTest do
     assert error.raw == invalid_payment_link
   end
 
+  test "returns decode errors for invalid payment link delete responses" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      payment_link_fixture_response(conn, 200)
+    end)
+
+    assert {:error, %Error{} = error} = PaymentLinks.delete(client(), "pl_123")
+    assert error.type == :decode
+    assert error.status == 200
+    assert error.reason == :invalid_no_content_response
+    assert error.operation == :payment_links_delete
+  end
+
   test "rejects invalid local inputs before sending" do
     test_pid = self()
 
@@ -493,10 +586,16 @@ defmodule MollieEx.PaymentLinksTest do
              PaymentLinks.create(client(), "bad")
 
     assert {:error, %Error{reason: :invalid_client}} =
+             PaymentLinks.delete("bad", "pl_123")
+
+    assert {:error, %Error{reason: :invalid_client}} =
              PaymentLinks.update("bad", "pl_123", update_params())
 
     assert {:error, %Error{reason: :invalid_payment_link_id}} =
              PaymentLinks.update(client(), "", update_params())
+
+    assert {:error, %Error{reason: :invalid_payment_link_id}} =
+             PaymentLinks.delete(client(), "")
 
     assert {:error, %Error{reason: :invalid_payment_link_params}} =
              PaymentLinks.update(client(), "pl_123", "bad")
@@ -506,6 +605,12 @@ defmodule MollieEx.PaymentLinksTest do
 
     assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
              PaymentLinks.update(client(), "pl_123", update_params(), unknown: true)
+
+    assert {:error, %Error{reason: :invalid_options}} =
+             PaymentLinks.delete(client(), "pl_123", "bad")
+
+    assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
+             PaymentLinks.delete(client(), "pl_123", unknown: true)
 
     assert {:error, %Error{reason: :missing_description}} =
              PaymentLinks.create(client(), %{amount: %{currency: "EUR", value: "10.00"}})
@@ -550,6 +655,13 @@ defmodule MollieEx.PaymentLinksTest do
                TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
                "pl_123",
                update_params(),
+               testmode: "true"
+             )
+
+    assert {:error, %Error{reason: :invalid_testmode}} =
+             PaymentLinks.delete(
+               TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
+               "pl_123",
                testmode: "true"
              )
 
@@ -614,6 +726,26 @@ defmodule MollieEx.PaymentLinksTest do
       "/payment-links/{paymentLinkId}",
       200,
       [@api_key, "pl_123", "payment-link-update-123", "authorization"]
+    )
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      no_content_response(conn)
+    end)
+
+    assert {:ok, :no_content} =
+             PaymentLinks.delete(
+               client(telemetry_prefix: prefix),
+               "pl_123",
+               idempotency_key: "payment-link-delete-123"
+             )
+
+    assert_success_telemetry(
+      prefix,
+      :payment_links_delete,
+      "DELETE",
+      "/payment-links/{paymentLinkId}",
+      204,
+      [@api_key, "pl_123", "payment-link-delete-123", "authorization"]
     )
 
     Req.Test.expect(__MODULE__, fn conn ->
@@ -695,6 +827,7 @@ defmodule MollieEx.PaymentLinksTest do
   defp call_operation(:get, client), do: PaymentLinks.get(client, "pl_123")
   defp call_operation(:list, client), do: PaymentLinks.list(client)
   defp call_operation(:update, client), do: PaymentLinks.update(client, "pl_123", update_params())
+  defp call_operation(:delete, client), do: PaymentLinks.delete(client, "pl_123")
 
   defp client(opts \\ []) do
     [api_key: @api_key]
@@ -782,6 +915,7 @@ defmodule MollieEx.PaymentLinksTest do
     }
   end
 
+  defp payment_link_response(:delete, conn), do: no_content_response(conn)
   defp payment_link_response(:list, conn), do: payment_link_list_fixture_response(conn, 200)
   defp payment_link_response(_operation, conn), do: payment_link_fixture_response(conn, 200)
 
