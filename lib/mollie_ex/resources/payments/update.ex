@@ -5,7 +5,7 @@ defmodule MollieEx.Resources.Payments.Update do
   alias MollieEx.Error
   alias MollieEx.HTTP.Request
   alias MollieEx.Resources.Casing
-  alias MollieEx.Resources.Payments.Options
+  alias MollieEx.Resources.Options
 
   @allowed_options [
     :idempotency_key,
@@ -22,13 +22,13 @@ defmodule MollieEx.Resources.Payments.Update do
       when is_binary(payment_id) and is_map(params) and is_list(opts) do
     with :ok <- Options.ensure_keyword(opts),
          :ok <- Options.reject_unknown(opts, @allowed_options),
-         {:ok, payment_id} <- payment_id(payment_id),
+         {:ok, payment_id} <- Options.payment_id(payment_id),
          :ok <- reject_profile_id(params),
          :ok <- reject_api_key_scoped_fields(client, params, opts),
          {:ok, body, testmode} <- body(client, params, opts) do
       request = %Request{
         method: :patch,
-        path: "/payments/" <> encode_path_segment(payment_id),
+        path: "/payments/" <> Options.encode_path_segment(payment_id),
         path_template: "/payments/{paymentId}",
         body: body,
         idempotency_key: Keyword.get(opts, :idempotency_key),
@@ -48,16 +48,6 @@ defmodule MollieEx.Resources.Payments.Update do
     do: configuration_error(:invalid_payment_params)
 
   def build(%Client{}, _payment_id, _params, _opts), do: configuration_error(:invalid_payment_id)
-
-  defp payment_id(payment_id) do
-    payment_id = String.trim(payment_id)
-
-    if payment_id == "" do
-      configuration_error(:invalid_payment_id)
-    else
-      {:ok, payment_id}
-    end
-  end
 
   defp reject_profile_id(params) do
     if Map.has_key?(params, :profile_id) or Map.has_key?(params, "profile_id") or
@@ -129,8 +119,6 @@ defmodule MollieEx.Resources.Payments.Update do
       end
     end)
   end
-
-  defp encode_path_segment(value), do: URI.encode(value, &URI.char_unreserved?/1)
 
   defp configuration_error(reason), do: Options.configuration_error(reason)
 end

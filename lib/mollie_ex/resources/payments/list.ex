@@ -4,7 +4,7 @@ defmodule MollieEx.Resources.Payments.List do
   alias MollieEx.Client
   alias MollieEx.Error
   alias MollieEx.HTTP.Request
-  alias MollieEx.Resources.Payments.Options
+  alias MollieEx.Resources.Options
 
   @allowed_options [
     :from,

@@ -4,7 +4,7 @@ defmodule MollieEx.Resources.Customers.Delete do
   alias MollieEx.Client
   alias MollieEx.Error
   alias MollieEx.HTTP.Request
-  alias MollieEx.Resources.Customers.Options
+  alias MollieEx.Resources.Options
 
   @allowed_options [
     :idempotency_key,

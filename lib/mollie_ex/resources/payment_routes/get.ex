@@ -4,7 +4,7 @@ defmodule MollieEx.Resources.PaymentRoutes.Get do
   alias MollieEx.Client
   alias MollieEx.Error
   alias MollieEx.HTTP.Request
-  alias MollieEx.Resources.PaymentRoutes.Options
+  alias MollieEx.Resources.Options
 
   @allowed_options [
     :pool_timeout,

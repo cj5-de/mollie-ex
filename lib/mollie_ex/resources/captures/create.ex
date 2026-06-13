@@ -4,8 +4,8 @@ defmodule MollieEx.Resources.Captures.Create do
   alias MollieEx.Client
   alias MollieEx.Error
   alias MollieEx.HTTP.Request
-  alias MollieEx.Resources.Captures.Options
   alias MollieEx.Resources.Casing
+  alias MollieEx.Resources.Options
 
   @allowed_options [
     :idempotency_key,
