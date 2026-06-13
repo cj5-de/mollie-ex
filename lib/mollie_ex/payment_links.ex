@@ -1,6 +1,6 @@
 defmodule MollieEx.PaymentLinks do
   @moduledoc """
-  Create, retrieve, list, and update Mollie payment links.
+  Create, retrieve, list, update, and delete Mollie payment links.
 
   All functions return result tuples. They do not raise for ordinary API,
   transport, or validation failures.
@@ -26,7 +26,7 @@ defmodule MollieEx.PaymentLinks do
   alias MollieEx.Error
   alias MollieEx.List, as: MollieList
   alias MollieEx.PaymentLink
-  alias MollieEx.Resources.PaymentLinks.{Create, Get, Update}
+  alias MollieEx.Resources.PaymentLinks.{Create, Delete, Get, Update}
   alias MollieEx.Resources.PaymentLinks.List, as: ListRequest
   alias MollieEx.Resources.RequestRunner
 
@@ -52,6 +52,12 @@ defmodule MollieEx.PaymentLinks do
           | {:request_timeout, pos_integer()}
   @type update_params :: map()
   @type update_option ::
+          {:idempotency_key, String.t()}
+          | {:testmode, boolean()}
+          | {:pool_timeout, pos_integer()}
+          | {:receive_timeout, pos_integer()}
+          | {:request_timeout, pos_integer()}
+  @type delete_option ::
           {:idempotency_key, String.t()}
           | {:testmode, boolean()}
           | {:pool_timeout, pos_integer()}
@@ -151,6 +157,32 @@ defmodule MollieEx.PaymentLinks do
 
   def update(_client, _payment_link_id, _params, _opts), do: configuration_error(:invalid_client)
 
+  @doc """
+  Deletes a Mollie payment link by ID.
+
+  Payment link deletion supports caller-owned idempotency keys. The SDK never
+  generates idempotency keys implicitly.
+  """
+  @doc since: "0.1.0"
+  @spec delete(Client.t(), String.t(), [delete_option()]) ::
+          {:ok, :no_content} | {:error, Error.t()}
+  def delete(client, payment_link_id, opts \\ [])
+
+  def delete(%Client{} = client, payment_link_id, opts)
+      when is_binary(payment_link_id) and is_list(opts) do
+    with {:ok, request, transport_opts} <- Delete.build(client, payment_link_id, opts) do
+      request_no_content(client, request, transport_opts)
+    end
+  end
+
+  def delete(%Client{}, _payment_link_id, opts) when not is_list(opts),
+    do: configuration_error(:invalid_options)
+
+  def delete(%Client{}, _payment_link_id, _opts),
+    do: configuration_error(:invalid_payment_link_id)
+
+  def delete(_client, _payment_link_id, _opts), do: configuration_error(:invalid_client)
+
   defp configuration_error(reason) do
     {:error, Error.exception(type: :configuration, reason: reason)}
   end
@@ -172,6 +204,17 @@ defmodule MollieEx.PaymentLinks do
       "payment_links",
       :payment_links_list,
       &PaymentLink.from_response(&1, :payment_links_list)
+    )
+  end
+
+  defp request_no_content(%Client{} = client, request, transport_opts) do
+    RequestRunner.expect_empty(
+      client,
+      request,
+      transport_opts,
+      204,
+      :no_content,
+      :invalid_no_content_response
     )
   end
 end
