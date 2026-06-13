@@ -52,7 +52,8 @@ checkout_url = MollieEx.Payment.checkout_url(payment)
 
 - [Getting started](guides/getting-started.md) covers installation, client
   setup, payment creation, and result handling.
-- [Resources](guides/resources.md) covers payments, refunds, captures, chargebacks,
-  pagination, and idempotency.
+- [Resources](guides/resources.md) covers payments, refunds, captures,
+  chargebacks, payment routes, pagination, and idempotency.
 - `MollieEx.Client`, `MollieEx.Payments`, `MollieEx.Refunds`,
-  `MollieEx.Captures`, and `MollieEx.Chargebacks` provide the API reference.
+  `MollieEx.Captures`, `MollieEx.Chargebacks`, and
+  `MollieEx.PaymentRoutes` provide the API reference.

@@ -1,0 +1,33 @@
+{
+  "resource": "route",
+  "id": "crt_123",
+  "paymentId": "tr_123",
+  "createdAt": "2026-06-13T11:20:00+00:00",
+  "releaseDate": "2026-06-20",
+  "description": "Payment for order #123",
+  "amount": {
+    "currency": "EUR",
+    "value": "10.00"
+  },
+  "destination": {
+    "type": "organization",
+    "organizationId": "org_123"
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/payments/tr_123/routes/crt_123",
+      "type": "application/hal+json"
+    },
+    "payment": {
+      "href": "https://api.mollie.com/v2/payments/tr_123",
+      "type": "application/hal+json"
+    },
+    "documentation": {
+      "href": "https://docs.mollie.com/reference/payment-get-route",
+      "type": "text/html"
+    }
+  },
+  "unexpectedFutureField": {
+    "visible": true
+  }
+}
