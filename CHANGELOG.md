@@ -10,7 +10,9 @@
   `MollieEx.PaymentRoutes.get/4`, and `MollieEx.PaymentRoutes.list/3`.
 - Add `MollieEx.PaymentLinks.create/3`, `MollieEx.PaymentLinks.get/3`, and
   `MollieEx.PaymentLinks.list/2`.
-- Add `MollieEx.Customers.create/3` and `MollieEx.Customers.get/3`.
+- Add `MollieEx.Customers.create/3`, `MollieEx.Customers.get/3`,
+  `MollieEx.Customers.list/2`, `MollieEx.Customers.update/4`, and
+  `MollieEx.Customers.delete/3`.
 
 ### Changed
 

@@ -183,7 +183,7 @@ checkout_url = MollieEx.PaymentLink.checkout_url(payment_link)
 
 ## Customers
 
-Create and retrieve customers:
+Create, retrieve, list, update, and delete customers:
 
 ```elixir
 {:ok, customer} =
@@ -198,6 +198,22 @@ Create and retrieve customers:
   )
 
 {:ok, customer} = MollieEx.Customers.get(client, customer.id)
+{:ok, customers} = MollieEx.Customers.list(client, limit: 10)
+
+{:ok, customer} =
+  MollieEx.Customers.update(
+    client,
+    customer.id,
+    %{name: "Jane Updated"},
+    idempotency_key: "d7d336f4-193f-4f5d-8702-c9111355386d"
+  )
+
+{:ok, :no_content} =
+  MollieEx.Customers.delete(
+    client,
+    customer.id,
+    idempotency_key: "b5c820c4-941d-4f06-a117-cb6afae5ac07"
+  )
 ```
 
 ## Idempotency

@@ -1,0 +1,44 @@
+{
+  "count": 1,
+  "_embedded": {
+    "customers": [
+      {
+        "resource": "customer",
+        "id": "cst_list_123",
+        "mode": "test",
+        "name": "Jane List",
+        "email": "jane-list@example.org",
+        "locale": "en_US",
+        "metadata": {
+          "crm_id": "customer-list-123"
+        },
+        "createdAt": "2026-06-13T10:20:30+00:00",
+        "_links": {
+          "self": {
+            "href": "https://api.mollie.com/v2/customers/cst_list_123",
+            "type": "application/hal+json"
+          },
+          "payments": {
+            "href": "https://api.mollie.com/v2/customers/cst_list_123/payments",
+            "type": "application/hal+json"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/customers?limit=1",
+      "type": "application/hal+json"
+    },
+    "previous": null,
+    "next": {
+      "href": "https://api.mollie.com/v2/customers?from=cst_next&limit=1",
+      "type": "application/hal+json"
+    },
+    "documentation": {
+      "href": "https://docs.mollie.com/reference/list-customers",
+      "type": "text/html"
+    }
+  }
+}

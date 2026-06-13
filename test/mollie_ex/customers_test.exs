@@ -5,12 +5,14 @@ defmodule MollieEx.CustomersTest do
   alias MollieEx.Customer
   alias MollieEx.Customers
   alias MollieEx.Error
+  alias MollieEx.List, as: MollieList
   alias MollieEx.Types.Link
 
   setup {Req.Test, :verify_on_exit!}
 
   @api_key "test_customers_secret"
   @customer_fixture Path.expand("../fixtures/mollie/customers/get_success.json", __DIR__)
+  @customer_list_fixture Path.expand("../fixtures/mollie/customers/list_success.json", __DIR__)
 
   test "creates a customer with pass-through metadata and caller idempotency key" do
     Req.Test.expect(__MODULE__, fn conn ->
@@ -126,6 +128,137 @@ defmodule MollieEx.CustomersTest do
              Customers.get(client, "cst_123", include: "events", testmode: false)
   end
 
+  test "lists customers with pagination and OAuth testmode query params" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/v2/customers"
+
+      assert URI.decode_query(conn.query_string) == %{
+               "from" => "cst_from",
+               "limit" => "1",
+               "sort" => "asc",
+               "testmode" => "false"
+             }
+
+      assert_empty_body(conn)
+
+      customer_list_fixture_response(conn, 200)
+    end)
+
+    client =
+      Client.new!(
+        oauth_token: "access_test_secret",
+        testmode: true,
+        transport: {:req_test, __MODULE__}
+      )
+
+    assert {:ok, %MollieList{} = customer_list} =
+             Customers.list(client, from: "cst_from", limit: 1, sort: :asc, testmode: false)
+
+    assert customer_list.count == 1
+    assert [%Customer{id: "cst_list_123", name: "Jane List"}] = customer_list.data
+
+    assert %Link{href: "https://api.mollie.com/v2/customers?from=cst_next&limit=1"} =
+             customer_list.links["next"]
+  end
+
+  test "updates a customer with pass-through metadata and caller idempotency key" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "PATCH"
+      assert conn.request_path == "/v2/customers/cst_123"
+      assert conn.query_string == ""
+      assert header(conn, "idempotency-key") == "customer-update-123"
+
+      assert_json_body(conn, %{
+        "name" => "Jane Updated",
+        "metadata" => %{
+          "crm_id" => "customer-456",
+          "nested_value" => %{"kept_value" => true}
+        }
+      })
+
+      customer_fixture_response(conn, 200)
+    end)
+
+    params = %{
+      name: "Jane Updated",
+      metadata: %{
+        "crm_id" => "customer-456",
+        "nested_value" => %{"kept_value" => true}
+      }
+    }
+
+    assert {:ok, %Customer{id: "cst_123"}} =
+             Customers.update(client(), "cst_123", params, idempotency_key: "customer-update-123")
+  end
+
+  test "adds testmode for OAuth update requests" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert_json_body(conn, %{
+        "name" => "Jane Updated",
+        "testmode" => false
+      })
+
+      customer_fixture_response(conn, 200)
+    end)
+
+    client =
+      Client.new!(
+        oauth_token: "access_test_secret",
+        testmode: true,
+        transport: {:req_test, __MODULE__}
+      )
+
+    assert {:ok, %Customer{id: "cst_123"}} =
+             Customers.update(client, "cst_123", %{name: "Jane Updated"}, testmode: false)
+  end
+
+  test "deletes a customer and returns no content" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "DELETE"
+      assert conn.request_path == "/v2/customers/cst_123"
+      assert conn.query_string == ""
+      assert header(conn, "idempotency-key") == "customer-delete-123"
+      assert_empty_body(conn)
+
+      no_content_response(conn)
+    end)
+
+    assert {:ok, :no_content} =
+             Customers.delete(client(), "cst_123", idempotency_key: "customer-delete-123")
+  end
+
+  test "sends testmode in the body for OAuth delete requests" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "DELETE"
+      assert conn.request_path == "/v2/customers/cst_123"
+      assert conn.query_string == ""
+      assert_json_body(conn, %{"testmode" => false})
+
+      no_content_response(conn)
+    end)
+
+    client =
+      Client.new!(
+        oauth_token: "access_test_secret",
+        testmode: true,
+        transport: {:req_test, __MODULE__}
+      )
+
+    assert {:ok, :no_content} = Customers.delete(client, "cst_123", testmode: false)
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "DELETE"
+      assert conn.request_path == "/v2/customers/cst_123"
+      assert conn.query_string == ""
+      assert_json_body(conn, %{"testmode" => true})
+
+      no_content_response(conn)
+    end)
+
+    assert {:ok, :no_content} = Customers.delete(client, "cst_123")
+  end
+
   test "rejects API-key testmode before sending" do
     test_pid = self()
 
@@ -142,6 +275,18 @@ defmodule MollieEx.CustomersTest do
 
     assert {:error, %Error{reason: :unsupported_testmode}} =
              Customers.get(client(), "cst_123", testmode: true)
+
+    assert {:error, %Error{reason: :unsupported_testmode}} =
+             Customers.list(client(), testmode: true)
+
+    assert {:error, %Error{reason: :unsupported_testmode}} =
+             Customers.update(client(), "cst_123", %{name: "Jane"}, testmode: true)
+
+    assert {:error, %Error{reason: :unsupported_testmode}} =
+             Customers.update(client(), "cst_123", %{name: "Jane", testmode: true})
+
+    assert {:error, %Error{reason: :unsupported_testmode}} =
+             Customers.delete(client(), "cst_123", testmode: true)
 
     refute_receive :request_sent, 10
   end
@@ -193,6 +338,51 @@ defmodule MollieEx.CustomersTest do
              )
   end
 
+  test "retries customer update and delete with caller idempotency keys" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == "customer-update-123"
+      assert_json_body(conn, %{"name" => "Jane Updated"})
+
+      conn
+      |> Plug.Conn.put_status(503)
+      |> Req.Test.json(%{"status" => 503})
+    end)
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == "customer-update-123"
+      assert_json_body(conn, %{"name" => "Jane Updated"})
+      customer_fixture_response(conn, 200)
+    end)
+
+    assert {:ok, %Customer{id: "cst_123"}} =
+             Customers.update(
+               client(max_retries: 1),
+               "cst_123",
+               %{name: "Jane Updated"},
+               idempotency_key: "customer-update-123"
+             )
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == "customer-delete-123"
+
+      conn
+      |> Plug.Conn.put_status(503)
+      |> Req.Test.json(%{"status" => 503})
+    end)
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == "customer-delete-123"
+      no_content_response(conn)
+    end)
+
+    assert {:ok, :no_content} =
+             Customers.delete(
+               client(max_retries: 1),
+               "cst_123",
+               idempotency_key: "customer-delete-123"
+             )
+  end
+
   test "retries safe customer get without idempotency key" do
     Req.Test.expect(__MODULE__, fn conn ->
       assert header(conn, "idempotency-key") == nil
@@ -210,10 +400,37 @@ defmodule MollieEx.CustomersTest do
     assert {:ok, %Customer{id: "cst_123"}} = Customers.get(client(max_retries: 1), "cst_123")
   end
 
+  test "does not retry customer update and delete without idempotency keys" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == nil
+
+      conn
+      |> Plug.Conn.put_status(503)
+      |> Req.Test.json(%{"status" => 503})
+    end)
+
+    assert {:error, %Error{type: :server_error, status: 503}} =
+             Customers.update(client(max_retries: 1), "cst_123", %{name: "Jane Updated"})
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == nil
+
+      conn
+      |> Plug.Conn.put_status(503)
+      |> Req.Test.json(%{"status" => 503})
+    end)
+
+    assert {:error, %Error{type: :server_error, status: 503}} =
+             Customers.delete(client(max_retries: 1), "cst_123")
+  end
+
   test "returns API errors for customer calls" do
     cases = [
       {:create, 422, :validation},
       {:get, 404, :not_found},
+      {:list, 400, :api_error},
+      {:update, 422, :validation},
+      {:delete, 404, :not_found},
       {:get, 429, :rate_limited}
     ]
 
@@ -238,7 +455,10 @@ defmodule MollieEx.CustomersTest do
   test "returns timeout errors for customer calls" do
     for {operation, expected_operation} <- [
           {:create, :customers_create},
-          {:get, :customers_get}
+          {:get, :customers_get},
+          {:list, :customers_list},
+          {:update, :customers_update},
+          {:delete, :customers_delete}
         ] do
       Req.Test.expect(__MODULE__, fn conn ->
         Req.Test.transport_error(conn, :timeout)
@@ -276,6 +496,30 @@ defmodule MollieEx.CustomersTest do
     assert error.raw == %{"resource" => "customer"}
   end
 
+  test "returns decode errors for invalid customer list response shapes" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      Req.Test.json(conn, %{"count" => 1, "_embedded" => %{"customers" => %{}}})
+    end)
+
+    assert {:error, %Error{} = error} = Customers.list(client())
+    assert error.type == :decode
+    assert error.status == 200
+    assert error.reason == :invalid_list_response
+    assert error.operation == :customers_list
+  end
+
+  test "returns decode errors for invalid customer delete responses" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      customer_fixture_response(conn, 200)
+    end)
+
+    assert {:error, %Error{} = error} = Customers.delete(client(), "cst_123")
+    assert error.type == :decode
+    assert error.status == 200
+    assert error.reason == :invalid_no_content_response
+    assert error.operation == :customers_delete
+  end
+
   test "rejects invalid local inputs before sending" do
     test_pid = self()
 
@@ -293,14 +537,47 @@ defmodule MollieEx.CustomersTest do
     assert {:error, %Error{reason: :invalid_customer_id}} =
              Customers.get(client(), "")
 
+    assert {:error, %Error{reason: :invalid_customer_id}} =
+             Customers.update(client(), "", %{name: "Jane"})
+
+    assert {:error, %Error{reason: :invalid_customer_id}} =
+             Customers.delete(client(), "")
+
+    assert {:error, %Error{reason: :invalid_customer_params}} =
+             Customers.update(client(), "cst_123", "bad")
+
     assert {:error, %Error{reason: :invalid_options}} =
              Customers.get(client(), "cst_123", "bad")
+
+    assert {:error, %Error{reason: :invalid_options}} =
+             Customers.list(client(), "bad")
+
+    assert {:error, %Error{reason: :invalid_options}} =
+             Customers.update(client(), "cst_123", %{name: "Jane"}, "bad")
+
+    assert {:error, %Error{reason: :invalid_options}} =
+             Customers.delete(client(), "cst_123", "bad")
 
     assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
              Customers.get(client(), "cst_123", unknown: true)
 
+    assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
+             Customers.list(client(), unknown: true)
+
+    assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
+             Customers.update(client(), "cst_123", %{name: "Jane"}, unknown: true)
+
     assert {:error, %Error{reason: {:invalid_option, :include}}} =
              Customers.get(client(), "cst_123", include: "")
+
+    assert {:error, %Error{reason: {:invalid_option, :from}}} =
+             Customers.list(client(), from: "")
+
+    assert {:error, %Error{reason: {:invalid_option, :limit}}} =
+             Customers.list(client(), limit: 251)
+
+    assert {:error, %Error{reason: {:invalid_option, :sort}}} =
+             Customers.list(client(), sort: :newest)
 
     assert {:error, %Error{reason: :invalid_testmode}} =
              Customers.create(
@@ -311,6 +588,27 @@ defmodule MollieEx.CustomersTest do
 
     assert {:error, %Error{reason: :invalid_testmode}} =
              Customers.get(
+               Client.new!(oauth_token: "access_test_secret", transport: {:req_test, __MODULE__}),
+               "cst_123",
+               testmode: "true"
+             )
+
+    assert {:error, %Error{reason: :invalid_testmode}} =
+             Customers.list(
+               Client.new!(oauth_token: "access_test_secret", transport: {:req_test, __MODULE__}),
+               testmode: "true"
+             )
+
+    assert {:error, %Error{reason: :invalid_testmode}} =
+             Customers.update(
+               Client.new!(oauth_token: "access_test_secret", transport: {:req_test, __MODULE__}),
+               "cst_123",
+               %{name: "Jane"},
+               testmode: "true"
+             )
+
+    assert {:error, %Error{reason: :invalid_testmode}} =
+             Customers.delete(
                Client.new!(oauth_token: "access_test_secret", transport: {:req_test, __MODULE__}),
                "cst_123",
                testmode: "true"
@@ -343,6 +641,41 @@ defmodule MollieEx.CustomersTest do
     assert {:ok, %Customer{}} = Customers.get(client(telemetry_prefix: prefix), "cst_123")
 
     assert_success_telemetry(prefix, :customers_get, "GET", "/customers/{customerId}", 200)
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      customer_list_fixture_response(conn, 200)
+    end)
+
+    assert {:ok, %MollieList{}} = Customers.list(client(telemetry_prefix: prefix))
+
+    assert_success_telemetry(prefix, :customers_list, "GET", "/customers", 200)
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      customer_fixture_response(conn, 200)
+    end)
+
+    assert {:ok, %Customer{}} =
+             Customers.update(
+               client(telemetry_prefix: prefix),
+               "cst_123",
+               %{name: "Jane Updated"},
+               idempotency_key: "customer-update-123"
+             )
+
+    assert_success_telemetry(prefix, :customers_update, "PATCH", "/customers/{customerId}", 200)
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      no_content_response(conn)
+    end)
+
+    assert {:ok, :no_content} =
+             Customers.delete(
+               client(telemetry_prefix: prefix),
+               "cst_123",
+               idempotency_key: "customer-delete-123"
+             )
+
+    assert_success_telemetry(prefix, :customers_delete, "DELETE", "/customers/{customerId}", 204)
   end
 
   test "emits safe decode exception and rate limit telemetry" do
@@ -406,6 +739,9 @@ defmodule MollieEx.CustomersTest do
 
   defp call_operation(:create, client), do: Customers.create(client, create_params())
   defp call_operation(:get, client), do: Customers.get(client, "cst_123")
+  defp call_operation(:list, client), do: Customers.list(client)
+  defp call_operation(:update, client), do: Customers.update(client, "cst_123", %{name: "Jane"})
+  defp call_operation(:delete, client), do: Customers.delete(client, "cst_123")
 
   defp client(opts \\ []) do
     [api_key: @api_key, transport: {:req_test, __MODULE__}]
@@ -429,6 +765,18 @@ defmodule MollieEx.CustomersTest do
     conn
     |> Plug.Conn.put_resp_header("content-type", "application/hal+json")
     |> Plug.Conn.send_resp(status, File.read!(@customer_fixture))
+  end
+
+  defp customer_list_fixture_response(conn, status) do
+    conn
+    |> Plug.Conn.put_resp_header("content-type", "application/hal+json")
+    |> Plug.Conn.send_resp(status, File.read!(@customer_list_fixture))
+  end
+
+  defp no_content_response(conn) do
+    conn
+    |> Plug.Conn.put_resp_header("content-type", "application/json")
+    |> Plug.Conn.send_resp(204, "")
   end
 
   defp assert_json_body(conn, expected) do
