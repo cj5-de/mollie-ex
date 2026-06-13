@@ -95,12 +95,14 @@ defmodule MollieEx.MixProject do
         Resources: [
           MollieEx.Payments,
           MollieEx.Refunds,
-          MollieEx.Captures
+          MollieEx.Captures,
+          MollieEx.Chargebacks
         ],
         Structs: [
           MollieEx.Payment,
           MollieEx.Refund,
           MollieEx.Capture,
+          MollieEx.Chargeback,
           MollieEx.List
         ],
         Types: [

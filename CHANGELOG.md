@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+
+- Add payment-scoped `MollieEx.Chargebacks.get/4` and
+  `MollieEx.Chargebacks.list/3`.
+
 ### Changed
 
 - Move detailed usage documentation from README into HexDocs guide and API

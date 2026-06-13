@@ -9,6 +9,8 @@ defmodule MollieEx do
   resource modules such as `MollieEx.Payments`, `MollieEx.Refunds`, and
   `MollieEx.Captures`.
 
+  Payment-scoped chargebacks are available through `MollieEx.Chargebacks`.
+
   Full usage guides are available in the HexDocs sidebar:
 
   - [Getting started](guides/getting-started.md)

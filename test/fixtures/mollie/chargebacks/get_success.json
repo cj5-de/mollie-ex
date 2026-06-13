@@ -1,0 +1,41 @@
+{
+  "resource": "chargeback",
+  "id": "chb_123",
+  "amount": {
+    "currency": "EUR",
+    "value": "10.00"
+  },
+  "settlementAmount": {
+    "currency": "EUR",
+    "value": "-10.00"
+  },
+  "reason": {
+    "code": "AC01",
+    "description": "Account identifier incorrect"
+  },
+  "paymentId": "tr_123",
+  "settlementId": "stl_123",
+  "createdAt": "2026-06-12T11:20:00+00:00",
+  "reversedAt": null,
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/payments/tr_123/chargebacks/chb_123",
+      "type": "application/hal+json"
+    },
+    "payment": {
+      "href": "https://api.mollie.com/v2/payments/tr_123",
+      "type": "application/hal+json"
+    },
+    "settlement": {
+      "href": "https://api.mollie.com/v2/settlements/stl_123",
+      "type": "application/hal+json"
+    },
+    "documentation": {
+      "href": "https://docs.mollie.com/reference/get-chargeback",
+      "type": "text/html"
+    }
+  },
+  "unexpectedFutureField": {
+    "visible": true
+  }
+}
