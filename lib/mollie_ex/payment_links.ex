@@ -1,6 +1,6 @@
 defmodule MollieEx.PaymentLinks do
   @moduledoc """
-  Create, retrieve, and list Mollie payment links.
+  Create, retrieve, list, and update Mollie payment links.
 
   All functions return result tuples. They do not raise for ordinary API,
   transport, or validation failures.
@@ -26,7 +26,7 @@ defmodule MollieEx.PaymentLinks do
   alias MollieEx.Error
   alias MollieEx.List, as: MollieList
   alias MollieEx.PaymentLink
-  alias MollieEx.Resources.PaymentLinks.{Create, Get}
+  alias MollieEx.Resources.PaymentLinks.{Create, Get, Update}
   alias MollieEx.Resources.PaymentLinks.List, as: ListRequest
   alias MollieEx.Resources.RequestRunner
 
@@ -46,6 +46,13 @@ defmodule MollieEx.PaymentLinks do
   @type list_option ::
           {:from, String.t()}
           | {:limit, pos_integer()}
+          | {:testmode, boolean()}
+          | {:pool_timeout, pos_integer()}
+          | {:receive_timeout, pos_integer()}
+          | {:request_timeout, pos_integer()}
+  @type update_params :: map()
+  @type update_option ::
+          {:idempotency_key, String.t()}
           | {:testmode, boolean()}
           | {:pool_timeout, pos_integer()}
           | {:receive_timeout, pos_integer()}
@@ -113,6 +120,36 @@ defmodule MollieEx.PaymentLinks do
 
   def list(%Client{}, _opts), do: configuration_error(:invalid_options)
   def list(_client, _opts), do: configuration_error(:invalid_client)
+
+  @doc """
+  Updates a Mollie payment link by ID.
+
+  Payment link updates support caller-owned idempotency keys. The SDK never
+  generates idempotency keys implicitly.
+  """
+  @doc since: "0.1.0"
+  @spec update(Client.t(), String.t(), update_params(), [update_option()]) ::
+          {:ok, PaymentLink.t()} | {:error, Error.t()}
+  def update(client, payment_link_id, params, opts \\ [])
+
+  def update(%Client{} = client, payment_link_id, params, opts)
+      when is_binary(payment_link_id) and is_map(params) and is_list(opts) do
+    with {:ok, request, transport_opts} <-
+           Update.build(client, payment_link_id, params, opts) do
+      request_payment_link(client, request, transport_opts, :payment_links_update)
+    end
+  end
+
+  def update(%Client{}, _payment_link_id, _params, opts) when not is_list(opts),
+    do: configuration_error(:invalid_options)
+
+  def update(%Client{}, _payment_link_id, params, _opts) when not is_map(params),
+    do: configuration_error(:invalid_payment_link_params)
+
+  def update(%Client{}, _payment_link_id, _params, _opts),
+    do: configuration_error(:invalid_payment_link_id)
+
+  def update(_client, _payment_link_id, _params, _opts), do: configuration_error(:invalid_client)
 
   defp configuration_error(reason) do
     {:error, Error.exception(type: :configuration, reason: reason)}

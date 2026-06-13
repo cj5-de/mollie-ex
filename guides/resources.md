@@ -161,7 +161,7 @@ Create, retrieve, and list delayed payment routes:
 
 ## Payment links
 
-Create, retrieve, and list payment links:
+Create, retrieve, list, and update payment links:
 
 ```elixir
 {:ok, payment_link} =
@@ -179,6 +179,14 @@ checkout_url = MollieEx.PaymentLink.checkout_url(payment_link)
 
 {:ok, payment_link} = MollieEx.PaymentLinks.get(client, "pl_123")
 {:ok, payment_links} = MollieEx.PaymentLinks.list(client, limit: 10)
+
+{:ok, payment_link} =
+  MollieEx.PaymentLinks.update(
+    client,
+    "pl_123",
+    %{description: "Updated order #123", archived: false},
+    idempotency_key: "70d6fc9d-6ec8-4cc7-a7cd-f1fd3a961f0a"
+  )
 ```
 
 ## Customers
