@@ -1,7 +1,7 @@
 defmodule MollieEx.MixProject do
   use Mix.Project
 
-  @version "0.1.0"
+  @version "0.2.0"
   @source_url "https://github.com/cj5-de/mollie-ex"
 
   def project do
