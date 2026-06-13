@@ -16,6 +16,18 @@ defmodule MollieEx.Resources.Customers.Options do
   @spec timeout_options(keyword()) :: keyword()
   defdelegate timeout_options(opts), to: SharedOptions
 
+  @spec put_query(keyword(), atom(), term()) :: keyword()
+  defdelegate put_query(query, key, value), to: SharedOptions
+
+  @spec put_body(map(), String.t(), term()) :: map()
+  defdelegate put_body(body, key, value), to: SharedOptions
+
+  @spec body_testmode(boolean() | nil) :: map() | nil
+  defdelegate body_testmode(testmode), to: SharedOptions
+
+  @spec drop_testmode(map()) :: map()
+  defdelegate drop_testmode(body), to: SharedOptions
+
   @spec limit(keyword()) :: {:ok, pos_integer() | nil} | {:error, Error.t()}
   defdelegate limit(opts), to: SharedOptions
 

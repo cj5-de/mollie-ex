@@ -64,8 +64,8 @@ defmodule MollieEx.Resources.Customers.Update do
       body =
         params
         |> encode_body_params()
-        |> Map.drop(["testmode", :testmode])
-        |> maybe_put("testmode", testmode)
+        |> Options.drop_testmode()
+        |> Options.put_body("testmode", testmode)
 
       {:ok, body, testmode}
     end
@@ -101,9 +101,6 @@ defmodule MollieEx.Resources.Customers.Update do
   defp encode_body_params(params) do
     Map.new(params, fn {key, value} -> {Casing.to_mollie_key(key), value} end)
   end
-
-  defp maybe_put(map, _key, nil), do: map
-  defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
   defp configuration_error(reason), do: Options.configuration_error(reason)
 end

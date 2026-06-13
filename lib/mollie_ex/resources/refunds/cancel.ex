@@ -55,8 +55,7 @@ defmodule MollieEx.Resources.Refunds.Cancel do
   def build(%Client{}, _payment_id, _refund_id, _opts),
     do: configuration_error(:invalid_refund_id)
 
-  defp query(nil), do: []
-  defp query(testmode), do: [testmode: testmode]
+  defp query(testmode), do: Options.put_query([], :testmode, testmode)
 
   defp configuration_error(reason), do: Options.configuration_error(reason)
 end
