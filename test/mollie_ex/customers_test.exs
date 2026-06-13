@@ -16,6 +16,7 @@ defmodule MollieEx.CustomersTest do
   @api_key "test_customers_secret"
   @customer_fixture Path.expand("../fixtures/mollie/customers/get_success.json", __DIR__)
   @customer_list_fixture Path.expand("../fixtures/mollie/customers/list_success.json", __DIR__)
+  @payment_fixture Path.expand("../fixtures/mollie/payments/create_success.json", __DIR__)
   @payment_list_fixture Path.expand("../fixtures/mollie/payments/list_success.json", __DIR__)
 
   test "creates a customer with pass-through metadata and caller idempotency key" do
@@ -188,6 +189,97 @@ defmodule MollieEx.CustomersTest do
              payment_list.links["next"]
   end
 
+  test "creates a payment for a customer with path customer ID and caller idempotency key" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "POST"
+      assert conn.request_path == "/v2/customers/cst_123/payments"
+      assert URI.decode_query(conn.query_string) == %{"include" => "details.qrCode"}
+      assert header(conn, "authorization") == "Bearer #{@api_key}"
+      assert header(conn, "idempotency-key") == "customer-payment-123"
+
+      assert_json_body(conn, %{
+        "amount" => %{"currency" => "EUR", "value" => "10.00"},
+        "description" => "Order #123",
+        "redirectUrl" => "https://example.test/return",
+        "billingAddress" => %{"givenName" => "Ada"}
+      })
+
+      payment_fixture_response(conn, 201)
+    end)
+
+    params =
+      customer_payment_params()
+      |> Map.put(:customer_id, "cst_body_atom")
+      |> Map.put("customer_id", "cst_body_string")
+      |> Map.put("customerId", "cst_body_camel")
+
+    assert {:ok, %Payment{} = payment} =
+             Customers.create_payment(client(), "cst_123", params,
+               idempotency_key: "customer-payment-123",
+               include: "details.qrCode"
+             )
+
+    assert payment.id == "tr_123"
+    assert payment.status == "open"
+  end
+
+  test "adds profileId and testmode for OAuth customer payment create requests" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert_json_body(conn, %{
+        "amount" => %{"currency" => "EUR", "value" => "10.00"},
+        "billingAddress" => %{"givenName" => "Ada"},
+        "description" => "Order #123",
+        "profileId" => "pfl_override",
+        "redirectUrl" => "https://example.test/return",
+        "testmode" => false
+      })
+
+      payment_fixture_response(conn, 201)
+    end)
+
+    client =
+      TestSupport.client(__MODULE__,
+        oauth_token: "access_test_secret",
+        profile_id: "pfl_default",
+        testmode: true
+      )
+
+    assert {:ok, %Payment{id: "tr_123"}} =
+             Customers.create_payment(client, "cst_123", customer_payment_params(),
+               profile_id: "pfl_override",
+               testmode: false
+             )
+  end
+
+  test "honors params-level testmode for OAuth customer payment create requests" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert_json_body(conn, %{
+        "amount" => %{"currency" => "EUR", "value" => "10.00"},
+        "billingAddress" => %{"givenName" => "Ada"},
+        "description" => "Order #123",
+        "profileId" => "pfl_default",
+        "redirectUrl" => "https://example.test/return",
+        "testmode" => false
+      })
+
+      payment_fixture_response(conn, 201)
+    end)
+
+    client =
+      TestSupport.client(__MODULE__,
+        oauth_token: "access_test_secret",
+        profile_id: "pfl_default",
+        testmode: true
+      )
+
+    assert {:ok, %Payment{id: "tr_123"}} =
+             Customers.create_payment(
+               client,
+               "cst_123",
+               Map.put(customer_payment_params(), :testmode, false)
+             )
+  end
+
   test "updates a customer with pass-through metadata and caller idempotency key" do
     Req.Test.expect(__MODULE__, fn conn ->
       assert conn.method == "PATCH"
@@ -301,6 +393,30 @@ defmodule MollieEx.CustomersTest do
     assert {:error, %Error{reason: :unsupported_testmode}} =
              Customers.list_payments(client(), "cst_123", testmode: true)
 
+    assert {:error, %Error{reason: :unsupported_profile_id}} =
+             Customers.create_payment(client(), "cst_123", customer_payment_params(),
+               profile_id: "pfl_123"
+             )
+
+    assert {:error, %Error{reason: :unsupported_profile_id}} =
+             Customers.create_payment(
+               client(),
+               "cst_123",
+               Map.put(customer_payment_params(), :profile_id, "pfl_123")
+             )
+
+    assert {:error, %Error{reason: :unsupported_testmode}} =
+             Customers.create_payment(client(), "cst_123", customer_payment_params(),
+               testmode: true
+             )
+
+    assert {:error, %Error{reason: :unsupported_testmode}} =
+             Customers.create_payment(
+               client(),
+               "cst_123",
+               Map.put(customer_payment_params(), :testmode, true)
+             )
+
     assert {:error, %Error{reason: :unsupported_testmode}} =
              Customers.update(client(), "cst_123", %{name: "Jane"}, testmode: true)
 
@@ -324,6 +440,23 @@ defmodule MollieEx.CustomersTest do
 
     assert {:error, %Error{type: :server_error, status: 503}} =
              Customers.create(client(max_retries: 1), create_params())
+  end
+
+  test "does not retry customer payment create without idempotency key" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == nil
+
+      conn
+      |> Plug.Conn.put_status(503)
+      |> Req.Test.json(%{"status" => 503})
+    end)
+
+    assert {:error, %Error{type: :server_error, status: 503}} =
+             Customers.create_payment(
+               client(max_retries: 1),
+               "cst_123",
+               customer_payment_params()
+             )
   end
 
   test "retries customer create with the same caller idempotency key and body" do
@@ -357,6 +490,38 @@ defmodule MollieEx.CustomersTest do
                client(max_retries: 1),
                create_params(),
                idempotency_key: "customer-123"
+             )
+  end
+
+  test "retries customer payment create with the same caller idempotency key and body" do
+    expected_body = %{
+      "amount" => %{"currency" => "EUR", "value" => "10.00"},
+      "description" => "Order #123",
+      "redirectUrl" => "https://example.test/return",
+      "billingAddress" => %{"givenName" => "Ada"}
+    }
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == "customer-payment-123"
+      assert_json_body(conn, expected_body)
+
+      conn
+      |> Plug.Conn.put_status(503)
+      |> Req.Test.json(%{"status" => 503})
+    end)
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == "customer-payment-123"
+      assert_json_body(conn, expected_body)
+      payment_fixture_response(conn, 201)
+    end)
+
+    assert {:ok, %Payment{id: "tr_123"}} =
+             Customers.create_payment(
+               client(max_retries: 1),
+               "cst_123",
+               customer_payment_params(),
+               idempotency_key: "customer-payment-123"
              )
   end
 
@@ -451,6 +616,7 @@ defmodule MollieEx.CustomersTest do
   test "returns API errors for customer calls" do
     cases = [
       {:create, 422, :validation},
+      {:create_payment, 422, :validation},
       {:get, 404, :not_found},
       {:list, 400, :api_error},
       {:list_payments, 400, :api_error},
@@ -480,6 +646,7 @@ defmodule MollieEx.CustomersTest do
   test "returns timeout errors for customer calls" do
     for {operation, expected_operation} <- [
           {:create, :customers_create},
+          {:create_payment, :customers_create_payment},
           {:get, :customers_get},
           {:list, :customers_list},
           {:list_payments, :customers_list_payments},
@@ -570,13 +737,22 @@ defmodule MollieEx.CustomersTest do
              Customers.create("bad", create_params())
 
     assert {:error, %Error{reason: :invalid_client}} =
+             Customers.create_payment("bad", "cst_123", customer_payment_params())
+
+    assert {:error, %Error{reason: :invalid_client}} =
              Customers.list_payments("bad", "cst_123")
 
     assert {:error, %Error{reason: :invalid_customer_params}} =
              Customers.create(client(), "bad")
 
+    assert {:error, %Error{reason: :invalid_payment_params}} =
+             Customers.create_payment(client(), "cst_123", "bad")
+
     assert {:error, %Error{reason: :invalid_customer_id}} =
              Customers.get(client(), "")
+
+    assert {:error, %Error{reason: :invalid_customer_id}} =
+             Customers.create_payment(client(), "", customer_payment_params())
 
     assert {:error, %Error{reason: :invalid_customer_id}} =
              Customers.update(client(), "", %{name: "Jane"})
@@ -594,6 +770,9 @@ defmodule MollieEx.CustomersTest do
              Customers.get(client(), "cst_123", "bad")
 
     assert {:error, %Error{reason: :invalid_options}} =
+             Customers.create_payment(client(), "cst_123", customer_payment_params(), "bad")
+
+    assert {:error, %Error{reason: :invalid_options}} =
              Customers.list(client(), "bad")
 
     assert {:error, %Error{reason: :invalid_options}} =
@@ -609,6 +788,11 @@ defmodule MollieEx.CustomersTest do
              Customers.get(client(), "cst_123", unknown: true)
 
     assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
+             Customers.create_payment(client(), "cst_123", customer_payment_params(),
+               unknown: true
+             )
+
+    assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
              Customers.list(client(), unknown: true)
 
     assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
@@ -619,6 +803,11 @@ defmodule MollieEx.CustomersTest do
 
     assert {:error, %Error{reason: {:invalid_option, :include}}} =
              Customers.get(client(), "cst_123", include: "")
+
+    assert {:error, %Error{reason: {:invalid_option, :include}}} =
+             Customers.create_payment(client(), "cst_123", customer_payment_params(),
+               include: 123
+             )
 
     assert {:error, %Error{reason: {:invalid_option, :from}}} =
              Customers.list(client(), from: "")
@@ -649,6 +838,32 @@ defmodule MollieEx.CustomersTest do
              Customers.get(
                TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
                "cst_123",
+               testmode: "true"
+             )
+
+    assert {:error, %Error{reason: :missing_profile_id}} =
+             Customers.create_payment(
+               TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
+               "cst_123",
+               customer_payment_params()
+             )
+
+    assert {:error, %Error{reason: :invalid_profile_id}} =
+             Customers.create_payment(
+               TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
+               "cst_123",
+               customer_payment_params(),
+               profile_id: ""
+             )
+
+    assert {:error, %Error{reason: :invalid_testmode}} =
+             Customers.create_payment(
+               TestSupport.client(__MODULE__,
+                 oauth_token: "access_test_secret",
+                 profile_id: "pfl_123"
+               ),
+               "cst_123",
+               customer_payment_params(),
                testmode: "true"
              )
 
@@ -770,6 +985,27 @@ defmodule MollieEx.CustomersTest do
     )
 
     Req.Test.expect(__MODULE__, fn conn ->
+      payment_fixture_response(conn, 201)
+    end)
+
+    assert {:ok, %Payment{}} =
+             Customers.create_payment(
+               client(telemetry_prefix: prefix),
+               "cst_123",
+               customer_payment_params(),
+               idempotency_key: "customer-payment-123"
+             )
+
+    assert_success_telemetry(
+      prefix,
+      :customers_create_payment,
+      "POST",
+      "/customers/{customerId}/payments",
+      201,
+      [@api_key, "cst_123", "tr_123", "authorization"]
+    )
+
+    Req.Test.expect(__MODULE__, fn conn ->
       customer_fixture_response(conn, 200)
     end)
 
@@ -871,6 +1107,10 @@ defmodule MollieEx.CustomersTest do
   end
 
   defp call_operation(:create, client), do: Customers.create(client, create_params())
+
+  defp call_operation(:create_payment, client),
+    do: Customers.create_payment(client, "cst_123", customer_payment_params())
+
   defp call_operation(:get, client), do: Customers.get(client, "cst_123")
   defp call_operation(:list, client), do: Customers.list(client)
   defp call_operation(:list_payments, client), do: Customers.list_payments(client, "cst_123")
@@ -895,14 +1135,28 @@ defmodule MollieEx.CustomersTest do
     }
   end
 
+  defp customer_payment_params do
+    %{
+      amount: %{currency: "EUR", value: "10.00"},
+      description: "Order #123",
+      redirect_url: "https://example.test/return",
+      billing_address: %{given_name: "Ada"}
+    }
+  end
+
   defp customer_fixture_response(conn, status),
     do: fixture_response(conn, @customer_fixture, status)
 
+  defp customer_response(:create_payment, conn), do: payment_fixture_response(conn, 201)
   defp customer_response(:list_payments, conn), do: payment_list_fixture_response(conn, 200)
   defp customer_response(_operation, conn), do: customer_fixture_response(conn, 200)
 
   defp customer_list_fixture_response(conn, status) do
     fixture_response(conn, @customer_list_fixture, status)
+  end
+
+  defp payment_fixture_response(conn, status) do
+    fixture_response(conn, @payment_fixture, status)
   end
 
   defp payment_list_fixture_response(conn, status) do

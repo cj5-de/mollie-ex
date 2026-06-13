@@ -27,13 +27,22 @@ defmodule MollieEx.Customers do
   alias MollieEx.Error
   alias MollieEx.List, as: MollieList
   alias MollieEx.Payment
-  alias MollieEx.Resources.Customers.{Create, Delete, Get, ListPayments, Update}
+  alias MollieEx.Resources.Customers.{Create, CreatePayment, Delete, Get, ListPayments, Update}
   alias MollieEx.Resources.Customers.List, as: ListRequest
   alias MollieEx.Resources.RequestRunner
 
   @type create_params :: map()
   @type create_option ::
           {:idempotency_key, String.t()}
+          | {:testmode, boolean()}
+          | {:pool_timeout, pos_integer()}
+          | {:receive_timeout, pos_integer()}
+          | {:request_timeout, pos_integer()}
+  @type create_payment_params :: map()
+  @type create_payment_option ::
+          {:idempotency_key, String.t()}
+          | {:include, String.t()}
+          | {:profile_id, String.t()}
           | {:testmode, boolean()}
           | {:pool_timeout, pos_integer()}
           | {:receive_timeout, pos_integer()}
@@ -97,6 +106,37 @@ defmodule MollieEx.Customers do
 
   def create(%Client{}, _params, _opts), do: configuration_error(:invalid_customer_params)
   def create(_client, _params, _opts), do: configuration_error(:invalid_client)
+
+  @doc """
+  Creates a Mollie payment for a customer.
+
+  Customer payment creation supports caller-owned idempotency keys. The SDK
+  never generates idempotency keys implicitly.
+  """
+  @doc since: "0.1.0"
+  @spec create_payment(Client.t(), String.t(), create_payment_params(), [create_payment_option()]) ::
+          {:ok, Payment.t()} | {:error, Error.t()}
+  def create_payment(client, customer_id, params, opts \\ [])
+
+  def create_payment(%Client{} = client, customer_id, params, opts)
+      when is_binary(customer_id) and is_map(params) and is_list(opts) do
+    with {:ok, request, transport_opts} <-
+           CreatePayment.build(client, customer_id, params, opts) do
+      request_payment(client, request, transport_opts, :customers_create_payment)
+    end
+  end
+
+  def create_payment(%Client{}, _customer_id, _params, opts) when not is_list(opts),
+    do: configuration_error(:invalid_options)
+
+  def create_payment(%Client{}, _customer_id, params, _opts) when not is_map(params),
+    do: configuration_error(:invalid_payment_params)
+
+  def create_payment(%Client{}, _customer_id, _params, _opts),
+    do: configuration_error(:invalid_customer_id)
+
+  def create_payment(_client, _customer_id, _params, _opts),
+    do: configuration_error(:invalid_client)
 
   @doc """
   Retrieves a Mollie customer by ID.
@@ -227,6 +267,10 @@ defmodule MollieEx.Customers do
       :customers_list,
       &Customer.from_response(&1, :customers_list)
     )
+  end
+
+  defp request_payment(%Client{} = client, request, transport_opts, operation) do
+    RequestRunner.decode(client, request, transport_opts, &Payment.from_response(&1, operation))
   end
 
   defp request_payment_list(%Client{} = client, request, transport_opts) do

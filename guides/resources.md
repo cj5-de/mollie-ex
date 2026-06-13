@@ -215,6 +215,19 @@ Create, retrieve, list, update, delete, and inspect payments for customers:
 
 {:ok, customer} = MollieEx.Customers.get(client, customer.id)
 {:ok, customers} = MollieEx.Customers.list(client, limit: 10)
+
+{:ok, payment} =
+  MollieEx.Customers.create_payment(
+    client,
+    customer.id,
+    %{
+      amount: %{currency: "EUR", value: "10.00"},
+      description: "Order #123",
+      redirect_url: "https://example.org/checkout/return"
+    },
+    idempotency_key: "11298b4a-83c6-4e8e-b6ab-a2c9bc50ea32"
+  )
+
 {:ok, customer_payments} = MollieEx.Customers.list_payments(client, customer.id, limit: 10)
 
 {:ok, customer} =
