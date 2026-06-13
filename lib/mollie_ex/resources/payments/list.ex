@@ -22,11 +22,11 @@ defmodule MollieEx.Resources.Payments.List do
     with :ok <- Options.ensure_keyword(opts),
          :ok <- Options.reject_unknown(opts, @allowed_options),
          :ok <- reject_api_key_scoped_fields(client, opts),
-         {:ok, from} <- string_query_option(opts, :from),
+         {:ok, from} <- Options.string_query_option(opts, :from),
          {:ok, limit} <- limit(opts),
-         {:ok, sort} <- sort(opts),
+         {:ok, sort} <- Options.sort(opts),
          {:ok, profile_id} <- effective_profile_id(client, opts),
-         {:ok, testmode} <- effective_testmode(client, opts) do
+         {:ok, testmode} <- Options.effective_testmode(client, opts) do
       request = %Request{
         method: :get,
         path: "/payments",
@@ -58,40 +58,11 @@ defmodule MollieEx.Resources.Payments.List do
 
   defp reject_api_key_scoped_fields(%Client{}, _opts), do: :ok
 
-  defp string_query_option(opts, key) do
-    case Keyword.get(opts, key) do
-      nil ->
-        {:ok, nil}
-
-      value when is_binary(value) ->
-        value
-        |> String.trim()
-        |> non_empty_string_option(key)
-
-      _value ->
-        configuration_error({:invalid_option, key})
-    end
-  end
-
-  defp non_empty_string_option("", key), do: configuration_error({:invalid_option, key})
-  defp non_empty_string_option(value, _key), do: {:ok, value}
-
   defp limit(opts) do
     case Keyword.get(opts, :limit) do
       nil -> {:ok, nil}
       limit when is_integer(limit) and limit > 0 -> {:ok, limit}
       _limit -> configuration_error({:invalid_option, :limit})
-    end
-  end
-
-  defp sort(opts) do
-    case Keyword.get(opts, :sort) do
-      nil -> {:ok, nil}
-      :asc -> {:ok, "asc"}
-      :desc -> {:ok, "desc"}
-      "asc" -> {:ok, "asc"}
-      "desc" -> {:ok, "desc"}
-      _sort -> configuration_error({:invalid_option, :sort})
     end
   end
 
@@ -102,33 +73,8 @@ defmodule MollieEx.Resources.Payments.List do
       {:ok, profile_id} -> profile_id
       :error -> client.profile_id
     end
-    |> profile_id()
+    |> Options.profile_id()
   end
-
-  defp profile_id(profile_id) when is_binary(profile_id) do
-    profile_id = String.trim(profile_id)
-
-    if profile_id == "" do
-      configuration_error(:invalid_profile_id)
-    else
-      {:ok, profile_id}
-    end
-  end
-
-  defp profile_id(nil), do: configuration_error(:missing_profile_id)
-  defp profile_id(_profile_id), do: configuration_error(:invalid_profile_id)
-
-  defp effective_testmode(%Client{auth: {:api_key, _credential}}, _opts), do: {:ok, nil}
-
-  defp effective_testmode(%Client{} = client, opts) do
-    opts
-    |> Keyword.get(:testmode, client.testmode)
-    |> testmode()
-  end
-
-  defp testmode(testmode) when is_boolean(testmode), do: {:ok, testmode}
-  defp testmode(nil), do: {:ok, nil}
-  defp testmode(_testmode), do: configuration_error(:invalid_testmode)
 
   defp query(from, limit, sort, profile_id, testmode) do
     []

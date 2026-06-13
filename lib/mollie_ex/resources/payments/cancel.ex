@@ -52,28 +52,10 @@ defmodule MollieEx.Resources.Payments.Cancel do
   end
 
   defp body(%Client{} = client, opts) do
-    with {:ok, testmode} <- effective_testmode(client, opts) do
+    with {:ok, testmode} <- Options.effective_testmode(client, opts) do
       {:ok, body(testmode), testmode}
     end
   end
-
-  defp effective_testmode(%Client{auth: {:api_key, _credential}}, opts) do
-    if Keyword.has_key?(opts, :testmode) do
-      configuration_error(:unsupported_testmode)
-    else
-      {:ok, nil}
-    end
-  end
-
-  defp effective_testmode(%Client{} = client, opts) do
-    opts
-    |> Keyword.get(:testmode, client.testmode)
-    |> testmode()
-  end
-
-  defp testmode(testmode) when is_boolean(testmode), do: {:ok, testmode}
-  defp testmode(nil), do: {:ok, nil}
-  defp testmode(_testmode), do: configuration_error(:invalid_testmode)
 
   defp body(nil), do: nil
   defp body(testmode), do: %{"testmode" => testmode}

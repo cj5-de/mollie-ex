@@ -89,33 +89,16 @@ defmodule MollieEx.Resources.Payments.ReleaseAuthorization do
       {:ok, profile_id} -> profile_id
       :error -> client.profile_id
     end
-    |> profile_id()
+    |> Options.profile_id()
   end
-
-  defp profile_id(profile_id) when is_binary(profile_id) do
-    profile_id = String.trim(profile_id)
-
-    if profile_id == "" do
-      configuration_error(:invalid_profile_id)
-    else
-      {:ok, profile_id}
-    end
-  end
-
-  defp profile_id(nil), do: configuration_error(:missing_profile_id)
-  defp profile_id(_profile_id), do: configuration_error(:invalid_profile_id)
 
   defp effective_testmode(%Client{auth: {:api_key, _credential}}, _opts), do: {:ok, nil}
 
   defp effective_testmode(%Client{} = client, opts) do
     opts
     |> Keyword.get(:testmode, client.testmode)
-    |> testmode()
+    |> Options.testmode()
   end
-
-  defp testmode(testmode) when is_boolean(testmode), do: {:ok, testmode}
-  defp testmode(nil), do: {:ok, nil}
-  defp testmode(_testmode), do: configuration_error(:invalid_testmode)
 
   defp maybe_put(map, _key, nil), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)

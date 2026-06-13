@@ -2,37 +2,36 @@ defmodule MollieEx.Resources.Payments.Options do
   @moduledoc false
 
   alias MollieEx.Error
-
-  @timeout_options [:pool_timeout, :receive_timeout, :request_timeout]
+  alias MollieEx.Resources.Options, as: SharedOptions
 
   @spec ensure_keyword(keyword() | term()) :: :ok | {:error, Error.t()}
-  def ensure_keyword(opts) when is_list(opts) do
-    if Keyword.keyword?(opts), do: :ok, else: configuration_error(:invalid_options)
-  end
-
-  def ensure_keyword(_opts), do: configuration_error(:invalid_options)
+  defdelegate ensure_keyword(opts), to: SharedOptions
 
   @spec reject_unknown(keyword(), [atom()]) :: :ok | {:error, Error.t()}
-  def reject_unknown(opts, allowed) do
-    case opts |> Keyword.keys() |> Enum.reject(&(&1 in allowed)) do
-      [] -> :ok
-      [key | _keys] -> configuration_error({:unsupported_option, key})
-    end
-  end
+  defdelegate reject_unknown(opts, allowed), to: SharedOptions
 
   @spec string_option(keyword(), atom()) :: {:ok, String.t() | nil} | {:error, Error.t()}
-  def string_option(opts, key) do
-    case Keyword.get(opts, key) do
-      nil -> {:ok, nil}
-      value when is_binary(value) -> {:ok, value}
-      _value -> configuration_error({:invalid_option, key})
-    end
-  end
+  defdelegate string_option(opts, key), to: SharedOptions
+
+  @spec string_query_option(keyword(), atom()) :: {:ok, String.t() | nil} | {:error, Error.t()}
+  defdelegate string_query_option(opts, key), to: SharedOptions
+
+  @spec sort(keyword()) :: {:ok, String.t() | nil} | {:error, Error.t()}
+  defdelegate sort(opts), to: SharedOptions
 
   @spec timeout_options(keyword()) :: keyword()
-  def timeout_options(opts), do: Keyword.take(opts, @timeout_options)
+  defdelegate timeout_options(opts), to: SharedOptions
 
-  def configuration_error(reason) do
-    {:error, Error.exception(type: :configuration, reason: reason)}
-  end
+  @spec profile_id(term()) :: {:ok, String.t()} | {:error, Error.t()}
+  defdelegate profile_id(profile_id), to: SharedOptions
+
+  @spec effective_testmode(MollieEx.Client.t(), keyword()) ::
+          {:ok, boolean() | nil} | {:error, Error.t()}
+  defdelegate effective_testmode(client, opts), to: SharedOptions
+
+  @spec testmode(boolean() | nil | term()) :: {:ok, boolean() | nil} | {:error, Error.t()}
+  defdelegate testmode(testmode), to: SharedOptions
+
+  @spec configuration_error(term()) :: {:error, Error.t()}
+  defdelegate configuration_error(reason), to: SharedOptions
 end
