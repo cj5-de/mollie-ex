@@ -5,6 +5,7 @@ defmodule MollieEx.CustomersTest do
   alias MollieEx.Customers
   alias MollieEx.Error
   alias MollieEx.List, as: MollieList
+  alias MollieEx.Payment
   alias MollieEx.TestSupport
   alias MollieEx.Types.Link
 
@@ -15,6 +16,7 @@ defmodule MollieEx.CustomersTest do
   @api_key "test_customers_secret"
   @customer_fixture Path.expand("../fixtures/mollie/customers/get_success.json", __DIR__)
   @customer_list_fixture Path.expand("../fixtures/mollie/customers/list_success.json", __DIR__)
+  @payment_list_fixture Path.expand("../fixtures/mollie/payments/list_success.json", __DIR__)
 
   test "creates a customer with pass-through metadata and caller idempotency key" do
     Req.Test.expect(__MODULE__, fn conn ->
@@ -144,6 +146,48 @@ defmodule MollieEx.CustomersTest do
              customer_list.links["next"]
   end
 
+  test "lists payments for a customer with pagination, profile, sort, and OAuth testmode" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/v2/customers/cst_123/payments"
+
+      assert URI.decode_query(conn.query_string) == %{
+               "from" => "tr_from",
+               "limit" => "1",
+               "profileId" => "pfl_override",
+               "sort" => "desc",
+               "testmode" => "false"
+             }
+
+      assert header(conn, "idempotency-key") == nil
+      assert_empty_body(conn)
+
+      payment_list_fixture_response(conn, 200)
+    end)
+
+    client =
+      TestSupport.client(__MODULE__,
+        oauth_token: "access_test_secret",
+        profile_id: "pfl_default",
+        testmode: true
+      )
+
+    assert {:ok, %MollieList{} = payment_list} =
+             Customers.list_payments(client, "cst_123",
+               from: "tr_from",
+               limit: 1,
+               profile_id: "pfl_override",
+               sort: :desc,
+               testmode: false
+             )
+
+    assert payment_list.count == 1
+    assert [%Payment{id: "tr_list_123", description: "Order #12345"}] = payment_list.data
+
+    assert %Link{href: "https://api.mollie.com/v2/payments?from=tr_next&limit=1"} =
+             payment_list.links["next"]
+  end
+
   test "updates a customer with pass-through metadata and caller idempotency key" do
     Req.Test.expect(__MODULE__, fn conn ->
       assert conn.method == "PATCH"
@@ -251,6 +295,12 @@ defmodule MollieEx.CustomersTest do
     assert {:error, %Error{reason: :unsupported_testmode}} =
              Customers.list(client(), testmode: true)
 
+    assert {:error, %Error{reason: :unsupported_profile_id}} =
+             Customers.list_payments(client(), "cst_123", profile_id: "pfl_123")
+
+    assert {:error, %Error{reason: :unsupported_testmode}} =
+             Customers.list_payments(client(), "cst_123", testmode: true)
+
     assert {:error, %Error{reason: :unsupported_testmode}} =
              Customers.update(client(), "cst_123", %{name: "Jane"}, testmode: true)
 
@@ -355,21 +405,23 @@ defmodule MollieEx.CustomersTest do
              )
   end
 
-  test "retries safe customer get without idempotency key" do
-    Req.Test.expect(__MODULE__, fn conn ->
-      assert header(conn, "idempotency-key") == nil
+  test "retries safe customer get and payment list requests without idempotency key" do
+    for operation <- [:get, :list_payments] do
+      Req.Test.expect(__MODULE__, fn conn ->
+        assert header(conn, "idempotency-key") == nil
 
-      conn
-      |> Plug.Conn.put_status(503)
-      |> Req.Test.json(%{"status" => 503})
-    end)
+        conn
+        |> Plug.Conn.put_status(503)
+        |> Req.Test.json(%{"status" => 503})
+      end)
 
-    Req.Test.expect(__MODULE__, fn conn ->
-      assert header(conn, "idempotency-key") == nil
-      customer_fixture_response(conn, 200)
-    end)
+      Req.Test.expect(__MODULE__, fn conn ->
+        assert header(conn, "idempotency-key") == nil
+        customer_response(operation, conn)
+      end)
 
-    assert {:ok, %Customer{id: "cst_123"}} = Customers.get(client(max_retries: 1), "cst_123")
+      assert {:ok, _result} = call_operation(operation, client(max_retries: 1))
+    end
   end
 
   test "does not retry customer update and delete without idempotency keys" do
@@ -401,6 +453,7 @@ defmodule MollieEx.CustomersTest do
       {:create, 422, :validation},
       {:get, 404, :not_found},
       {:list, 400, :api_error},
+      {:list_payments, 400, :api_error},
       {:update, 422, :validation},
       {:delete, 404, :not_found},
       {:get, 429, :rate_limited}
@@ -429,6 +482,7 @@ defmodule MollieEx.CustomersTest do
           {:create, :customers_create},
           {:get, :customers_get},
           {:list, :customers_list},
+          {:list_payments, :customers_list_payments},
           {:update, :customers_update},
           {:delete, :customers_delete}
         ] do
@@ -480,6 +534,18 @@ defmodule MollieEx.CustomersTest do
     assert error.operation == :customers_list
   end
 
+  test "returns decode errors for invalid customer payments list response shapes" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      Req.Test.json(conn, %{"count" => 1, "_embedded" => %{"payments" => %{}}})
+    end)
+
+    assert {:error, %Error{} = error} = Customers.list_payments(client(), "cst_123")
+    assert error.type == :decode
+    assert error.status == 200
+    assert error.reason == :invalid_list_response
+    assert error.operation == :customers_list_payments
+  end
+
   test "returns decode errors for invalid customer delete responses" do
     Req.Test.expect(__MODULE__, fn conn ->
       customer_fixture_response(conn, 200)
@@ -503,6 +569,9 @@ defmodule MollieEx.CustomersTest do
     assert {:error, %Error{reason: :invalid_client}} =
              Customers.create("bad", create_params())
 
+    assert {:error, %Error{reason: :invalid_client}} =
+             Customers.list_payments("bad", "cst_123")
+
     assert {:error, %Error{reason: :invalid_customer_params}} =
              Customers.create(client(), "bad")
 
@@ -514,6 +583,9 @@ defmodule MollieEx.CustomersTest do
 
     assert {:error, %Error{reason: :invalid_customer_id}} =
              Customers.delete(client(), "")
+
+    assert {:error, %Error{reason: :invalid_customer_id}} =
+             Customers.list_payments(client(), "")
 
     assert {:error, %Error{reason: :invalid_customer_params}} =
              Customers.update(client(), "cst_123", "bad")
@@ -530,11 +602,17 @@ defmodule MollieEx.CustomersTest do
     assert {:error, %Error{reason: :invalid_options}} =
              Customers.delete(client(), "cst_123", "bad")
 
+    assert {:error, %Error{reason: :invalid_options}} =
+             Customers.list_payments(client(), "cst_123", "bad")
+
     assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
              Customers.get(client(), "cst_123", unknown: true)
 
     assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
              Customers.list(client(), unknown: true)
+
+    assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
+             Customers.list_payments(client(), "cst_123", unknown: true)
 
     assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
              Customers.update(client(), "cst_123", %{name: "Jane"}, unknown: true)
@@ -550,6 +628,15 @@ defmodule MollieEx.CustomersTest do
 
     assert {:error, %Error{reason: {:invalid_option, :sort}}} =
              Customers.list(client(), sort: :newest)
+
+    assert {:error, %Error{reason: {:invalid_option, :from}}} =
+             Customers.list_payments(client(), "cst_123", from: "")
+
+    assert {:error, %Error{reason: {:invalid_option, :limit}}} =
+             Customers.list_payments(client(), "cst_123", limit: 251)
+
+    assert {:error, %Error{reason: {:invalid_option, :sort}}} =
+             Customers.list_payments(client(), "cst_123", sort: :newest)
 
     assert {:error, %Error{reason: :invalid_testmode}} =
              Customers.create(
@@ -568,6 +655,29 @@ defmodule MollieEx.CustomersTest do
     assert {:error, %Error{reason: :invalid_testmode}} =
              Customers.list(
                TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
+               testmode: "true"
+             )
+
+    assert {:error, %Error{reason: :missing_profile_id}} =
+             Customers.list_payments(
+               TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
+               "cst_123"
+             )
+
+    assert {:error, %Error{reason: :invalid_profile_id}} =
+             Customers.list_payments(
+               TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
+               "cst_123",
+               profile_id: ""
+             )
+
+    assert {:error, %Error{reason: :invalid_testmode}} =
+             Customers.list_payments(
+               TestSupport.client(__MODULE__,
+                 oauth_token: "access_test_secret",
+                 profile_id: "pfl_123"
+               ),
+               "cst_123",
                testmode: "true"
              )
 
@@ -639,6 +749,22 @@ defmodule MollieEx.CustomersTest do
       :customers_list,
       "GET",
       "/customers",
+      200,
+      [@api_key, "cst_123", "authorization"]
+    )
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      payment_list_fixture_response(conn, 200)
+    end)
+
+    assert {:ok, %MollieList{}} =
+             Customers.list_payments(client(telemetry_prefix: prefix), "cst_123")
+
+    assert_success_telemetry(
+      prefix,
+      :customers_list_payments,
+      "GET",
+      "/customers/{customerId}/payments",
       200,
       [@api_key, "cst_123", "authorization"]
     )
@@ -747,6 +873,7 @@ defmodule MollieEx.CustomersTest do
   defp call_operation(:create, client), do: Customers.create(client, create_params())
   defp call_operation(:get, client), do: Customers.get(client, "cst_123")
   defp call_operation(:list, client), do: Customers.list(client)
+  defp call_operation(:list_payments, client), do: Customers.list_payments(client, "cst_123")
   defp call_operation(:update, client), do: Customers.update(client, "cst_123", %{name: "Jane"})
   defp call_operation(:delete, client), do: Customers.delete(client, "cst_123")
 
@@ -771,7 +898,14 @@ defmodule MollieEx.CustomersTest do
   defp customer_fixture_response(conn, status),
     do: fixture_response(conn, @customer_fixture, status)
 
+  defp customer_response(:list_payments, conn), do: payment_list_fixture_response(conn, 200)
+  defp customer_response(_operation, conn), do: customer_fixture_response(conn, 200)
+
   defp customer_list_fixture_response(conn, status) do
     fixture_response(conn, @customer_list_fixture, status)
+  end
+
+  defp payment_list_fixture_response(conn, status) do
+    fixture_response(conn, @payment_list_fixture, status)
   end
 end

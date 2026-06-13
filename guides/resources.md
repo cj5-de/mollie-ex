@@ -199,7 +199,7 @@ checkout_url = MollieEx.PaymentLink.checkout_url(payment_link)
 
 ## Customers
 
-Create, retrieve, list, update, and delete customers:
+Create, retrieve, list, update, delete, and inspect payments for customers:
 
 ```elixir
 {:ok, customer} =
@@ -215,6 +215,7 @@ Create, retrieve, list, update, and delete customers:
 
 {:ok, customer} = MollieEx.Customers.get(client, customer.id)
 {:ok, customers} = MollieEx.Customers.list(client, limit: 10)
+{:ok, customer_payments} = MollieEx.Customers.list_payments(client, customer.id, limit: 10)
 
 {:ok, customer} =
   MollieEx.Customers.update(
