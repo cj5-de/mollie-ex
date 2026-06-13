@@ -1,12 +1,14 @@
 defmodule MollieEx.PaymentRoutesTest do
   use ExUnit.Case, async: false
 
-  alias MollieEx.Client
   alias MollieEx.Error
   alias MollieEx.List, as: MollieList
   alias MollieEx.PaymentRoutes
   alias MollieEx.Route
+  alias MollieEx.TestSupport
   alias MollieEx.Types.{Link, Money}
+
+  import MollieEx.TestSupport, except: [client: 2]
 
   setup {Req.Test, :verify_on_exit!}
 
@@ -68,12 +70,7 @@ defmodule MollieEx.PaymentRoutesTest do
       route_fixture_response(conn, 201)
     end)
 
-    client =
-      Client.new!(
-        oauth_token: "access_test_secret",
-        testmode: true,
-        transport: {:req_test, __MODULE__}
-      )
+    client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
 
     assert {:ok, %Route{id: "crt_123"}} =
              PaymentRoutes.create(
@@ -95,12 +92,7 @@ defmodule MollieEx.PaymentRoutesTest do
       route_fixture_response(conn, 201)
     end)
 
-    client =
-      Client.new!(
-        oauth_token: "access_test_secret",
-        testmode: true,
-        transport: {:req_test, __MODULE__}
-      )
+    client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
 
     assert {:ok, %Route{id: "crt_123"}} =
              PaymentRoutes.create(client, "tr_123", Map.put(valid_params(), :testmode, false))
@@ -144,12 +136,7 @@ defmodule MollieEx.PaymentRoutesTest do
       route_list_fixture_response(conn, 200)
     end)
 
-    client =
-      Client.new!(
-        oauth_token: "access_test_secret",
-        testmode: true,
-        transport: {:req_test, __MODULE__}
-      )
+    client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
 
     assert {:ok, %MollieList{}} = PaymentRoutes.list(client, "tr_123", testmode: false)
   end
@@ -371,7 +358,7 @@ defmodule MollieEx.PaymentRoutesTest do
 
     assert {:error, %Error{reason: :invalid_testmode}} =
              PaymentRoutes.list(
-               Client.new!(oauth_token: "access_test_secret", transport: {:req_test, __MODULE__}),
+               TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
                "tr_123",
                testmode: "true"
              )
@@ -400,7 +387,8 @@ defmodule MollieEx.PaymentRoutesTest do
       :payment_routes_create,
       "POST",
       "/payments/{paymentId}/routes",
-      201
+      201,
+      [@api_key, "crt_123", "authorization"]
     )
 
     Req.Test.expect(__MODULE__, fn conn ->
@@ -415,7 +403,8 @@ defmodule MollieEx.PaymentRoutesTest do
       :payment_routes_get,
       "GET",
       "/payments/{paymentId}/routes/{routeId}",
-      200
+      200,
+      [@api_key, "crt_123", "authorization"]
     )
 
     Req.Test.expect(__MODULE__, fn conn ->
@@ -430,7 +419,8 @@ defmodule MollieEx.PaymentRoutesTest do
       :payment_routes_list,
       "GET",
       "/payments/{paymentId}/routes",
-      200
+      200,
+      [@api_key, "crt_123", "authorization"]
     )
   end
 
@@ -502,9 +492,9 @@ defmodule MollieEx.PaymentRoutesTest do
   defp call_operation(:list, client), do: PaymentRoutes.list(client, "tr_123")
 
   defp client(opts \\ []) do
-    [api_key: @api_key, transport: {:req_test, __MODULE__}]
+    [api_key: @api_key]
     |> Keyword.merge(opts)
-    |> Client.new!()
+    |> then(&TestSupport.client(__MODULE__, &1))
   end
 
   defp valid_params do
@@ -517,71 +507,9 @@ defmodule MollieEx.PaymentRoutesTest do
   defp route_response(:list, conn), do: route_list_fixture_response(conn, 200)
   defp route_response(_operation, conn), do: route_fixture_response(conn, 200)
 
-  defp route_fixture_response(conn, status) do
-    conn
-    |> Plug.Conn.put_resp_header("content-type", "application/hal+json")
-    |> Plug.Conn.send_resp(status, File.read!(@route_fixture))
-  end
+  defp route_fixture_response(conn, status), do: fixture_response(conn, @route_fixture, status)
 
   defp route_list_fixture_response(conn, status) do
-    conn
-    |> Plug.Conn.put_resp_header("content-type", "application/hal+json")
-    |> Plug.Conn.send_resp(status, File.read!(@route_list_fixture))
-  end
-
-  defp assert_json_body(conn, expected) do
-    assert conn |> Req.Test.raw_body() |> Jason.decode!() == expected
-  end
-
-  defp assert_empty_body(conn) do
-    assert conn |> Req.Test.raw_body() |> IO.iodata_to_binary() == ""
-  end
-
-  defp header(conn, name) do
-    conn.req_headers
-    |> List.keyfind(name, 0)
-    |> case do
-      {^name, value} -> value
-      nil -> nil
-    end
-  end
-
-  defp assert_success_telemetry(prefix, operation, method, path_template, status) do
-    start_event = prefix ++ [:request, :start]
-    stop_event = prefix ++ [:request, :stop]
-
-    assert_receive {:telemetry, ^start_event, %{system_time: system_time}, start_metadata}
-    assert is_integer(system_time)
-    assert start_metadata.operation == operation
-    assert start_metadata.method == method
-    assert start_metadata.path_template == path_template
-
-    assert_receive {:telemetry, ^stop_event, %{duration: duration}, stop_metadata}
-    assert is_integer(duration)
-    assert stop_metadata.status == status
-    assert stop_metadata.operation == operation
-
-    telemetry_text = inspect([start_metadata, stop_metadata])
-    refute telemetry_text =~ @api_key
-    refute telemetry_text =~ "crt_123"
-    refute telemetry_text =~ "authorization"
-  end
-
-  defp attach_telemetry(prefix, suffixes) do
-    handler_id = {__MODULE__, self(), make_ref()}
-    events = Enum.map(suffixes, &(prefix ++ &1))
-
-    :telemetry.attach_many(
-      handler_id,
-      events,
-      &__MODULE__.handle_telemetry/4,
-      self()
-    )
-
-    on_exit(fn -> :telemetry.detach(handler_id) end)
-  end
-
-  def handle_telemetry(event, measurements, metadata, test_pid) do
-    send(test_pid, {:telemetry, event, measurements, metadata})
+    fixture_response(conn, @route_list_fixture, status)
   end
 end

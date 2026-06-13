@@ -1,12 +1,14 @@
 defmodule MollieEx.CustomersTest do
   use ExUnit.Case, async: false
 
-  alias MollieEx.Client
   alias MollieEx.Customer
   alias MollieEx.Customers
   alias MollieEx.Error
   alias MollieEx.List, as: MollieList
+  alias MollieEx.TestSupport
   alias MollieEx.Types.Link
+
+  import MollieEx.TestSupport, except: [client: 2]
 
   setup {Req.Test, :verify_on_exit!}
 
@@ -64,12 +66,7 @@ defmodule MollieEx.CustomersTest do
       customer_fixture_response(conn, 201)
     end)
 
-    client =
-      Client.new!(
-        oauth_token: "access_test_secret",
-        testmode: true,
-        transport: {:req_test, __MODULE__}
-      )
+    client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
 
     assert {:ok, %Customer{id: "cst_123"}} =
              Customers.create(client, create_params(), testmode: false)
@@ -91,12 +88,7 @@ defmodule MollieEx.CustomersTest do
       customer_fixture_response(conn, 201)
     end)
 
-    client =
-      Client.new!(
-        oauth_token: "access_test_secret",
-        testmode: true,
-        transport: {:req_test, __MODULE__}
-      )
+    client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
 
     assert {:ok, %Customer{id: "cst_123"}} =
              Customers.create(client, Map.put(create_params(), :testmode, false))
@@ -117,12 +109,7 @@ defmodule MollieEx.CustomersTest do
       customer_fixture_response(conn, 200)
     end)
 
-    client =
-      Client.new!(
-        oauth_token: "access_test_secret",
-        testmode: true,
-        transport: {:req_test, __MODULE__}
-      )
+    client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
 
     assert {:ok, %Customer{id: "cst_123"}} =
              Customers.get(client, "cst_123", include: "events", testmode: false)
@@ -145,12 +132,7 @@ defmodule MollieEx.CustomersTest do
       customer_list_fixture_response(conn, 200)
     end)
 
-    client =
-      Client.new!(
-        oauth_token: "access_test_secret",
-        testmode: true,
-        transport: {:req_test, __MODULE__}
-      )
+    client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
 
     assert {:ok, %MollieList{} = customer_list} =
              Customers.list(client, from: "cst_from", limit: 1, sort: :asc, testmode: false)
@@ -202,12 +184,7 @@ defmodule MollieEx.CustomersTest do
       customer_fixture_response(conn, 200)
     end)
 
-    client =
-      Client.new!(
-        oauth_token: "access_test_secret",
-        testmode: true,
-        transport: {:req_test, __MODULE__}
-      )
+    client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
 
     assert {:ok, %Customer{id: "cst_123"}} =
              Customers.update(client, "cst_123", %{name: "Jane Updated"}, testmode: false)
@@ -238,12 +215,7 @@ defmodule MollieEx.CustomersTest do
       no_content_response(conn)
     end)
 
-    client =
-      Client.new!(
-        oauth_token: "access_test_secret",
-        testmode: true,
-        transport: {:req_test, __MODULE__}
-      )
+    client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
 
     assert {:ok, :no_content} = Customers.delete(client, "cst_123", testmode: false)
 
@@ -581,27 +553,27 @@ defmodule MollieEx.CustomersTest do
 
     assert {:error, %Error{reason: :invalid_testmode}} =
              Customers.create(
-               Client.new!(oauth_token: "access_test_secret", transport: {:req_test, __MODULE__}),
+               TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
                create_params(),
                testmode: "true"
              )
 
     assert {:error, %Error{reason: :invalid_testmode}} =
              Customers.get(
-               Client.new!(oauth_token: "access_test_secret", transport: {:req_test, __MODULE__}),
+               TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
                "cst_123",
                testmode: "true"
              )
 
     assert {:error, %Error{reason: :invalid_testmode}} =
              Customers.list(
-               Client.new!(oauth_token: "access_test_secret", transport: {:req_test, __MODULE__}),
+               TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
                testmode: "true"
              )
 
     assert {:error, %Error{reason: :invalid_testmode}} =
              Customers.update(
-               Client.new!(oauth_token: "access_test_secret", transport: {:req_test, __MODULE__}),
+               TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
                "cst_123",
                %{name: "Jane"},
                testmode: "true"
@@ -609,7 +581,7 @@ defmodule MollieEx.CustomersTest do
 
     assert {:error, %Error{reason: :invalid_testmode}} =
              Customers.delete(
-               Client.new!(oauth_token: "access_test_secret", transport: {:req_test, __MODULE__}),
+               TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
                "cst_123",
                testmode: "true"
              )
@@ -632,7 +604,14 @@ defmodule MollieEx.CustomersTest do
                idempotency_key: "customer-123"
              )
 
-    assert_success_telemetry(prefix, :customers_create, "POST", "/customers", 201)
+    assert_success_telemetry(
+      prefix,
+      :customers_create,
+      "POST",
+      "/customers",
+      201,
+      [@api_key, "cst_123", "authorization"]
+    )
 
     Req.Test.expect(__MODULE__, fn conn ->
       customer_fixture_response(conn, 200)
@@ -640,7 +619,14 @@ defmodule MollieEx.CustomersTest do
 
     assert {:ok, %Customer{}} = Customers.get(client(telemetry_prefix: prefix), "cst_123")
 
-    assert_success_telemetry(prefix, :customers_get, "GET", "/customers/{customerId}", 200)
+    assert_success_telemetry(
+      prefix,
+      :customers_get,
+      "GET",
+      "/customers/{customerId}",
+      200,
+      [@api_key, "cst_123", "authorization"]
+    )
 
     Req.Test.expect(__MODULE__, fn conn ->
       customer_list_fixture_response(conn, 200)
@@ -648,7 +634,14 @@ defmodule MollieEx.CustomersTest do
 
     assert {:ok, %MollieList{}} = Customers.list(client(telemetry_prefix: prefix))
 
-    assert_success_telemetry(prefix, :customers_list, "GET", "/customers", 200)
+    assert_success_telemetry(
+      prefix,
+      :customers_list,
+      "GET",
+      "/customers",
+      200,
+      [@api_key, "cst_123", "authorization"]
+    )
 
     Req.Test.expect(__MODULE__, fn conn ->
       customer_fixture_response(conn, 200)
@@ -662,7 +655,14 @@ defmodule MollieEx.CustomersTest do
                idempotency_key: "customer-update-123"
              )
 
-    assert_success_telemetry(prefix, :customers_update, "PATCH", "/customers/{customerId}", 200)
+    assert_success_telemetry(
+      prefix,
+      :customers_update,
+      "PATCH",
+      "/customers/{customerId}",
+      200,
+      [@api_key, "cst_123", "authorization"]
+    )
 
     Req.Test.expect(__MODULE__, fn conn ->
       no_content_response(conn)
@@ -675,7 +675,14 @@ defmodule MollieEx.CustomersTest do
                idempotency_key: "customer-delete-123"
              )
 
-    assert_success_telemetry(prefix, :customers_delete, "DELETE", "/customers/{customerId}", 204)
+    assert_success_telemetry(
+      prefix,
+      :customers_delete,
+      "DELETE",
+      "/customers/{customerId}",
+      204,
+      [@api_key, "cst_123", "authorization"]
+    )
   end
 
   test "emits safe decode exception and rate limit telemetry" do
@@ -744,9 +751,9 @@ defmodule MollieEx.CustomersTest do
   defp call_operation(:delete, client), do: Customers.delete(client, "cst_123")
 
   defp client(opts \\ []) do
-    [api_key: @api_key, transport: {:req_test, __MODULE__}]
+    [api_key: @api_key]
     |> Keyword.merge(opts)
-    |> Client.new!()
+    |> then(&TestSupport.client(__MODULE__, &1))
   end
 
   defp create_params do
@@ -761,77 +768,10 @@ defmodule MollieEx.CustomersTest do
     }
   end
 
-  defp customer_fixture_response(conn, status) do
-    conn
-    |> Plug.Conn.put_resp_header("content-type", "application/hal+json")
-    |> Plug.Conn.send_resp(status, File.read!(@customer_fixture))
-  end
+  defp customer_fixture_response(conn, status),
+    do: fixture_response(conn, @customer_fixture, status)
 
   defp customer_list_fixture_response(conn, status) do
-    conn
-    |> Plug.Conn.put_resp_header("content-type", "application/hal+json")
-    |> Plug.Conn.send_resp(status, File.read!(@customer_list_fixture))
-  end
-
-  defp no_content_response(conn) do
-    conn
-    |> Plug.Conn.put_resp_header("content-type", "application/json")
-    |> Plug.Conn.send_resp(204, "")
-  end
-
-  defp assert_json_body(conn, expected) do
-    assert conn |> Req.Test.raw_body() |> Jason.decode!() == expected
-  end
-
-  defp assert_empty_body(conn) do
-    assert conn |> Req.Test.raw_body() |> IO.iodata_to_binary() == ""
-  end
-
-  defp header(conn, name) do
-    conn.req_headers
-    |> List.keyfind(name, 0)
-    |> case do
-      {^name, value} -> value
-      nil -> nil
-    end
-  end
-
-  defp assert_success_telemetry(prefix, operation, method, path_template, status) do
-    start_event = prefix ++ [:request, :start]
-    stop_event = prefix ++ [:request, :stop]
-
-    assert_receive {:telemetry, ^start_event, %{system_time: system_time}, start_metadata}
-    assert is_integer(system_time)
-    assert start_metadata.operation == operation
-    assert start_metadata.method == method
-    assert start_metadata.path_template == path_template
-
-    assert_receive {:telemetry, ^stop_event, %{duration: duration}, stop_metadata}
-    assert is_integer(duration)
-    assert stop_metadata.status == status
-    assert stop_metadata.operation == operation
-
-    telemetry_text = inspect([start_metadata, stop_metadata])
-    refute telemetry_text =~ @api_key
-    refute telemetry_text =~ "cst_123"
-    refute telemetry_text =~ "authorization"
-  end
-
-  defp attach_telemetry(prefix, suffixes) do
-    handler_id = {__MODULE__, self(), make_ref()}
-    events = Enum.map(suffixes, &(prefix ++ &1))
-
-    :telemetry.attach_many(
-      handler_id,
-      events,
-      &__MODULE__.handle_telemetry/4,
-      self()
-    )
-
-    on_exit(fn -> :telemetry.detach(handler_id) end)
-  end
-
-  def handle_telemetry(event, measurements, metadata, test_pid) do
-    send(test_pid, {:telemetry, event, measurements, metadata})
+    fixture_response(conn, @customer_list_fixture, status)
   end
 end
