@@ -4,7 +4,21 @@ defmodule MollieEx.Captures do
 
   All functions return result tuples. They do not raise for ordinary API,
   transport, or validation failures.
+
+  Capture creation accepts a caller-owned idempotency key. The SDK never
+  generates idempotency keys implicitly.
+
+  ```elixir
+  {:ok, capture} =
+    MollieEx.Captures.create(
+      client,
+      "tr_123",
+      %{amount: %{currency: "EUR", value: "10.00"}},
+      idempotency_key: "7da9444e-4360-4ab4-b411-73b33ac52b1f"
+    )
+  ```
   """
+  @moduledoc since: "0.1.0"
 
   alias MollieEx.Capture
   alias MollieEx.Client
@@ -43,6 +57,7 @@ defmodule MollieEx.Captures do
   Capture creation supports caller-owned idempotency keys. The SDK never
   generates idempotency keys implicitly.
   """
+  @doc since: "0.1.0"
   @spec create(Client.t(), String.t(), create_params(), [create_option()]) ::
           {:ok, Capture.t()} | {:error, Error.t()}
   def create(client, payment_id, params, opts \\ [])
@@ -66,6 +81,7 @@ defmodule MollieEx.Captures do
   @doc """
   Retrieves a Mollie capture by payment ID and capture ID.
   """
+  @doc since: "0.1.0"
   @spec get(Client.t(), String.t(), String.t(), [get_option()]) ::
           {:ok, Capture.t()} | {:error, Error.t()}
   def get(client, payment_id, capture_id, opts \\ [])
@@ -91,6 +107,7 @@ defmodule MollieEx.Captures do
   @doc """
   Lists Mollie captures for a payment.
   """
+  @doc since: "0.1.0"
   @spec list(Client.t(), String.t(), [list_option()]) ::
           {:ok, MollieList.t(Capture.t())} | {:error, Error.t()}
   def list(client, payment_id, opts \\ [])

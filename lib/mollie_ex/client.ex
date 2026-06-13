@@ -5,7 +5,20 @@ defmodule MollieEx.Client do
   A client is immutable and carries all user-visible SDK configuration.
   Resource modules receive it explicitly instead of reading process state,
   application environment, or environment variables.
+
+  Use `new!/1` for boot-time configuration that should fail fast:
+
+  ```elixir
+  client =
+    MollieEx.Client.new!(
+      api_key: System.fetch_env!("MOLLIE_API_KEY")
+    )
+  ```
+
+  Use `new/1` when configuration is dynamic and invalid values should be
+  returned as `{:error, %MollieEx.Error{}}`.
   """
+  @moduledoc since: "0.1.0"
 
   alias MollieEx.Error
 
@@ -92,7 +105,11 @@ defmodule MollieEx.Client do
   Exactly one auth mode must be configured. This function validates static
   configuration only; function credentials and token providers are not called
   during construction.
+
+  Supported auth options are `:api_key`, `:oauth_token`,
+  `:organization_token`, and `:token_provider`.
   """
+  @doc since: "0.1.0"
   @spec new(keyword() | map()) :: {:ok, t()} | {:error, Error.t()}
   def new(opts) when is_list(opts) do
     with true <- Keyword.keyword?(opts),
@@ -143,6 +160,7 @@ defmodule MollieEx.Client do
   @doc """
   Builds a MollieEx client or raises `%MollieEx.Error{}` for invalid config.
   """
+  @doc since: "0.1.0"
   @spec new!(keyword()) :: t()
   def new!(opts) do
     case new(opts) do

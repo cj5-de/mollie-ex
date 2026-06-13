@@ -4,7 +4,21 @@ defmodule MollieEx.Refunds do
 
   All functions return result tuples. They do not raise for ordinary API,
   transport, or validation failures.
+
+  Refund write operations accept caller-owned idempotency keys. The SDK never
+  generates idempotency keys implicitly.
+
+  ```elixir
+  {:ok, refund} =
+    MollieEx.Refunds.create(
+      client,
+      "tr_123",
+      %{amount: %{currency: "EUR", value: "10.00"}},
+      idempotency_key: "f7f88f02-9a60-4a1f-bab8-8ef9e29cfeaf"
+    )
+  ```
   """
+  @moduledoc since: "0.1.0"
 
   alias MollieEx.Client
   alias MollieEx.Error
@@ -49,6 +63,7 @@ defmodule MollieEx.Refunds do
   Refund creation supports caller-owned idempotency keys. The SDK never
   generates idempotency keys implicitly.
   """
+  @doc since: "0.1.0"
   @spec create(Client.t(), String.t(), create_params(), [create_option()]) ::
           {:ok, Refund.t()} | {:error, Error.t()}
   def create(client, payment_id, params, opts \\ [])
@@ -72,6 +87,7 @@ defmodule MollieEx.Refunds do
   @doc """
   Retrieves a Mollie refund by payment ID and refund ID.
   """
+  @doc since: "0.1.0"
   @spec get(Client.t(), String.t(), String.t(), [get_option()]) ::
           {:ok, Refund.t()} | {:error, Error.t()}
   def get(client, payment_id, refund_id, opts \\ [])
@@ -97,6 +113,7 @@ defmodule MollieEx.Refunds do
   @doc """
   Lists Mollie refunds for a payment.
   """
+  @doc since: "0.1.0"
   @spec list(Client.t(), String.t(), [list_option()]) ::
           {:ok, MollieList.t(Refund.t())} | {:error, Error.t()}
   def list(client, payment_id, opts \\ [])
@@ -119,6 +136,7 @@ defmodule MollieEx.Refunds do
   Refund cancellation supports caller-owned idempotency keys. The SDK never
   generates idempotency keys implicitly.
   """
+  @doc since: "0.1.0"
   @spec cancel(Client.t(), String.t(), String.t(), [cancel_option()]) ::
           {:ok, :no_content} | {:error, Error.t()}
   def cancel(client, payment_id, refund_id, opts \\ [])
