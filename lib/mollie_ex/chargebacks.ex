@@ -15,11 +15,10 @@ defmodule MollieEx.Chargebacks do
   alias MollieEx.Chargeback
   alias MollieEx.Client
   alias MollieEx.Error
-  alias MollieEx.HTTP.{Telemetry, Transport}
   alias MollieEx.List, as: MollieList
   alias MollieEx.Resources.Chargebacks.Get
   alias MollieEx.Resources.Chargebacks.List, as: ListRequest
-  alias MollieEx.Resources.ListDecoder
+  alias MollieEx.Resources.RequestRunner
 
   @type get_option ::
           {:embed, String.t()}
@@ -87,59 +86,22 @@ defmodule MollieEx.Chargebacks do
   end
 
   defp request_chargeback(%Client{} = client, request, transport_opts, operation) do
-    start_time = Telemetry.start(client, request)
-    transport_opts = Keyword.put(transport_opts, :telemetry, false)
-
-    case Transport.request(client, request, transport_opts) do
-      {:ok, response} ->
-        result = Chargeback.from_response(response, operation)
-        emit_chargeback_result(client, request, response, result, start_time)
-        result
-
-      {:error, %Error{} = error} = result ->
-        Telemetry.emit_result(client, request, result, start_time)
-        {:error, error}
-    end
+    RequestRunner.decode(
+      client,
+      request,
+      transport_opts,
+      &Chargeback.from_response(&1, operation)
+    )
   end
 
   defp request_chargeback_list(%Client{} = client, request, transport_opts) do
-    start_time = Telemetry.start(client, request)
-    transport_opts = Keyword.put(transport_opts, :telemetry, false)
-
-    case Transport.request(client, request, transport_opts) do
-      {:ok, response} ->
-        result =
-          ListDecoder.from_response(
-            response,
-            "chargebacks",
-            :chargebacks_list,
-            &Chargeback.from_response(&1, :chargebacks_list)
-          )
-
-        emit_chargeback_result(client, request, response, result, start_time)
-        result
-
-      {:error, %Error{} = error} = result ->
-        Telemetry.emit_result(client, request, result, start_time)
-        {:error, error}
-    end
-  end
-
-  defp emit_chargeback_result(client, request, response, {:ok, %Chargeback{}}, start_time) do
-    Telemetry.emit_result(client, request, {:ok, response}, start_time)
-  end
-
-  defp emit_chargeback_result(client, request, response, {:ok, %MollieList{}}, start_time) do
-    Telemetry.emit_result(client, request, {:ok, response}, start_time)
-  end
-
-  defp emit_chargeback_result(
-         client,
-         request,
-         _response,
-         {:error, %Error{} = error},
-         start_time
-       ) do
-    Telemetry.emit_result(client, request, {:error, error}, start_time)
+    RequestRunner.decode_list(
+      client,
+      request,
+      transport_opts,
+      "chargebacks",
+      :chargebacks_list,
+      &Chargeback.from_response(&1, :chargebacks_list)
+    )
   end
 end

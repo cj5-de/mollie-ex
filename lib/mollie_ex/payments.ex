@@ -25,12 +25,11 @@ defmodule MollieEx.Payments do
 
   alias MollieEx.Client
   alias MollieEx.Error
-  alias MollieEx.HTTP.{Response, Telemetry, Transport}
   alias MollieEx.List, as: MollieList
   alias MollieEx.Payment
-  alias MollieEx.Resources.ListDecoder
   alias MollieEx.Resources.Payments.{Cancel, Create, Get, ReleaseAuthorization, Update}
   alias MollieEx.Resources.Payments.List, as: ListRequest
+  alias MollieEx.Resources.RequestRunner
 
   @type create_params :: map()
   @type create_option ::
@@ -219,84 +218,28 @@ defmodule MollieEx.Payments do
   end
 
   defp request_payment(%Client{} = client, request, transport_opts, operation) do
-    start_time = Telemetry.start(client, request)
-    transport_opts = Keyword.put(transport_opts, :telemetry, false)
-
-    case Transport.request(client, request, transport_opts) do
-      {:ok, response} ->
-        result = Payment.from_response(response, operation)
-        emit_payment_result(client, request, response, result, start_time)
-        result
-
-      {:error, %Error{} = error} = result ->
-        Telemetry.emit_result(client, request, result, start_time)
-        {:error, error}
-    end
+    RequestRunner.decode(client, request, transport_opts, &Payment.from_response(&1, operation))
   end
 
   defp request_payment_list(%Client{} = client, request, transport_opts) do
-    start_time = Telemetry.start(client, request)
-    transport_opts = Keyword.put(transport_opts, :telemetry, false)
-
-    case Transport.request(client, request, transport_opts) do
-      {:ok, response} ->
-        result =
-          ListDecoder.from_response(
-            response,
-            "payments",
-            :payments_list,
-            &Payment.from_response(&1, :payments_list)
-          )
-
-        emit_payment_result(client, request, response, result, start_time)
-        result
-
-      {:error, %Error{} = error} = result ->
-        Telemetry.emit_result(client, request, result, start_time)
-        {:error, error}
-    end
+    RequestRunner.decode_list(
+      client,
+      request,
+      transport_opts,
+      "payments",
+      :payments_list,
+      &Payment.from_response(&1, :payments_list)
+    )
   end
 
   defp request_accepted(%Client{} = client, request, transport_opts) do
-    start_time = Telemetry.start(client, request)
-    transport_opts = Keyword.put(transport_opts, :telemetry, false)
-
-    case Transport.request(client, request, transport_opts) do
-      {:ok, %Response{status: 202, body: nil} = response} ->
-        Telemetry.emit_result(client, request, {:ok, response}, start_time)
-        {:ok, :accepted}
-
-      {:ok, %Response{} = response} ->
-        error = invalid_accepted_response_error(request, response)
-        Telemetry.emit_result(client, request, {:error, error}, start_time)
-        {:error, error}
-
-      {:error, %Error{} = error} = result ->
-        Telemetry.emit_result(client, request, result, start_time)
-        {:error, error}
-    end
-  end
-
-  defp emit_payment_result(client, request, response, {:ok, %Payment{}}, start_time) do
-    Telemetry.emit_result(client, request, {:ok, response}, start_time)
-  end
-
-  defp emit_payment_result(client, request, response, {:ok, %MollieList{}}, start_time) do
-    Telemetry.emit_result(client, request, {:ok, response}, start_time)
-  end
-
-  defp emit_payment_result(client, request, _response, {:error, %Error{} = error}, start_time) do
-    Telemetry.emit_result(client, request, {:error, error}, start_time)
-  end
-
-  defp invalid_accepted_response_error(request, %Response{} = response) do
-    Error.exception(
-      type: :decode,
-      status: response.status,
-      headers: response.headers,
-      raw: response.raw,
-      reason: :invalid_accepted_response,
-      operation: request.operation
+    RequestRunner.expect_empty(
+      client,
+      request,
+      transport_opts,
+      202,
+      :accepted,
+      :invalid_accepted_response
     )
   end
 end

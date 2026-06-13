@@ -22,12 +22,11 @@ defmodule MollieEx.Refunds do
 
   alias MollieEx.Client
   alias MollieEx.Error
-  alias MollieEx.HTTP.{Response, Telemetry, Transport}
   alias MollieEx.List, as: MollieList
   alias MollieEx.Refund
-  alias MollieEx.Resources.ListDecoder
   alias MollieEx.Resources.Refunds.{Cancel, Create, Get}
   alias MollieEx.Resources.Refunds.List, as: ListRequest
+  alias MollieEx.Resources.RequestRunner
 
   @type create_params :: map()
   @type create_option ::
@@ -164,84 +163,28 @@ defmodule MollieEx.Refunds do
   end
 
   defp request_refund(%Client{} = client, request, transport_opts, operation) do
-    start_time = Telemetry.start(client, request)
-    transport_opts = Keyword.put(transport_opts, :telemetry, false)
-
-    case Transport.request(client, request, transport_opts) do
-      {:ok, response} ->
-        result = Refund.from_response(response, operation)
-        emit_refund_result(client, request, response, result, start_time)
-        result
-
-      {:error, %Error{} = error} = result ->
-        Telemetry.emit_result(client, request, result, start_time)
-        {:error, error}
-    end
+    RequestRunner.decode(client, request, transport_opts, &Refund.from_response(&1, operation))
   end
 
   defp request_refund_list(%Client{} = client, request, transport_opts) do
-    start_time = Telemetry.start(client, request)
-    transport_opts = Keyword.put(transport_opts, :telemetry, false)
-
-    case Transport.request(client, request, transport_opts) do
-      {:ok, response} ->
-        result =
-          ListDecoder.from_response(
-            response,
-            "refunds",
-            :refunds_list,
-            &Refund.from_response(&1, :refunds_list)
-          )
-
-        emit_refund_result(client, request, response, result, start_time)
-        result
-
-      {:error, %Error{} = error} = result ->
-        Telemetry.emit_result(client, request, result, start_time)
-        {:error, error}
-    end
+    RequestRunner.decode_list(
+      client,
+      request,
+      transport_opts,
+      "refunds",
+      :refunds_list,
+      &Refund.from_response(&1, :refunds_list)
+    )
   end
 
   defp request_no_content(%Client{} = client, request, transport_opts) do
-    start_time = Telemetry.start(client, request)
-    transport_opts = Keyword.put(transport_opts, :telemetry, false)
-
-    case Transport.request(client, request, transport_opts) do
-      {:ok, %Response{status: 204, body: nil} = response} ->
-        Telemetry.emit_result(client, request, {:ok, response}, start_time)
-        {:ok, :no_content}
-
-      {:ok, %Response{} = response} ->
-        error = invalid_no_content_response_error(request, response)
-        Telemetry.emit_result(client, request, {:error, error}, start_time)
-        {:error, error}
-
-      {:error, %Error{} = error} = result ->
-        Telemetry.emit_result(client, request, result, start_time)
-        {:error, error}
-    end
-  end
-
-  defp emit_refund_result(client, request, response, {:ok, %Refund{}}, start_time) do
-    Telemetry.emit_result(client, request, {:ok, response}, start_time)
-  end
-
-  defp emit_refund_result(client, request, response, {:ok, %MollieList{}}, start_time) do
-    Telemetry.emit_result(client, request, {:ok, response}, start_time)
-  end
-
-  defp emit_refund_result(client, request, _response, {:error, %Error{} = error}, start_time) do
-    Telemetry.emit_result(client, request, {:error, error}, start_time)
-  end
-
-  defp invalid_no_content_response_error(request, %Response{} = response) do
-    Error.exception(
-      type: :decode,
-      status: response.status,
-      headers: response.headers,
-      raw: response.raw,
-      reason: :invalid_no_content_response,
-      operation: request.operation
+    RequestRunner.expect_empty(
+      client,
+      request,
+      transport_opts,
+      204,
+      :no_content,
+      :invalid_no_content_response
     )
   end
 end
