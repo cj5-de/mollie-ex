@@ -1,12 +1,14 @@
 defmodule MollieEx.PaymentLinksTest do
   use ExUnit.Case, async: false
 
-  alias MollieEx.Client
   alias MollieEx.Error
   alias MollieEx.List, as: MollieList
   alias MollieEx.PaymentLink
   alias MollieEx.PaymentLinks
+  alias MollieEx.TestSupport
   alias MollieEx.Types.{Link, Money}
+
+  import MollieEx.TestSupport, except: [client: 2]
 
   setup {Req.Test, :verify_on_exit!}
 
@@ -75,11 +77,10 @@ defmodule MollieEx.PaymentLinksTest do
     end)
 
     client =
-      Client.new!(
+      TestSupport.client(__MODULE__,
         oauth_token: "access_test_secret",
         profile_id: "pfl_client",
-        testmode: true,
-        transport: {:req_test, __MODULE__}
+        testmode: true
       )
 
     assert {:ok, %PaymentLink{id: "pl_123"}} =
@@ -104,11 +105,10 @@ defmodule MollieEx.PaymentLinksTest do
     end)
 
     client =
-      Client.new!(
+      TestSupport.client(__MODULE__,
         oauth_token: "access_test_secret",
         profile_id: "pfl_client",
-        testmode: true,
-        transport: {:req_test, __MODULE__}
+        testmode: true
       )
 
     params =
@@ -130,12 +130,7 @@ defmodule MollieEx.PaymentLinksTest do
       payment_link_fixture_response(conn, 200)
     end)
 
-    client =
-      Client.new!(
-        oauth_token: "access_test_secret",
-        testmode: true,
-        transport: {:req_test, __MODULE__}
-      )
+    client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
 
     assert {:ok, %PaymentLink{id: "pl_123"}} =
              PaymentLinks.get(client, "pl_123", testmode: false)
@@ -157,12 +152,7 @@ defmodule MollieEx.PaymentLinksTest do
       payment_link_list_fixture_response(conn, 200)
     end)
 
-    client =
-      Client.new!(
-        oauth_token: "access_test_secret",
-        testmode: true,
-        transport: {:req_test, __MODULE__}
-      )
+    client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
 
     assert {:ok, %MollieList{} = payment_link_list} =
              PaymentLinks.list(client, from: "pl_from", limit: 1, testmode: false)
@@ -407,20 +397,20 @@ defmodule MollieEx.PaymentLinksTest do
 
     assert {:error, %Error{reason: :missing_profile_id}} =
              PaymentLinks.create(
-               Client.new!(oauth_token: "access_test_secret", transport: {:req_test, __MODULE__}),
+               TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
                create_params()
              )
 
     assert {:error, %Error{reason: :invalid_profile_id}} =
              PaymentLinks.create(
-               Client.new!(oauth_token: "access_test_secret", transport: {:req_test, __MODULE__}),
+               TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
                create_params(),
                profile_id: ""
              )
 
     assert {:error, %Error{reason: :invalid_testmode}} =
              PaymentLinks.get(
-               Client.new!(oauth_token: "access_test_secret", transport: {:req_test, __MODULE__}),
+               TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
                "pl_123",
                testmode: "true"
              )
@@ -443,7 +433,14 @@ defmodule MollieEx.PaymentLinksTest do
                idempotency_key: "payment-link-123"
              )
 
-    assert_success_telemetry(prefix, :payment_links_create, "POST", "/payment-links", 201)
+    assert_success_telemetry(
+      prefix,
+      :payment_links_create,
+      "POST",
+      "/payment-links",
+      201,
+      [@api_key, "pl_123", "authorization"]
+    )
 
     Req.Test.expect(__MODULE__, fn conn ->
       payment_link_fixture_response(conn, 200)
@@ -456,7 +453,8 @@ defmodule MollieEx.PaymentLinksTest do
       :payment_links_get,
       "GET",
       "/payment-links/{paymentLinkId}",
-      200
+      200,
+      [@api_key, "pl_123", "authorization"]
     )
 
     Req.Test.expect(__MODULE__, fn conn ->
@@ -465,7 +463,14 @@ defmodule MollieEx.PaymentLinksTest do
 
     assert {:ok, %MollieList{}} = PaymentLinks.list(client(telemetry_prefix: prefix))
 
-    assert_success_telemetry(prefix, :payment_links_list, "GET", "/payment-links", 200)
+    assert_success_telemetry(
+      prefix,
+      :payment_links_list,
+      "GET",
+      "/payment-links",
+      200,
+      [@api_key, "pl_123", "authorization"]
+    )
   end
 
   test "emits safe decode exception and rate limit telemetry" do
@@ -532,9 +537,9 @@ defmodule MollieEx.PaymentLinksTest do
   defp call_operation(:list, client), do: PaymentLinks.list(client)
 
   defp client(opts \\ []) do
-    [api_key: @api_key, transport: {:req_test, __MODULE__}]
+    [api_key: @api_key]
     |> Keyword.merge(opts)
-    |> Client.new!()
+    |> then(&TestSupport.client(__MODULE__, &1))
   end
 
   defp create_params do
@@ -554,71 +559,10 @@ defmodule MollieEx.PaymentLinksTest do
   defp payment_link_response(:list, conn), do: payment_link_list_fixture_response(conn, 200)
   defp payment_link_response(_operation, conn), do: payment_link_fixture_response(conn, 200)
 
-  defp payment_link_fixture_response(conn, status) do
-    conn
-    |> Plug.Conn.put_resp_header("content-type", "application/hal+json")
-    |> Plug.Conn.send_resp(status, File.read!(@payment_link_fixture))
-  end
+  defp payment_link_fixture_response(conn, status),
+    do: fixture_response(conn, @payment_link_fixture, status)
 
   defp payment_link_list_fixture_response(conn, status) do
-    conn
-    |> Plug.Conn.put_resp_header("content-type", "application/hal+json")
-    |> Plug.Conn.send_resp(status, File.read!(@payment_link_list_fixture))
-  end
-
-  defp assert_json_body(conn, expected) do
-    assert conn |> Req.Test.raw_body() |> Jason.decode!() == expected
-  end
-
-  defp assert_empty_body(conn) do
-    assert conn |> Req.Test.raw_body() |> IO.iodata_to_binary() == ""
-  end
-
-  defp header(conn, name) do
-    conn.req_headers
-    |> List.keyfind(name, 0)
-    |> case do
-      {^name, value} -> value
-      nil -> nil
-    end
-  end
-
-  defp assert_success_telemetry(prefix, operation, method, path_template, status) do
-    start_event = prefix ++ [:request, :start]
-    stop_event = prefix ++ [:request, :stop]
-
-    assert_receive {:telemetry, ^start_event, %{system_time: system_time}, start_metadata}
-    assert is_integer(system_time)
-    assert start_metadata.operation == operation
-    assert start_metadata.method == method
-    assert start_metadata.path_template == path_template
-
-    assert_receive {:telemetry, ^stop_event, %{duration: duration}, stop_metadata}
-    assert is_integer(duration)
-    assert stop_metadata.status == status
-    assert stop_metadata.operation == operation
-
-    telemetry_text = inspect([start_metadata, stop_metadata])
-    refute telemetry_text =~ @api_key
-    refute telemetry_text =~ "pl_123"
-    refute telemetry_text =~ "authorization"
-  end
-
-  defp attach_telemetry(prefix, suffixes) do
-    handler_id = {__MODULE__, self(), make_ref()}
-    events = Enum.map(suffixes, &(prefix ++ &1))
-
-    :telemetry.attach_many(
-      handler_id,
-      events,
-      &__MODULE__.handle_telemetry/4,
-      self()
-    )
-
-    on_exit(fn -> :telemetry.detach(handler_id) end)
-  end
-
-  def handle_telemetry(event, measurements, metadata, test_pid) do
-    send(test_pid, {:telemetry, event, measurements, metadata})
+    fixture_response(conn, @payment_link_list_fixture, status)
   end
 end
