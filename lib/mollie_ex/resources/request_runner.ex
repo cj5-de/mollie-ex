@@ -7,9 +7,65 @@ defmodule MollieEx.Resources.RequestRunner do
   alias MollieEx.Resources.ListDecoder
 
   @type decode_result :: {:ok, term()} | {:error, Error.t()}
+  @type build_result :: {:ok, Request.t(), keyword()} | {:error, Error.t()}
   @type decoder_module :: module()
   @type decoder :: (Response.t() -> decode_result())
   @type item_decoder :: (Response.t() -> decode_result())
+
+  @spec run_resource(build_result(), Client.t(), decoder_module(), atom()) :: decode_result()
+  def run_resource(
+        {:ok, %Request{} = request, transport_opts},
+        %Client{} = client,
+        decoder_module,
+        operation
+      )
+      when is_list(transport_opts) and is_atom(decoder_module) and is_atom(operation) do
+    decode_resource(client, request, transport_opts, decoder_module, operation)
+  end
+
+  def run_resource({:error, %Error{}} = error, %Client{}, decoder_module, operation)
+      when is_atom(decoder_module) and is_atom(operation),
+      do: error
+
+  @spec run_resource_list(build_result(), Client.t(), String.t(), decoder_module(), atom()) ::
+          decode_result()
+  def run_resource_list(
+        {:ok, %Request{} = request, transport_opts},
+        %Client{} = client,
+        embedded_key,
+        decoder_module,
+        operation
+      )
+      when is_list(transport_opts) and is_binary(embedded_key) and is_atom(decoder_module) and
+             is_atom(operation) do
+    decode_resource_list(client, request, transport_opts, embedded_key, decoder_module, operation)
+  end
+
+  def run_resource_list(
+        {:error, %Error{}} = error,
+        %Client{},
+        embedded_key,
+        decoder_module,
+        operation
+      )
+      when is_binary(embedded_key) and is_atom(decoder_module) and is_atom(operation),
+      do: error
+
+  @spec run_no_content(build_result(), Client.t()) :: decode_result()
+  def run_no_content({:ok, %Request{} = request, transport_opts}, %Client{} = client)
+      when is_list(transport_opts) do
+    expect_no_content(client, request, transport_opts)
+  end
+
+  def run_no_content({:error, %Error{}} = error, %Client{}), do: error
+
+  @spec run_accepted(build_result(), Client.t()) :: decode_result()
+  def run_accepted({:ok, %Request{} = request, transport_opts}, %Client{} = client)
+      when is_list(transport_opts) do
+    expect_accepted(client, request, transport_opts)
+  end
+
+  def run_accepted({:error, %Error{}} = error, %Client{}), do: error
 
   @spec decode(Client.t(), Request.t(), keyword(), decoder()) :: decode_result()
   def decode(%Client{} = client, %Request{} = request, transport_opts, decoder)

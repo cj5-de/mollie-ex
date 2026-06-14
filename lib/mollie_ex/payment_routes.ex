@@ -67,15 +67,12 @@ defmodule MollieEx.PaymentRoutes do
 
   def create(%Client{} = client, payment_id, params, opts)
       when is_binary(payment_id) and is_map(params) and is_list(opts) do
-    with {:ok, request, transport_opts} <- Create.build(client, payment_id, params, opts) do
-      RequestRunner.decode_resource(
-        client,
-        request,
-        transport_opts,
-        Route,
-        :payment_routes_create
-      )
-    end
+    RequestRunner.run_resource(
+      Create.build(client, payment_id, params, opts),
+      client,
+      Route,
+      :payment_routes_create
+    )
   end
 
   def create(%Client{}, _payment_id, _params, opts) when not is_list(opts),
@@ -97,9 +94,12 @@ defmodule MollieEx.PaymentRoutes do
 
   def get(%Client{} = client, payment_id, route_id, opts)
       when is_binary(payment_id) and is_binary(route_id) and is_list(opts) do
-    with {:ok, request, transport_opts} <- Get.build(client, payment_id, route_id, opts) do
-      RequestRunner.decode_resource(client, request, transport_opts, Route, :payment_routes_get)
-    end
+    RequestRunner.run_resource(
+      Get.build(client, payment_id, route_id, opts),
+      client,
+      Route,
+      :payment_routes_get
+    )
   end
 
   def get(%Client{}, _payment_id, _route_id, opts) when not is_list(opts),
@@ -132,16 +132,12 @@ defmodule MollieEx.PaymentRoutes do
 
   def update_release_date(%Client{} = client, payment_id, route_id, release_date, opts)
       when is_binary(payment_id) and is_binary(route_id) and is_list(opts) do
-    with {:ok, request, transport_opts} <-
-           UpdateReleaseDate.build(client, payment_id, route_id, release_date, opts) do
-      RequestRunner.decode_resource(
-        client,
-        request,
-        transport_opts,
-        Route,
-        :payment_routes_update_release_date
-      )
-    end
+    RequestRunner.run_resource(
+      UpdateReleaseDate.build(client, payment_id, route_id, release_date, opts),
+      client,
+      Route,
+      :payment_routes_update_release_date
+    )
   end
 
   def update_release_date(%Client{}, _payment_id, _route_id, _release_date, opts)
@@ -171,16 +167,13 @@ defmodule MollieEx.PaymentRoutes do
   def list(client, payment_id, opts \\ [])
 
   def list(%Client{} = client, payment_id, opts) when is_binary(payment_id) and is_list(opts) do
-    with {:ok, request, transport_opts} <- ListRequest.build(client, payment_id, opts) do
-      RequestRunner.decode_resource_list(
-        client,
-        request,
-        transport_opts,
-        "routes",
-        Route,
-        :payment_routes_list
-      )
-    end
+    RequestRunner.run_resource_list(
+      ListRequest.build(client, payment_id, opts),
+      client,
+      "routes",
+      Route,
+      :payment_routes_list
+    )
   end
 
   def list(%Client{}, _payment_id, opts) when not is_list(opts),

@@ -78,16 +78,13 @@ defmodule MollieEx.Refunds do
   def all(client, opts \\ [])
 
   def all(%Client{} = client, opts) when is_list(opts) do
-    with {:ok, request, transport_opts} <- All.build(client, opts) do
-      RequestRunner.decode_resource_list(
-        client,
-        request,
-        transport_opts,
-        "refunds",
-        Refund,
-        :refunds_all
-      )
-    end
+    RequestRunner.run_resource_list(
+      All.build(client, opts),
+      client,
+      "refunds",
+      Refund,
+      :refunds_all
+    )
   end
 
   def all(%Client{}, _opts), do: configuration_error(:invalid_options)
@@ -106,9 +103,12 @@ defmodule MollieEx.Refunds do
 
   def create(%Client{} = client, payment_id, params, opts)
       when is_binary(payment_id) and is_map(params) and is_list(opts) do
-    with {:ok, request, transport_opts} <- Create.build(client, payment_id, params, opts) do
-      RequestRunner.decode_resource(client, request, transport_opts, Refund, :refunds_create)
-    end
+    RequestRunner.run_resource(
+      Create.build(client, payment_id, params, opts),
+      client,
+      Refund,
+      :refunds_create
+    )
   end
 
   def create(%Client{}, _payment_id, _params, opts) when not is_list(opts),
@@ -130,9 +130,12 @@ defmodule MollieEx.Refunds do
 
   def get(%Client{} = client, payment_id, refund_id, opts)
       when is_binary(payment_id) and is_binary(refund_id) and is_list(opts) do
-    with {:ok, request, transport_opts} <- Get.build(client, payment_id, refund_id, opts) do
-      RequestRunner.decode_resource(client, request, transport_opts, Refund, :refunds_get)
-    end
+    RequestRunner.run_resource(
+      Get.build(client, payment_id, refund_id, opts),
+      client,
+      Refund,
+      :refunds_get
+    )
   end
 
   def get(%Client{}, _payment_id, _refund_id, opts) when not is_list(opts),
@@ -155,16 +158,13 @@ defmodule MollieEx.Refunds do
   def list(client, payment_id, opts \\ [])
 
   def list(%Client{} = client, payment_id, opts) when is_binary(payment_id) and is_list(opts) do
-    with {:ok, request, transport_opts} <- ListRequest.build(client, payment_id, opts) do
-      RequestRunner.decode_resource_list(
-        client,
-        request,
-        transport_opts,
-        "refunds",
-        Refund,
-        :refunds_list
-      )
-    end
+    RequestRunner.run_resource_list(
+      ListRequest.build(client, payment_id, opts),
+      client,
+      "refunds",
+      Refund,
+      :refunds_list
+    )
   end
 
   def list(%Client{}, _payment_id, opts) when not is_list(opts),
@@ -186,9 +186,7 @@ defmodule MollieEx.Refunds do
 
   def cancel(%Client{} = client, payment_id, refund_id, opts)
       when is_binary(payment_id) and is_binary(refund_id) and is_list(opts) do
-    with {:ok, request, transport_opts} <- Cancel.build(client, payment_id, refund_id, opts) do
-      RequestRunner.expect_no_content(client, request, transport_opts)
-    end
+    RequestRunner.run_no_content(Cancel.build(client, payment_id, refund_id, opts), client)
   end
 
   def cancel(%Client{}, _payment_id, _refund_id, opts) when not is_list(opts),

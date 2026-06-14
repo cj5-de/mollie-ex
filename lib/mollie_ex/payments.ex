@@ -89,9 +89,12 @@ defmodule MollieEx.Payments do
   def create(client, params, opts \\ [])
 
   def create(%Client{} = client, params, opts) when is_map(params) and is_list(opts) do
-    with {:ok, request, transport_opts} <- Create.build(client, params, opts) do
-      RequestRunner.decode_resource(client, request, transport_opts, Payment, :payments_create)
-    end
+    RequestRunner.run_resource(
+      Create.build(client, params, opts),
+      client,
+      Payment,
+      :payments_create
+    )
   end
 
   def create(%Client{}, _params, opts) when not is_list(opts),
@@ -108,9 +111,12 @@ defmodule MollieEx.Payments do
   def get(client, payment_id, opts \\ [])
 
   def get(%Client{} = client, payment_id, opts) when is_binary(payment_id) and is_list(opts) do
-    with {:ok, request, transport_opts} <- Get.build(client, payment_id, opts) do
-      RequestRunner.decode_resource(client, request, transport_opts, Payment, :payments_get)
-    end
+    RequestRunner.run_resource(
+      Get.build(client, payment_id, opts),
+      client,
+      Payment,
+      :payments_get
+    )
   end
 
   def get(%Client{}, _payment_id, opts) when not is_list(opts),
@@ -128,16 +134,13 @@ defmodule MollieEx.Payments do
   def list(client, opts \\ [])
 
   def list(%Client{} = client, opts) when is_list(opts) do
-    with {:ok, request, transport_opts} <- ListRequest.build(client, opts) do
-      RequestRunner.decode_resource_list(
-        client,
-        request,
-        transport_opts,
-        "payments",
-        Payment,
-        :payments_list
-      )
-    end
+    RequestRunner.run_resource_list(
+      ListRequest.build(client, opts),
+      client,
+      "payments",
+      Payment,
+      :payments_list
+    )
   end
 
   def list(%Client{}, _opts), do: configuration_error(:invalid_options)
@@ -156,9 +159,12 @@ defmodule MollieEx.Payments do
 
   def update(%Client{} = client, payment_id, params, opts)
       when is_binary(payment_id) and is_map(params) and is_list(opts) do
-    with {:ok, request, transport_opts} <- Update.build(client, payment_id, params, opts) do
-      RequestRunner.decode_resource(client, request, transport_opts, Payment, :payments_update)
-    end
+    RequestRunner.run_resource(
+      Update.build(client, payment_id, params, opts),
+      client,
+      Payment,
+      :payments_update
+    )
   end
 
   def update(%Client{}, _payment_id, _params, opts) when not is_list(opts),
@@ -182,9 +188,12 @@ defmodule MollieEx.Payments do
   def cancel(client, payment_id, opts \\ [])
 
   def cancel(%Client{} = client, payment_id, opts) when is_binary(payment_id) and is_list(opts) do
-    with {:ok, request, transport_opts} <- Cancel.build(client, payment_id, opts) do
-      RequestRunner.decode_resource(client, request, transport_opts, Payment, :payments_cancel)
-    end
+    RequestRunner.run_resource(
+      Cancel.build(client, payment_id, opts),
+      client,
+      Payment,
+      :payments_cancel
+    )
   end
 
   def cancel(%Client{}, _payment_id, opts) when not is_list(opts),
@@ -206,10 +215,7 @@ defmodule MollieEx.Payments do
 
   def release_authorization(%Client{} = client, payment_id, opts)
       when is_binary(payment_id) and is_list(opts) do
-    with {:ok, request, transport_opts} <-
-           ReleaseAuthorization.build(client, payment_id, opts) do
-      RequestRunner.expect_accepted(client, request, transport_opts)
-    end
+    RequestRunner.run_accepted(ReleaseAuthorization.build(client, payment_id, opts), client)
   end
 
   def release_authorization(%Client{}, _payment_id, opts) when not is_list(opts),

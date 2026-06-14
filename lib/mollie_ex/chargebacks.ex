@@ -57,16 +57,13 @@ defmodule MollieEx.Chargebacks do
   def all(client, opts \\ [])
 
   def all(%Client{} = client, opts) when is_list(opts) do
-    with {:ok, request, transport_opts} <- All.build(client, opts) do
-      RequestRunner.decode_resource_list(
-        client,
-        request,
-        transport_opts,
-        "chargebacks",
-        Chargeback,
-        :chargebacks_all
-      )
-    end
+    RequestRunner.run_resource_list(
+      All.build(client, opts),
+      client,
+      "chargebacks",
+      Chargeback,
+      :chargebacks_all
+    )
   end
 
   def all(%Client{}, _opts), do: configuration_error(:invalid_options)
@@ -82,9 +79,12 @@ defmodule MollieEx.Chargebacks do
 
   def get(%Client{} = client, payment_id, chargeback_id, opts)
       when is_binary(payment_id) and is_binary(chargeback_id) and is_list(opts) do
-    with {:ok, request, transport_opts} <- Get.build(client, payment_id, chargeback_id, opts) do
-      RequestRunner.decode_resource(client, request, transport_opts, Chargeback, :chargebacks_get)
-    end
+    RequestRunner.run_resource(
+      Get.build(client, payment_id, chargeback_id, opts),
+      client,
+      Chargeback,
+      :chargebacks_get
+    )
   end
 
   def get(%Client{}, _payment_id, _chargeback_id, opts) when not is_list(opts),
@@ -107,16 +107,13 @@ defmodule MollieEx.Chargebacks do
   def list(client, payment_id, opts \\ [])
 
   def list(%Client{} = client, payment_id, opts) when is_binary(payment_id) and is_list(opts) do
-    with {:ok, request, transport_opts} <- ListRequest.build(client, payment_id, opts) do
-      RequestRunner.decode_resource_list(
-        client,
-        request,
-        transport_opts,
-        "chargebacks",
-        Chargeback,
-        :chargebacks_list
-      )
-    end
+    RequestRunner.run_resource_list(
+      ListRequest.build(client, payment_id, opts),
+      client,
+      "chargebacks",
+      Chargeback,
+      :chargebacks_list
+    )
   end
 
   def list(%Client{}, _payment_id, opts) when not is_list(opts),
