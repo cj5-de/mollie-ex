@@ -50,7 +50,12 @@ defmodule MollieEx.Resources.PaymentRoutes.Create do
 
   defp body(%Client{} = client, params, opts) do
     with :ok <- Options.require_param(params, [:amount, "amount"], :missing_amount),
-         :ok <- Options.require_param(params, [:destination, "destination"], :missing_destination),
+         :ok <-
+           Options.require_param(
+             params,
+             [:destination, "destination"],
+             :missing_destination
+           ),
          {:ok, testmode} <- Options.effective_testmode(client, params, opts) do
       body =
         params
