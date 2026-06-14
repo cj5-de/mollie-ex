@@ -4,7 +4,6 @@ defmodule MollieEx.Resources.PaymentRoutes.Create do
   alias MollieEx.Client
   alias MollieEx.Error
   alias MollieEx.HTTP.Request
-  alias MollieEx.Resources.Casing
   alias MollieEx.Resources.Options
   alias MollieEx.Resources.RequestBuilder
 
@@ -53,15 +52,8 @@ defmodule MollieEx.Resources.PaymentRoutes.Create do
              params,
              [:destination, "destination"],
              :missing_destination
-           ),
-         {:ok, testmode} <- Options.effective_testmode(client, params, opts) do
-      body =
-        params
-        |> Casing.to_mollie_body(@structured_body_keys)
-        |> Options.drop_testmode()
-        |> Options.put_body("testmode", testmode)
-
-      {:ok, body, testmode}
+           ) do
+      Options.body_with_testmode(client, params, opts, @structured_body_keys)
     end
   end
 

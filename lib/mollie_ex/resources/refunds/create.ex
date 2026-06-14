@@ -4,7 +4,6 @@ defmodule MollieEx.Resources.Refunds.Create do
   alias MollieEx.Client
   alias MollieEx.Error
   alias MollieEx.HTTP.Request
-  alias MollieEx.Resources.Casing
   alias MollieEx.Resources.Options
   alias MollieEx.Resources.RequestBuilder
 
@@ -46,17 +45,8 @@ defmodule MollieEx.Resources.Refunds.Create do
 
   def build(%Client{}, _payment_id, _params, _opts), do: configuration_error(:invalid_payment_id)
 
-  defp body(%Client{} = client, params, opts) do
-    with {:ok, testmode} <- Options.effective_testmode(client, params, opts) do
-      body =
-        params
-        |> Casing.to_mollie_body(@structured_body_keys)
-        |> Options.drop_testmode()
-        |> Options.put_body("testmode", testmode)
-
-      {:ok, body, testmode}
-    end
-  end
+  defp body(%Client{} = client, params, opts),
+    do: Options.body_with_testmode(client, params, opts, @structured_body_keys)
 
   defp configuration_error(reason), do: Options.configuration_error(reason)
 end
