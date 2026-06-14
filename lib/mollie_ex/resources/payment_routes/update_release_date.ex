@@ -5,6 +5,7 @@ defmodule MollieEx.Resources.PaymentRoutes.UpdateReleaseDate do
   alias MollieEx.Error
   alias MollieEx.HTTP.Request
   alias MollieEx.Resources.Options
+  alias MollieEx.Resources.RequestBuilder
 
   @allowed_options [
     :idempotency_key,
@@ -24,7 +25,7 @@ defmodule MollieEx.Resources.PaymentRoutes.UpdateReleaseDate do
          {:ok, route_id} <- Options.route_id(route_id),
          {:ok, release_date} <- release_date(release_date),
          {:ok, testmode} <- Options.effective_testmode(client, opts) do
-      request = %Request{
+      RequestBuilder.build(opts,
         method: :patch,
         path:
           "/payments/" <>
@@ -33,13 +34,10 @@ defmodule MollieEx.Resources.PaymentRoutes.UpdateReleaseDate do
             Options.encode_path_segment(route_id),
         path_template: "/payments/{paymentId}/routes/{routeId}",
         body: body(release_date, testmode),
-        idempotency_key: Keyword.get(opts, :idempotency_key),
         idempotency_policy: :optional,
         operation: :payment_routes_update_release_date,
         testmode: testmode
-      }
-
-      {:ok, request, Options.timeout_options(opts)}
+      )
     end
   end
 

@@ -5,6 +5,7 @@ defmodule MollieEx.Resources.PaymentLinks.Delete do
   alias MollieEx.Error
   alias MollieEx.HTTP.Request
   alias MollieEx.Resources.Options
+  alias MollieEx.Resources.RequestBuilder
 
   @allowed_options [
     :idempotency_key,
@@ -22,18 +23,15 @@ defmodule MollieEx.Resources.PaymentLinks.Delete do
          :ok <- Options.reject_unknown(opts, @allowed_options),
          {:ok, payment_link_id} <- Options.payment_link_id(payment_link_id),
          {:ok, testmode} <- Options.effective_testmode(client, opts) do
-      request = %Request{
+      RequestBuilder.build(opts,
         method: :delete,
         path: "/payment-links/" <> Options.encode_path_segment(payment_link_id),
         path_template: "/payment-links/{paymentLinkId}",
         body: Options.body_testmode(testmode),
-        idempotency_key: Keyword.get(opts, :idempotency_key),
         idempotency_policy: :optional,
         operation: :payment_links_delete,
         testmode: testmode
-      }
-
-      {:ok, request, Options.timeout_options(opts)}
+      )
     end
   end
 

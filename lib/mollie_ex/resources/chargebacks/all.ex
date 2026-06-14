@@ -5,6 +5,7 @@ defmodule MollieEx.Resources.Chargebacks.All do
   alias MollieEx.Error
   alias MollieEx.HTTP.Request
   alias MollieEx.Resources.Options
+  alias MollieEx.Resources.RequestBuilder
 
   @allowed_options [
     :from,
@@ -29,7 +30,7 @@ defmodule MollieEx.Resources.Chargebacks.All do
          {:ok, embed} <- Options.string_option(opts, :embed),
          {:ok, profile_id} <- effective_profile_id(client, opts),
          {:ok, testmode} <- Options.effective_testmode(client, opts) do
-      request = %Request{
+      RequestBuilder.build(opts,
         method: :get,
         path: "/chargebacks",
         path_template: "/chargebacks",
@@ -45,9 +46,7 @@ defmodule MollieEx.Resources.Chargebacks.All do
         idempotency_policy: :unsupported,
         operation: :chargebacks_all,
         testmode: testmode
-      }
-
-      {:ok, request, Options.timeout_options(opts)}
+      )
     end
   end
 

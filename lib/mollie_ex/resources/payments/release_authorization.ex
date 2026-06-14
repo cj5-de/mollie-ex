@@ -5,6 +5,7 @@ defmodule MollieEx.Resources.Payments.ReleaseAuthorization do
   alias MollieEx.Error
   alias MollieEx.HTTP.Request
   alias MollieEx.Resources.Options
+  alias MollieEx.Resources.RequestBuilder
 
   @allowed_options [
     :idempotency_key,
@@ -23,18 +24,15 @@ defmodule MollieEx.Resources.Payments.ReleaseAuthorization do
          {:ok, payment_id} <- Options.payment_id(payment_id),
          :ok <- Options.reject_api_key_scoped_fields(client, opts),
          {:ok, body, testmode} <- body(client, opts) do
-      request = %Request{
+      RequestBuilder.build(opts,
         method: :post,
         path: "/payments/" <> Options.encode_path_segment(payment_id) <> "/release-authorization",
         path_template: "/payments/{paymentId}/release-authorization",
         body: body,
-        idempotency_key: Keyword.get(opts, :idempotency_key),
         idempotency_policy: :optional,
         operation: :payments_release_authorization,
         testmode: testmode
-      }
-
-      {:ok, request, Options.timeout_options(opts)}
+      )
     end
   end
 

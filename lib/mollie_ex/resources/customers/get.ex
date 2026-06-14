@@ -5,6 +5,7 @@ defmodule MollieEx.Resources.Customers.Get do
   alias MollieEx.Error
   alias MollieEx.HTTP.Request
   alias MollieEx.Resources.Options
+  alias MollieEx.Resources.RequestBuilder
 
   @allowed_options [
     :include,
@@ -23,7 +24,7 @@ defmodule MollieEx.Resources.Customers.Get do
          {:ok, customer_id} <- Options.customer_id(customer_id),
          {:ok, include} <- Options.string_query_option(opts, :include),
          {:ok, testmode} <- Options.effective_testmode(client, opts) do
-      request = %Request{
+      RequestBuilder.build(opts,
         method: :get,
         path: "/customers/" <> Options.encode_path_segment(customer_id),
         path_template: "/customers/{customerId}",
@@ -31,9 +32,7 @@ defmodule MollieEx.Resources.Customers.Get do
         idempotency_policy: :unsupported,
         operation: :customers_get,
         testmode: testmode
-      }
-
-      {:ok, request, Options.timeout_options(opts)}
+      )
     end
   end
 
