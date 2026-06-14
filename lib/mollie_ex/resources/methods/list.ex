@@ -49,7 +49,8 @@ defmodule MollieEx.Resources.Methods.List do
          {:ok, include} <- Options.string_option(opts, :include),
          {:ok, include_wallets} <- Options.string_query_option(opts, :include_wallets),
          {:ok, locale} <- Options.string_query_option(opts, :locale),
-         {:ok, order_line_categories} <- Options.string_query_option(opts, :order_line_categories),
+         {:ok, order_line_categories} <-
+           Options.string_query_option(opts, :order_line_categories),
          {:ok, resource} <- Options.string_query_option(opts, :resource),
          {:ok, sequence_type} <- Options.string_query_option(opts, :sequence_type),
          {:ok, profile_id} <- Options.effective_profile_id(client, opts),
