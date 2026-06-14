@@ -31,7 +31,7 @@ defmodule MollieEx.Resources.Refunds.Cancel do
             "/refunds/" <>
             Options.encode_path_segment(refund_id),
         path_template: "/payments/{paymentId}/refunds/{refundId}",
-        query: query(testmode),
+        query: Options.query(testmode: testmode),
         idempotency_key: Keyword.get(opts, :idempotency_key),
         idempotency_policy: :optional,
         operation: :refunds_cancel,
@@ -54,8 +54,6 @@ defmodule MollieEx.Resources.Refunds.Cancel do
 
   def build(%Client{}, _payment_id, _refund_id, _opts),
     do: configuration_error(:invalid_refund_id)
-
-  defp query(testmode), do: Options.put_query([], :testmode, testmode)
 
   defp configuration_error(reason), do: Options.configuration_error(reason)
 end

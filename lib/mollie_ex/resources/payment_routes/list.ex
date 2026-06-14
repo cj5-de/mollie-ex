@@ -24,7 +24,7 @@ defmodule MollieEx.Resources.PaymentRoutes.List do
         method: :get,
         path: "/payments/" <> Options.encode_path_segment(payment_id) <> "/routes",
         path_template: "/payments/{paymentId}/routes",
-        query: query(testmode),
+        query: Options.query(testmode: testmode),
         idempotency_policy: :unsupported,
         operation: :payment_routes_list,
         testmode: testmode
@@ -38,11 +38,6 @@ defmodule MollieEx.Resources.PaymentRoutes.List do
     do: configuration_error(:invalid_options)
 
   def build(%Client{}, _payment_id, _opts), do: configuration_error(:invalid_payment_id)
-
-  defp query(testmode) do
-    []
-    |> Options.put_query(:testmode, testmode)
-  end
 
   defp configuration_error(reason), do: Options.configuration_error(reason)
 end

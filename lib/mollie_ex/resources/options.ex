@@ -74,6 +74,13 @@ defmodule MollieEx.Resources.Options do
   def put_query(query, _key, nil), do: query
   def put_query(query, key, value), do: Keyword.put(query, key, value)
 
+  @spec query(keyword()) :: keyword()
+  def query(values) do
+    Enum.reduce(values, [], fn {key, value}, query ->
+      put_query(query, key, value)
+    end)
+  end
+
   @spec put_body(map(), String.t(), term()) :: map()
   def put_body(body, _key, nil), do: body
   def put_body(body, key, value), do: Map.put(body, key, value)

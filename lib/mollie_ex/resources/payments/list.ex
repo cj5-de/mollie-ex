@@ -31,7 +31,14 @@ defmodule MollieEx.Resources.Payments.List do
         method: :get,
         path: "/payments",
         path_template: "/payments",
-        query: query(from, limit, sort, profile_id, testmode),
+        query:
+          Options.query(
+            from: from,
+            limit: limit,
+            sort: sort,
+            profileId: profile_id,
+            testmode: testmode
+          ),
         idempotency_policy: :unsupported,
         operation: :payments_list,
         testmode: testmode
@@ -74,15 +81,6 @@ defmodule MollieEx.Resources.Payments.List do
       :error -> client.profile_id
     end
     |> Options.profile_id()
-  end
-
-  defp query(from, limit, sort, profile_id, testmode) do
-    []
-    |> Options.put_query(:from, from)
-    |> Options.put_query(:limit, limit)
-    |> Options.put_query(:sort, sort)
-    |> Options.put_query(:profileId, profile_id)
-    |> Options.put_query(:testmode, testmode)
   end
 
   defp configuration_error(reason), do: Options.configuration_error(reason)

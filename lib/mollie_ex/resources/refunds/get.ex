@@ -32,7 +32,7 @@ defmodule MollieEx.Resources.Refunds.Get do
             "/refunds/" <>
             Options.encode_path_segment(refund_id),
         path_template: "/payments/{paymentId}/refunds/{refundId}",
-        query: query(embed, testmode),
+        query: Options.query(embed: embed, testmode: testmode),
         idempotency_policy: :unsupported,
         operation: :refunds_get,
         testmode: testmode
@@ -54,12 +54,6 @@ defmodule MollieEx.Resources.Refunds.Get do
 
   def build(%Client{}, _payment_id, _refund_id, _opts),
     do: configuration_error(:invalid_refund_id)
-
-  defp query(embed, testmode) do
-    []
-    |> Options.put_query(:embed, embed)
-    |> Options.put_query(:testmode, testmode)
-  end
 
   defp configuration_error(reason), do: Options.configuration_error(reason)
 end

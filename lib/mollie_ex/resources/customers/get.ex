@@ -27,7 +27,7 @@ defmodule MollieEx.Resources.Customers.Get do
         method: :get,
         path: "/customers/" <> Options.encode_path_segment(customer_id),
         path_template: "/customers/{customerId}",
-        query: query(include, testmode),
+        query: Options.query(include: include, testmode: testmode),
         idempotency_policy: :unsupported,
         operation: :customers_get,
         testmode: testmode
@@ -41,12 +41,6 @@ defmodule MollieEx.Resources.Customers.Get do
     do: configuration_error(:invalid_options)
 
   def build(%Client{}, _customer_id, _opts), do: configuration_error(:invalid_customer_id)
-
-  defp query(include, testmode) do
-    []
-    |> Options.put_query(:include, include)
-    |> Options.put_query(:testmode, testmode)
-  end
 
   defp configuration_error(reason), do: Options.configuration_error(reason)
 end

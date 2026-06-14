@@ -30,7 +30,7 @@ defmodule MollieEx.Resources.Chargebacks.List do
         method: :get,
         path: "/payments/" <> Options.encode_path_segment(payment_id) <> "/chargebacks",
         path_template: "/payments/{paymentId}/chargebacks",
-        query: query(from, limit, embed, testmode),
+        query: Options.query(from: from, limit: limit, embed: embed, testmode: testmode),
         idempotency_policy: :unsupported,
         operation: :chargebacks_list,
         testmode: testmode
@@ -44,14 +44,6 @@ defmodule MollieEx.Resources.Chargebacks.List do
     do: configuration_error(:invalid_options)
 
   def build(%Client{}, _payment_id, _opts), do: configuration_error(:invalid_payment_id)
-
-  defp query(from, limit, embed, testmode) do
-    []
-    |> Options.put_query(:from, from)
-    |> Options.put_query(:limit, limit)
-    |> Options.put_query(:embed, embed)
-    |> Options.put_query(:testmode, testmode)
-  end
 
   defp configuration_error(reason), do: Options.configuration_error(reason)
 end

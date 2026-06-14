@@ -28,7 +28,7 @@ defmodule MollieEx.Resources.Payments.Get do
         method: :get,
         path: "/payments/" <> Options.encode_path_segment(payment_id),
         path_template: "/payments/{paymentId}",
-        query: query(include, embed, testmode),
+        query: Options.query(include: include, embed: embed, testmode: testmode),
         idempotency_policy: :unsupported,
         operation: :payments_get,
         testmode: testmode
@@ -39,13 +39,6 @@ defmodule MollieEx.Resources.Payments.Get do
   end
 
   def build(%Client{}, _payment_id, _opts), do: configuration_error(:invalid_payment_id)
-
-  defp query(include, embed, testmode) do
-    []
-    |> Options.put_query(:include, include)
-    |> Options.put_query(:embed, embed)
-    |> Options.put_query(:testmode, testmode)
-  end
 
   defp configuration_error(reason), do: Options.configuration_error(reason)
 end

@@ -27,7 +27,7 @@ defmodule MollieEx.Resources.PaymentLinks.List do
         method: :get,
         path: "/payment-links",
         path_template: "/payment-links",
-        query: query(from, limit, testmode),
+        query: Options.query(from: from, limit: limit, testmode: testmode),
         idempotency_policy: :unsupported,
         operation: :payment_links_list,
         testmode: testmode
@@ -38,13 +38,6 @@ defmodule MollieEx.Resources.PaymentLinks.List do
   end
 
   def build(%Client{}, _opts), do: configuration_error(:invalid_options)
-
-  defp query(from, limit, testmode) do
-    []
-    |> Options.put_query(:from, from)
-    |> Options.put_query(:limit, limit)
-    |> Options.put_query(:testmode, testmode)
-  end
 
   defp configuration_error(reason), do: Options.configuration_error(reason)
 end

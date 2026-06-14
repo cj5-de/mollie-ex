@@ -33,7 +33,7 @@ defmodule MollieEx.Resources.Customers.CreatePayment do
         method: :post,
         path: "/customers/" <> Options.encode_path_segment(customer_id) <> "/payments",
         path_template: "/customers/{customerId}/payments",
-        query: query(include),
+        query: Options.query(include: include),
         body: body,
         idempotency_key: Keyword.get(opts, :idempotency_key),
         idempotency_policy: :optional,
@@ -139,9 +139,6 @@ defmodule MollieEx.Resources.Customers.CreatePayment do
       end
     end)
   end
-
-  defp query(nil), do: []
-  defp query(include), do: [include: include]
 
   defp configuration_error(reason), do: Options.configuration_error(reason)
 end
