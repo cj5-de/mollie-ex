@@ -33,7 +33,15 @@ defmodule MollieEx.Resources.Chargebacks.All do
         method: :get,
         path: "/chargebacks",
         path_template: "/chargebacks",
-        query: query(from, limit, sort, embed, profile_id, testmode),
+        query:
+          Options.query(
+            from: from,
+            limit: limit,
+            sort: sort,
+            embed: embed,
+            profileId: profile_id,
+            testmode: testmode
+          ),
         idempotency_policy: :unsupported,
         operation: :chargebacks_all,
         testmode: testmode
@@ -72,16 +80,6 @@ defmodule MollieEx.Resources.Chargebacks.All do
 
   defp optional_profile_id(nil), do: {:ok, nil}
   defp optional_profile_id(profile_id), do: Options.profile_id(profile_id)
-
-  defp query(from, limit, sort, embed, profile_id, testmode) do
-    []
-    |> Options.put_query(:from, from)
-    |> Options.put_query(:limit, limit)
-    |> Options.put_query(:sort, sort)
-    |> Options.put_query(:embed, embed)
-    |> Options.put_query(:profileId, profile_id)
-    |> Options.put_query(:testmode, testmode)
-  end
 
   defp configuration_error(reason), do: Options.configuration_error(reason)
 end

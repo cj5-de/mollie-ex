@@ -33,7 +33,15 @@ defmodule MollieEx.Resources.Refunds.All do
         method: :get,
         path: "/refunds",
         path_template: "/refunds",
-        query: query(from, limit, sort, embed, profile_id, testmode),
+        query:
+          Options.query(
+            from: from,
+            limit: limit,
+            sort: sort,
+            embed: embed,
+            profileId: profile_id,
+            testmode: testmode
+          ),
         idempotency_policy: :unsupported,
         operation: :refunds_all,
         testmode: testmode
@@ -68,16 +76,6 @@ defmodule MollieEx.Resources.Refunds.All do
       :error -> client.profile_id
     end
     |> Options.profile_id()
-  end
-
-  defp query(from, limit, sort, embed, profile_id, testmode) do
-    []
-    |> Options.put_query(:from, from)
-    |> Options.put_query(:limit, limit)
-    |> Options.put_query(:sort, sort)
-    |> Options.put_query(:embed, embed)
-    |> Options.put_query(:profileId, profile_id)
-    |> Options.put_query(:testmode, testmode)
   end
 
   defp configuration_error(reason), do: Options.configuration_error(reason)

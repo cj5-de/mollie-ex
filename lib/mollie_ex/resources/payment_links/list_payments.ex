@@ -31,7 +31,7 @@ defmodule MollieEx.Resources.PaymentLinks.ListPayments do
         method: :get,
         path: "/payment-links/" <> Options.encode_path_segment(payment_link_id) <> "/payments",
         path_template: "/payment-links/{paymentLinkId}/payments",
-        query: query(from, limit, sort, testmode),
+        query: Options.query(from: from, limit: limit, sort: sort, testmode: testmode),
         idempotency_policy: :unsupported,
         operation: :payment_links_list_payments,
         testmode: testmode
@@ -46,14 +46,6 @@ defmodule MollieEx.Resources.PaymentLinks.ListPayments do
 
   def build(%Client{}, _payment_link_id, _opts),
     do: configuration_error(:invalid_payment_link_id)
-
-  defp query(from, limit, sort, testmode) do
-    []
-    |> Options.put_query(:from, from)
-    |> Options.put_query(:limit, limit)
-    |> Options.put_query(:sort, sort)
-    |> Options.put_query(:testmode, testmode)
-  end
 
   defp configuration_error(reason), do: Options.configuration_error(reason)
 end

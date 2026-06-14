@@ -29,7 +29,7 @@ defmodule MollieEx.Resources.Customers.List do
         method: :get,
         path: "/customers",
         path_template: "/customers",
-        query: query(from, limit, sort, testmode),
+        query: Options.query(from: from, limit: limit, sort: sort, testmode: testmode),
         idempotency_policy: :unsupported,
         operation: :customers_list,
         testmode: testmode
@@ -40,14 +40,6 @@ defmodule MollieEx.Resources.Customers.List do
   end
 
   def build(%Client{}, _opts), do: configuration_error(:invalid_options)
-
-  defp query(from, limit, sort, testmode) do
-    []
-    |> Options.put_query(:from, from)
-    |> Options.put_query(:limit, limit)
-    |> Options.put_query(:sort, sort)
-    |> Options.put_query(:testmode, testmode)
-  end
 
   defp configuration_error(reason), do: Options.configuration_error(reason)
 end

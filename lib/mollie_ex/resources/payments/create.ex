@@ -30,7 +30,7 @@ defmodule MollieEx.Resources.Payments.Create do
         method: :post,
         path: "/payments",
         path_template: "/payments",
-        query: query(include),
+        query: Options.query(include: include),
         body: body,
         idempotency_key: Keyword.get(opts, :idempotency_key),
         idempotency_policy: :optional,
@@ -127,9 +127,6 @@ defmodule MollieEx.Resources.Payments.Create do
       end
     end)
   end
-
-  defp query(nil), do: []
-  defp query(include), do: [include: include]
 
   defp configuration_error(reason), do: Options.configuration_error(reason)
 end
