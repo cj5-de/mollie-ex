@@ -21,8 +21,7 @@ defmodule MollieEx.Resources.PaymentLinks.ListPayments do
           {:ok, Request.t(), keyword()} | {:error, Error.t()}
   def build(%Client{} = client, payment_link_id, opts)
       when is_binary(payment_link_id) and is_list(opts) do
-    with :ok <- Options.ensure_keyword(opts),
-         :ok <- Options.reject_unknown(opts, @allowed_options),
+    with :ok <- Options.validate_options(opts, @allowed_options),
          {:ok, payment_link_id} <- Options.payment_link_id(payment_link_id),
          {:ok, from} <- Options.string_query_option(opts, :from),
          {:ok, limit} <- Options.limit(opts),

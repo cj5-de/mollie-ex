@@ -27,6 +27,22 @@ defmodule MollieEx.Resources.OptionsTest do
     end
   end
 
+  describe "validate_options/2" do
+    test "accepts keyword options with only allowed keys" do
+      assert :ok = Options.validate_options([from: "tr_123", limit: 10], [:from, :limit])
+    end
+
+    test "rejects non-keyword lists as invalid options" do
+      assert {:error, %Error{reason: :invalid_options}} =
+               Options.validate_options([:from, "tr_123"], [:from])
+    end
+
+    test "rejects the first unsupported option" do
+      assert {:error, %Error{reason: {:unsupported_option, :extra}}} =
+               Options.validate_options([from: "tr_123", extra: true], [:from])
+    end
+  end
+
   describe "param helpers" do
     test "fetch_param/2 returns the first present key, including nil values" do
       params = %{"profileId" => "pfl_string", profile_id: nil}

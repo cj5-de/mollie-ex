@@ -23,8 +23,7 @@ defmodule MollieEx.Resources.Customers.CreatePayment do
           {:ok, Request.t(), keyword()} | {:error, Error.t()}
   def build(%Client{} = client, customer_id, params, opts)
       when is_binary(customer_id) and is_map(params) and is_list(opts) do
-    with :ok <- Options.ensure_keyword(opts),
-         :ok <- Options.reject_unknown(opts, @allowed_options),
+    with :ok <- Options.validate_options(opts, @allowed_options),
          :ok <- Options.reject_api_key_scoped_fields(client, params, opts),
          {:ok, customer_id} <- Options.customer_id(customer_id),
          {:ok, include} <- Options.string_option(opts, :include),

@@ -18,8 +18,7 @@ defmodule MollieEx.Resources.Customers.Create do
   @spec build(Client.t(), map(), keyword()) ::
           {:ok, Request.t(), keyword()} | {:error, Error.t()}
   def build(%Client{} = client, params, opts) when is_map(params) and is_list(opts) do
-    with :ok <- Options.ensure_keyword(opts),
-         :ok <- Options.reject_unknown(opts, @allowed_options),
+    with :ok <- Options.validate_options(opts, @allowed_options),
          :ok <- Options.reject_api_key_testmode(client, params, opts),
          {:ok, body, testmode} <- body(client, params, opts) do
       RequestBuilder.build(opts,

@@ -19,8 +19,7 @@ defmodule MollieEx.Resources.Captures.Get do
           {:ok, Request.t(), keyword()} | {:error, Error.t()}
   def build(%Client{} = client, payment_id, capture_id, opts)
       when is_binary(payment_id) and is_binary(capture_id) and is_list(opts) do
-    with :ok <- Options.ensure_keyword(opts),
-         :ok <- Options.reject_unknown(opts, @allowed_options),
+    with :ok <- Options.validate_options(opts, @allowed_options),
          {:ok, payment_id} <- Options.payment_id(payment_id),
          {:ok, capture_id} <- Options.capture_id(capture_id),
          {:ok, embed} <- Options.string_option(opts, :embed),

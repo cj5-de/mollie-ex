@@ -20,8 +20,7 @@ defmodule MollieEx.Resources.Customers.List do
   @spec build(Client.t(), keyword()) ::
           {:ok, Request.t(), keyword()} | {:error, Error.t()}
   def build(%Client{} = client, opts) when is_list(opts) do
-    with :ok <- Options.ensure_keyword(opts),
-         :ok <- Options.reject_unknown(opts, @allowed_options),
+    with :ok <- Options.validate_options(opts, @allowed_options),
          {:ok, from} <- Options.string_query_option(opts, :from),
          {:ok, limit} <- Options.limit(opts),
          {:ok, sort} <- Options.sort(opts),

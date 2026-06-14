@@ -19,8 +19,7 @@ defmodule MollieEx.Resources.Customers.Delete do
           {:ok, Request.t(), keyword()} | {:error, Error.t()}
   def build(%Client{} = client, customer_id, opts)
       when is_binary(customer_id) and is_list(opts) do
-    with :ok <- Options.ensure_keyword(opts),
-         :ok <- Options.reject_unknown(opts, @allowed_options),
+    with :ok <- Options.validate_options(opts, @allowed_options),
          {:ok, customer_id} <- Options.customer_id(customer_id),
          {:ok, testmode} <- Options.effective_testmode(client, opts) do
       RequestBuilder.build(opts,
