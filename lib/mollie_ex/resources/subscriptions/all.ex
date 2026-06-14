@@ -44,6 +44,7 @@ defmodule MollieEx.Resources.Subscriptions.All do
 
   defp optional_profile_id(%Client{} = client, opts) do
     case Keyword.fetch(opts, :profile_id) do
+      {:ok, nil} -> {:ok, nil}
       {:ok, profile_id} -> Options.profile_id(profile_id)
       :error -> {:ok, client.profile_id}
     end

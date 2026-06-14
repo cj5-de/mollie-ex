@@ -40,7 +40,7 @@ defmodule MollieEx.Subscriptions do
   @type all_option ::
           {:from, String.t()}
           | {:limit, pos_integer()}
-          | {:profile_id, String.t()}
+          | {:profile_id, String.t() | nil}
           | {:testmode, boolean()}
           | {:pool_timeout, pos_integer()}
           | {:receive_timeout, pos_integer()}
@@ -157,6 +157,9 @@ defmodule MollieEx.Subscriptions do
 
   @doc """
   Lists subscriptions across customers.
+
+  Pass `profile_id: nil` with organization-level credentials to omit a
+  configured client profile and list subscriptions across the organization.
   """
   @doc since: "0.4.0"
   @spec all(Client.t(), [all_option()]) ::
