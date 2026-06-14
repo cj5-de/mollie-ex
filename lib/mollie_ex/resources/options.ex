@@ -3,6 +3,7 @@ defmodule MollieEx.Resources.Options do
 
   alias MollieEx.Client
   alias MollieEx.Error
+  alias MollieEx.Resources.Casing
 
   @profile_param_keys [:profile_id, "profile_id", "profileId"]
   @testmode_param_keys [:testmode, "testmode"]
@@ -93,6 +94,39 @@ defmodule MollieEx.Resources.Options do
 
   @spec drop_testmode(map()) :: map()
   def drop_testmode(body), do: Map.drop(body, ["testmode", :testmode])
+
+  @spec body_with_testmode(Client.t(), map(), keyword(), [String.t()]) ::
+          {:ok, map(), boolean() | nil} | {:error, Error.t()}
+  def body_with_testmode(%Client{} = client, params, opts, structured_body_keys)
+      when is_map(params) and is_list(opts) and is_list(structured_body_keys) do
+    with {:ok, testmode} <- effective_testmode(client, params, opts) do
+      body =
+        params
+        |> Casing.to_mollie_body(structured_body_keys)
+        |> drop_testmode()
+        |> put_body("testmode", testmode)
+
+      {:ok, body, testmode}
+    end
+  end
+
+  @spec body_with_profile(Client.t(), map(), keyword(), [String.t()], [term()]) ::
+          {:ok, map(), boolean() | nil} | {:error, Error.t()}
+  def body_with_profile(%Client{} = client, params, opts, structured_body_keys, extra_drop_keys)
+      when is_map(params) and is_list(opts) and is_list(structured_body_keys) and
+             is_list(extra_drop_keys) do
+    with {:ok, profile_id} <- effective_profile_id(client, params, opts),
+         {:ok, testmode} <- effective_testmode(client, params, opts) do
+      body =
+        params
+        |> Casing.to_mollie_body(structured_body_keys)
+        |> Map.drop(@profile_param_keys ++ @testmode_param_keys ++ extra_drop_keys)
+        |> put_body("profileId", profile_id)
+        |> put_body("testmode", testmode)
+
+      {:ok, body, testmode}
+    end
+  end
 
   @spec fetch_param(map(), [term()]) :: {:ok, term()} | :error
   def fetch_param(params, keys) when is_map(params) and is_list(keys) do

@@ -172,6 +172,76 @@ defmodule MollieEx.Resources.OptionsTest do
     end
   end
 
+  describe "body helpers" do
+    test "body_with_testmode/4 cases structured fields and resolves effective testmode" do
+      client = oauth_client(testmode: true)
+
+      assert {:ok, body, false} =
+               Options.body_with_testmode(
+                 client,
+                 %{
+                   amount: %{currency: "EUR", value: "10.00"},
+                   metadata: %{order_id: "ord_123"},
+                   testmode: true
+                 },
+                 [testmode: false],
+                 ~w(amount)
+               )
+
+      assert body == %{
+               "amount" => %{"currency" => "EUR", "value" => "10.00"},
+               "metadata" => %{order_id: "ord_123"},
+               "testmode" => false
+             }
+    end
+
+    test "body_with_profile/5 resolves profile and testmode before body params" do
+      client = oauth_client(profile_id: "pfl_default", testmode: true)
+
+      assert {:ok, body, false} =
+               Options.body_with_profile(
+                 client,
+                 %{
+                   profile_id: "pfl_params",
+                   testmode: true,
+                   amount: %{currency: "EUR", value: "10.00"}
+                 },
+                 [profile_id: "pfl_opts", testmode: false],
+                 ~w(amount),
+                 []
+               )
+
+      assert body == %{
+               "amount" => %{"currency" => "EUR", "value" => "10.00"},
+               "profileId" => "pfl_opts",
+               "testmode" => false
+             }
+    end
+
+    test "body_with_profile/5 drops extra relationship keys after casing" do
+      client = oauth_client(profile_id: "pfl_default")
+
+      assert {:ok, body, nil} =
+               Options.body_with_profile(
+                 client,
+                 %{customer_id: "cst_123", description: "Order #123"},
+                 [],
+                 [],
+                 ["customerId", "customer_id", :customer_id]
+               )
+
+      assert body == %{"description" => "Order #123", "profileId" => "pfl_default"}
+    end
+
+    test "body helpers return effective profile and testmode errors unchanged" do
+      assert {:error, %Error{reason: :missing_profile_id}} =
+               Options.body_with_profile(oauth_client(), %{profile_id: nil}, [], [], [])
+
+      assert {:error, %Error{reason: :invalid_testmode}} =
+               Options.body_with_testmode(oauth_client(), %{"testmode" => "false"}, [], [])
+    end
+  end
+
   defp api_key_client, do: Client.new!(api_key: @api_key)
   defp oauth_client(opts \\ []), do: Client.new!(Keyword.put(opts, :oauth_token, @oauth_token))
 end
