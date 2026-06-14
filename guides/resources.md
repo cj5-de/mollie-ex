@@ -105,6 +105,12 @@ Retrieve, list, and cancel payment refunds:
   )
 ```
 
+List refunds across the active API-key profile:
+
+```elixir
+{:ok, refunds} = MollieEx.Refunds.all(client, limit: 10, sort: :desc)
+```
+
 ## Captures
 
 Create a capture for an authorized payment:
@@ -136,6 +142,12 @@ Retrieve and list payment chargebacks:
 ```elixir
 {:ok, chargeback} = MollieEx.Chargebacks.get(client, "tr_123", "chb_123")
 {:ok, chargebacks} = MollieEx.Chargebacks.list(client, "tr_123", limit: 10)
+```
+
+List chargebacks across the active API-key profile:
+
+```elixir
+{:ok, chargebacks} = MollieEx.Chargebacks.all(client, limit: 10, sort: :desc)
 ```
 
 ## Payment routes

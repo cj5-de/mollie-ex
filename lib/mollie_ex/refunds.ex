@@ -72,7 +72,7 @@ defmodule MollieEx.Refunds do
   This is the top-level refund list endpoint. Use `list/3` to list refunds for
   a specific payment.
   """
-  @doc since: "0.1.0"
+  @doc since: "0.3.0"
   @spec all(Client.t(), [all_option()]) ::
           {:ok, MollieList.t(Refund.t())} | {:error, Error.t()}
   def all(client, opts \\ [])

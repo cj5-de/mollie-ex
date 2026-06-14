@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.0 - 2026-06-14
+
+### Added
+
+- Add top-level `MollieEx.Refunds.all/2` and
+  `MollieEx.Chargebacks.all/2` list endpoints.
+- Add `MollieEx.PaymentRoutes.update_release_date/5`.
+- Add `MollieEx.PaymentLinks.list_payments/3`,
+  `MollieEx.PaymentLinks.update/4`, and `MollieEx.PaymentLinks.delete/3`.
+- Add `MollieEx.Customers.create_payment/4` and
+  `MollieEx.Customers.list_payments/3`.
+
 ## 0.2.0 - 2026-06-13
 
 ### Added

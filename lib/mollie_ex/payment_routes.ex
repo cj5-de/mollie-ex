@@ -21,7 +21,7 @@ defmodule MollieEx.PaymentRoutes do
     )
   ```
   """
-  @moduledoc since: "0.1.0"
+  @moduledoc since: "0.2.0"
 
   alias MollieEx.Client
   alias MollieEx.Error
@@ -60,7 +60,7 @@ defmodule MollieEx.PaymentRoutes do
   Route creation supports caller-owned idempotency keys. The SDK never
   generates idempotency keys implicitly.
   """
-  @doc since: "0.1.0"
+  @doc since: "0.2.0"
   @spec create(Client.t(), String.t(), create_params(), [create_option()]) ::
           {:ok, Route.t()} | {:error, Error.t()}
   def create(client, payment_id, params, opts \\ [])
@@ -84,7 +84,7 @@ defmodule MollieEx.PaymentRoutes do
   @doc """
   Retrieves a delayed route by payment ID and route ID.
   """
-  @doc since: "0.1.0"
+  @doc since: "0.2.0"
   @spec get(Client.t(), String.t(), String.t(), [get_option()]) ::
           {:ok, Route.t()} | {:error, Error.t()}
   def get(client, payment_id, route_id, opts \\ [])
@@ -113,7 +113,7 @@ defmodule MollieEx.PaymentRoutes do
   Route release date updates support caller-owned idempotency keys. The SDK
   never generates idempotency keys implicitly.
   """
-  @doc since: "0.1.0"
+  @doc since: "0.3.0"
   @spec update_release_date(
           Client.t(),
           String.t(),
@@ -153,7 +153,7 @@ defmodule MollieEx.PaymentRoutes do
   @doc """
   Lists delayed routes for a payment.
   """
-  @doc since: "0.1.0"
+  @doc since: "0.2.0"
   @spec list(Client.t(), String.t(), [list_option()]) ::
           {:ok, MollieList.t(Route.t())} | {:error, Error.t()}
   def list(client, payment_id, opts \\ [])

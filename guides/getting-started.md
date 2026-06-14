@@ -9,7 +9,7 @@ Add `mollie_ex` to your dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:mollie_ex, "~> 0.2.0"}
+    {:mollie_ex, "~> 0.3.0"}
   ]
 end
 ```
