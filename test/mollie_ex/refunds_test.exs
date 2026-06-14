@@ -13,9 +13,6 @@ defmodule MollieEx.RefundsTest do
   setup {Req.Test, :verify_on_exit!}
 
   @api_key "test_refunds_secret"
-  @refund_fixture Path.expand("../fixtures/mollie/refunds/create_success.json", __DIR__)
-  @refund_all_fixture Path.expand("../fixtures/mollie/refunds/all_success.json", __DIR__)
-  @refund_list_fixture Path.expand("../fixtures/mollie/refunds/list_success.json", __DIR__)
 
   test "creates a refund with camelCased body and caller idempotency key" do
     Req.Test.expect(__MODULE__, fn conn ->
@@ -42,7 +39,7 @@ defmodule MollieEx.RefundsTest do
         ]
       })
 
-      refund_fixture_response(conn, 201)
+      fixture_response(conn, "refunds/create_success.json", 201)
     end)
 
     params = %{
@@ -85,7 +82,7 @@ defmodule MollieEx.RefundsTest do
         "testmode" => false
       })
 
-      refund_fixture_response(conn, 201)
+      fixture_response(conn, "refunds/create_success.json", 201)
     end)
 
     client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
@@ -106,7 +103,7 @@ defmodule MollieEx.RefundsTest do
       assert URI.decode_query(conn.query_string) == %{"embed" => "payment", "testmode" => "false"}
       assert_empty_body(conn)
 
-      refund_fixture_response(conn, 200)
+      fixture_response(conn, "refunds/create_success.json", 200)
     end)
 
     client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
@@ -129,7 +126,7 @@ defmodule MollieEx.RefundsTest do
 
       assert_empty_body(conn)
 
-      refund_all_fixture_response(conn, 200)
+      fixture_response(conn, "refunds/all_success.json", 200)
     end)
 
     assert {:ok, %MollieList{} = refund_list} =
@@ -154,7 +151,7 @@ defmodule MollieEx.RefundsTest do
 
       assert_empty_body(conn)
 
-      refund_all_fixture_response(conn, 200)
+      fixture_response(conn, "refunds/all_success.json", 200)
     end)
 
     client =
@@ -173,7 +170,7 @@ defmodule MollieEx.RefundsTest do
 
     Req.Test.stub(__MODULE__, fn conn ->
       send(test_pid, :request_sent)
-      refund_all_fixture_response(conn, 200)
+      fixture_response(conn, "refunds/all_success.json", 200)
     end)
 
     for client <- [
@@ -199,7 +196,7 @@ defmodule MollieEx.RefundsTest do
 
       assert_empty_body(conn)
 
-      refund_list_fixture_response(conn, 200)
+      fixture_response(conn, "refunds/list_success.json", 200)
     end)
 
     assert {:ok, %MollieList{} = refund_list} =
@@ -298,7 +295,7 @@ defmodule MollieEx.RefundsTest do
     Req.Test.expect(__MODULE__, fn conn ->
       assert header(conn, "idempotency-key") == "refund-123"
       assert_json_body(conn, expected_body)
-      refund_fixture_response(conn, 201)
+      fixture_response(conn, "refunds/create_success.json", 201)
     end)
 
     assert {:ok, %Refund{id: "re_123"}} =
@@ -359,7 +356,7 @@ defmodule MollieEx.RefundsTest do
 
     Req.Test.expect(__MODULE__, fn conn ->
       assert header(conn, "idempotency-key") == nil
-      refund_all_fixture_response(conn, 200)
+      fixture_response(conn, "refunds/all_success.json", 200)
     end)
 
     assert {:ok, %MollieList{}} = Refunds.all(client(max_retries: 1))
@@ -571,7 +568,7 @@ defmodule MollieEx.RefundsTest do
     attach_telemetry(prefix, [[:request, :start], [:request, :stop]])
 
     Req.Test.expect(__MODULE__, fn conn ->
-      refund_all_fixture_response(conn, 200)
+      fixture_response(conn, "refunds/all_success.json", 200)
     end)
 
     assert {:ok, %MollieList{}} =
@@ -587,7 +584,7 @@ defmodule MollieEx.RefundsTest do
     )
 
     Req.Test.expect(__MODULE__, fn conn ->
-      refund_fixture_response(conn, 201)
+      fixture_response(conn, "refunds/create_success.json", 201)
     end)
 
     assert {:ok, %Refund{}} =
@@ -608,7 +605,7 @@ defmodule MollieEx.RefundsTest do
     )
 
     Req.Test.expect(__MODULE__, fn conn ->
-      refund_fixture_response(conn, 200)
+      fixture_response(conn, "refunds/create_success.json", 200)
     end)
 
     assert {:ok, %Refund{}} =
@@ -624,7 +621,7 @@ defmodule MollieEx.RefundsTest do
     )
 
     Req.Test.expect(__MODULE__, fn conn ->
-      refund_list_fixture_response(conn, 200)
+      fixture_response(conn, "refunds/list_success.json", 200)
     end)
 
     assert {:ok, %MollieList{}} =
@@ -734,16 +731,5 @@ defmodule MollieEx.RefundsTest do
     [api_key: @api_key]
     |> Keyword.merge(opts)
     |> then(&TestSupport.client(__MODULE__, &1))
-  end
-
-  defp refund_fixture_response(conn, status),
-    do: fixture_response(conn, @refund_fixture, status)
-
-  defp refund_all_fixture_response(conn, status) do
-    fixture_response(conn, @refund_all_fixture, status)
-  end
-
-  defp refund_list_fixture_response(conn, status) do
-    fixture_response(conn, @refund_list_fixture, status)
   end
 end

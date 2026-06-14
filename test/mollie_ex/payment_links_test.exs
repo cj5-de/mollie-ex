@@ -14,12 +14,6 @@ defmodule MollieEx.PaymentLinksTest do
   setup {Req.Test, :verify_on_exit!}
 
   @api_key "test_payment_links_secret"
-  @payment_link_fixture Path.expand("../fixtures/mollie/payment_links/get_success.json", __DIR__)
-  @payment_link_list_fixture Path.expand(
-                               "../fixtures/mollie/payment_links/list_success.json",
-                               __DIR__
-                             )
-  @payment_list_fixture Path.expand("../fixtures/mollie/payments/list_success.json", __DIR__)
 
   test "creates a payment link with camelCased body and caller idempotency key" do
     Req.Test.expect(__MODULE__, fn conn ->
@@ -41,7 +35,7 @@ defmodule MollieEx.PaymentLinksTest do
         }
       })
 
-      payment_link_fixture_response(conn, 201)
+      fixture_response(conn, "payment_links/get_success.json", 201)
     end)
 
     assert {:ok, %PaymentLink{} = payment_link} =
@@ -75,7 +69,7 @@ defmodule MollieEx.PaymentLinksTest do
         "testmode" => false
       })
 
-      payment_link_fixture_response(conn, 201)
+      fixture_response(conn, "payment_links/get_success.json", 201)
     end)
 
     client =
@@ -103,7 +97,7 @@ defmodule MollieEx.PaymentLinksTest do
         "testmode" => false
       })
 
-      payment_link_fixture_response(conn, 201)
+      fixture_response(conn, "payment_links/get_success.json", 201)
     end)
 
     client =
@@ -129,7 +123,7 @@ defmodule MollieEx.PaymentLinksTest do
       assert URI.decode_query(conn.query_string) == %{"testmode" => "false"}
       assert_empty_body(conn)
 
-      payment_link_fixture_response(conn, 200)
+      fixture_response(conn, "payment_links/get_success.json", 200)
     end)
 
     client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
@@ -151,7 +145,7 @@ defmodule MollieEx.PaymentLinksTest do
 
       assert_empty_body(conn)
 
-      payment_link_list_fixture_response(conn, 200)
+      fixture_response(conn, "payment_links/list_success.json", 200)
     end)
 
     client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
@@ -181,7 +175,7 @@ defmodule MollieEx.PaymentLinksTest do
       assert header(conn, "idempotency-key") == nil
       assert_empty_body(conn)
 
-      payment_list_fixture_response(conn, 200)
+      fixture_response(conn, "payments/list_success.json", 200)
     end)
 
     client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
@@ -210,7 +204,7 @@ defmodule MollieEx.PaymentLinksTest do
       assert header(conn, "idempotency-key") == "payment-link-update-123"
       assert_json_body(conn, expected_update_body())
 
-      payment_link_fixture_response(conn, 200)
+      fixture_response(conn, "payment_links/get_success.json", 200)
     end)
 
     assert {:ok, %PaymentLink{} = payment_link} =
@@ -232,7 +226,7 @@ defmodule MollieEx.PaymentLinksTest do
         "testmode" => false
       })
 
-      payment_link_fixture_response(conn, 200)
+      fixture_response(conn, "payment_links/get_success.json", 200)
     end)
 
     client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
@@ -248,7 +242,7 @@ defmodule MollieEx.PaymentLinksTest do
         "testmode" => false
       })
 
-      payment_link_fixture_response(conn, 200)
+      fixture_response(conn, "payment_links/get_success.json", 200)
     end)
 
     client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
@@ -387,7 +381,7 @@ defmodule MollieEx.PaymentLinksTest do
     Req.Test.expect(__MODULE__, fn conn ->
       assert header(conn, "idempotency-key") == "payment-link-123"
       assert_json_body(conn, expected_body)
-      payment_link_fixture_response(conn, 201)
+      fixture_response(conn, "payment_links/get_success.json", 201)
     end)
 
     assert {:ok, %PaymentLink{id: "pl_123"}} =
@@ -427,7 +421,7 @@ defmodule MollieEx.PaymentLinksTest do
     Req.Test.expect(__MODULE__, fn conn ->
       assert header(conn, "idempotency-key") == "payment-link-update-123"
       assert_json_body(conn, expected_body)
-      payment_link_fixture_response(conn, 200)
+      fixture_response(conn, "payment_links/get_success.json", 200)
     end)
 
     assert {:ok, %PaymentLink{id: "pl_123"}} =
@@ -619,7 +613,7 @@ defmodule MollieEx.PaymentLinksTest do
 
   test "returns decode errors for invalid payment link delete responses" do
     Req.Test.expect(__MODULE__, fn conn ->
-      payment_link_fixture_response(conn, 200)
+      fixture_response(conn, "payment_links/get_success.json", 200)
     end)
 
     assert {:error, %Error{} = error} = PaymentLinks.delete(client(), "pl_123")
@@ -759,7 +753,7 @@ defmodule MollieEx.PaymentLinksTest do
     attach_telemetry(prefix, [[:request, :start], [:request, :stop]])
 
     Req.Test.expect(__MODULE__, fn conn ->
-      payment_link_fixture_response(conn, 201)
+      fixture_response(conn, "payment_links/get_success.json", 201)
     end)
 
     assert {:ok, %PaymentLink{}} =
@@ -779,7 +773,7 @@ defmodule MollieEx.PaymentLinksTest do
     )
 
     Req.Test.expect(__MODULE__, fn conn ->
-      payment_link_fixture_response(conn, 200)
+      fixture_response(conn, "payment_links/get_success.json", 200)
     end)
 
     assert {:ok, %PaymentLink{}} = PaymentLinks.get(client(telemetry_prefix: prefix), "pl_123")
@@ -794,7 +788,7 @@ defmodule MollieEx.PaymentLinksTest do
     )
 
     Req.Test.expect(__MODULE__, fn conn ->
-      payment_link_fixture_response(conn, 200)
+      fixture_response(conn, "payment_links/get_success.json", 200)
     end)
 
     assert {:ok, %PaymentLink{}} =
@@ -835,7 +829,7 @@ defmodule MollieEx.PaymentLinksTest do
     )
 
     Req.Test.expect(__MODULE__, fn conn ->
-      payment_link_list_fixture_response(conn, 200)
+      fixture_response(conn, "payment_links/list_success.json", 200)
     end)
 
     assert {:ok, %MollieList{}} = PaymentLinks.list(client(telemetry_prefix: prefix))
@@ -850,7 +844,7 @@ defmodule MollieEx.PaymentLinksTest do
     )
 
     Req.Test.expect(__MODULE__, fn conn ->
-      payment_list_fixture_response(conn, 200)
+      fixture_response(conn, "payments/list_success.json", 200)
     end)
 
     assert {:ok, %MollieList{}} =
@@ -1019,18 +1013,13 @@ defmodule MollieEx.PaymentLinksTest do
   end
 
   defp payment_link_response(:delete, conn), do: no_content_response(conn)
-  defp payment_link_response(:list, conn), do: payment_link_list_fixture_response(conn, 200)
-  defp payment_link_response(:list_payments, conn), do: payment_list_fixture_response(conn, 200)
-  defp payment_link_response(_operation, conn), do: payment_link_fixture_response(conn, 200)
 
-  defp payment_link_fixture_response(conn, status),
-    do: fixture_response(conn, @payment_link_fixture, status)
+  defp payment_link_response(:list, conn),
+    do: fixture_response(conn, "payment_links/list_success.json", 200)
 
-  defp payment_link_list_fixture_response(conn, status) do
-    fixture_response(conn, @payment_link_list_fixture, status)
-  end
+  defp payment_link_response(:list_payments, conn),
+    do: fixture_response(conn, "payments/list_success.json", 200)
 
-  defp payment_list_fixture_response(conn, status) do
-    fixture_response(conn, @payment_list_fixture, status)
-  end
+  defp payment_link_response(_operation, conn),
+    do: fixture_response(conn, "payment_links/get_success.json", 200)
 end

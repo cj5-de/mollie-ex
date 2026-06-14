@@ -13,8 +13,6 @@ defmodule MollieEx.PaymentRoutesTest do
   setup {Req.Test, :verify_on_exit!}
 
   @api_key "test_payment_routes_secret"
-  @route_fixture Path.expand("../fixtures/mollie/payment_routes/get_success.json", __DIR__)
-  @route_list_fixture Path.expand("../fixtures/mollie/payment_routes/list_success.json", __DIR__)
 
   test "creates a payment route with camelCased body and caller idempotency key" do
     Req.Test.expect(__MODULE__, fn conn ->
@@ -30,7 +28,7 @@ defmodule MollieEx.PaymentRoutesTest do
         "description" => "Payment for order #123"
       })
 
-      route_fixture_response(conn, 201)
+      fixture_response(conn, "payment_routes/get_success.json", 201)
     end)
 
     params = %{
@@ -67,7 +65,7 @@ defmodule MollieEx.PaymentRoutesTest do
         "testmode" => false
       })
 
-      route_fixture_response(conn, 201)
+      fixture_response(conn, "payment_routes/get_success.json", 201)
     end)
 
     client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
@@ -89,7 +87,7 @@ defmodule MollieEx.PaymentRoutesTest do
         "testmode" => false
       })
 
-      route_fixture_response(conn, 201)
+      fixture_response(conn, "payment_routes/get_success.json", 201)
     end)
 
     client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
@@ -105,7 +103,7 @@ defmodule MollieEx.PaymentRoutesTest do
       assert conn.query_string == ""
       assert_empty_body(conn)
 
-      route_fixture_response(conn, 200)
+      fixture_response(conn, "payment_routes/get_success.json", 200)
     end)
 
     assert {:ok, %Route{id: "crt_123", payment_id: "tr_123"}} =
@@ -121,7 +119,7 @@ defmodule MollieEx.PaymentRoutesTest do
       assert header(conn, "idempotency-key") == "route-release-123"
       assert_json_body(conn, %{"releaseDate" => release_date()})
 
-      route_fixture_response(conn, 200)
+      fixture_response(conn, "payment_routes/get_success.json", 200)
     end)
 
     assert {:ok, %Route{id: "crt_123"} = route} =
@@ -144,7 +142,7 @@ defmodule MollieEx.PaymentRoutesTest do
         "testmode" => false
       })
 
-      route_fixture_response(conn, 200)
+      fixture_response(conn, "payment_routes/get_success.json", 200)
     end)
 
     client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
@@ -166,7 +164,7 @@ defmodule MollieEx.PaymentRoutesTest do
       assert conn.query_string == ""
       assert_empty_body(conn)
 
-      route_list_fixture_response(conn, 200)
+      fixture_response(conn, "payment_routes/list_success.json", 200)
     end)
 
     assert {:ok, %MollieList{} = route_list} = PaymentRoutes.list(client(), "tr_123")
@@ -180,7 +178,7 @@ defmodule MollieEx.PaymentRoutesTest do
   test "adds testmode query param for OAuth list requests" do
     Req.Test.expect(__MODULE__, fn conn ->
       assert URI.decode_query(conn.query_string) == %{"testmode" => "false"}
-      route_list_fixture_response(conn, 200)
+      fixture_response(conn, "payment_routes/list_success.json", 200)
     end)
 
     client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
@@ -269,7 +267,7 @@ defmodule MollieEx.PaymentRoutesTest do
     Req.Test.expect(__MODULE__, fn conn ->
       assert header(conn, "idempotency-key") == "route-123"
       assert_json_body(conn, expected_body)
-      route_fixture_response(conn, 201)
+      fixture_response(conn, "payment_routes/get_success.json", 201)
     end)
 
     assert {:ok, %Route{id: "crt_123"}} =
@@ -296,7 +294,7 @@ defmodule MollieEx.PaymentRoutesTest do
     Req.Test.expect(__MODULE__, fn conn ->
       assert header(conn, "idempotency-key") == "route-release-123"
       assert_json_body(conn, expected_body)
-      route_fixture_response(conn, 200)
+      fixture_response(conn, "payment_routes/get_success.json", 200)
     end)
 
     assert {:ok, %Route{id: "crt_123"}} =
@@ -528,7 +526,7 @@ defmodule MollieEx.PaymentRoutesTest do
     attach_telemetry(prefix, [[:request, :start], [:request, :stop]])
 
     Req.Test.expect(__MODULE__, fn conn ->
-      route_fixture_response(conn, 201)
+      fixture_response(conn, "payment_routes/get_success.json", 201)
     end)
 
     assert {:ok, %Route{}} =
@@ -549,7 +547,7 @@ defmodule MollieEx.PaymentRoutesTest do
     )
 
     Req.Test.expect(__MODULE__, fn conn ->
-      route_fixture_response(conn, 200)
+      fixture_response(conn, "payment_routes/get_success.json", 200)
     end)
 
     assert {:ok, %Route{}} =
@@ -565,7 +563,7 @@ defmodule MollieEx.PaymentRoutesTest do
     )
 
     Req.Test.expect(__MODULE__, fn conn ->
-      route_fixture_response(conn, 200)
+      fixture_response(conn, "payment_routes/get_success.json", 200)
     end)
 
     assert {:ok, %Route{}} =
@@ -587,7 +585,7 @@ defmodule MollieEx.PaymentRoutesTest do
     )
 
     Req.Test.expect(__MODULE__, fn conn ->
-      route_list_fixture_response(conn, 200)
+      fixture_response(conn, "payment_routes/list_success.json", 200)
     end)
 
     assert {:ok, %MollieList{}} =
@@ -689,12 +687,9 @@ defmodule MollieEx.PaymentRoutesTest do
 
   defp release_date, do: "2026-07-01"
 
-  defp route_response(:list, conn), do: route_list_fixture_response(conn, 200)
-  defp route_response(_operation, conn), do: route_fixture_response(conn, 200)
+  defp route_response(:list, conn),
+    do: fixture_response(conn, "payment_routes/list_success.json", 200)
 
-  defp route_fixture_response(conn, status), do: fixture_response(conn, @route_fixture, status)
-
-  defp route_list_fixture_response(conn, status) do
-    fixture_response(conn, @route_list_fixture, status)
-  end
+  defp route_response(_operation, conn),
+    do: fixture_response(conn, "payment_routes/get_success.json", 200)
 end
