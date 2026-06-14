@@ -32,6 +32,16 @@
             }
           }
         ],
+        "pricing": [
+          {
+            "description": "The Netherlands",
+            "fixed": {
+              "value": "0.29",
+              "currency": "EUR"
+            },
+            "variable": "0.1"
+          }
+        ],
         "unexpectedFutureField": true
       },
       {

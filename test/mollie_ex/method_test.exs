@@ -16,6 +16,14 @@ defmodule MollieEx.MethodTest do
       "image" => %{"svg" => "https://example.test/ideal.svg"},
       "status" => "activated",
       "issuers" => [%{"id" => "ideal_INGBNL2A", "name" => "ING"}],
+      "pricing" => [
+        %{
+          "description" => "The Netherlands",
+          "fixed" => %{"currency" => "EUR", "value" => "0.29"},
+          "variable" => "0.1",
+          "feeRegion" => "other"
+        }
+      ],
       "_links" => %{
         "self" => %{
           "href" => "https://api.mollie.com/v2/methods/ideal",
@@ -49,6 +57,7 @@ defmodule MollieEx.MethodTest do
     assert method.image == %{"svg" => "https://example.test/ideal.svg"}
     assert method.status == "activated"
     assert method.issuers == [%{"id" => "ideal_INGBNL2A", "name" => "ING"}]
+    assert method.pricing == body["pricing"]
     assert %Link{href: "https://api.mollie.com/v2/methods/ideal"} = method.links["self"]
     assert method.raw["futureField"] == true
   end
