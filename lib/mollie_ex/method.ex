@@ -22,6 +22,7 @@ defmodule MollieEx.Method do
           image: map() | nil,
           status: String.t() | nil,
           issuers: [map()] | nil,
+          pricing: [map()] | nil,
           links: links(),
           raw: map()
         }
@@ -36,6 +37,7 @@ defmodule MollieEx.Method do
     :image,
     :status,
     :issuers,
+    :pricing,
     links: %{},
     raw: %{}
   ]
@@ -55,6 +57,7 @@ defmodule MollieEx.Method do
            image: Map.get(body, "image"),
            status: Map.get(body, "status"),
            issuers: Map.get(body, "issuers"),
+           pricing: Map.get(body, "pricing"),
            links: links(Map.get(body, "_links")),
            raw: body
          }}

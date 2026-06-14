@@ -55,14 +55,22 @@ defmodule MollieEx.MethodsTest do
     Req.Test.expect(__MODULE__, fn conn ->
       assert conn.method == "GET"
       assert conn.request_path == "/v2/methods/all"
-      assert URI.decode_query(conn.query_string) == %{"include" => "issuers"}
+      assert URI.decode_query(conn.query_string) == %{"include" => "pricing"}
       assert_empty_body(conn)
 
       fixture_response(conn, "methods/list_success.json", 200)
     end)
 
-    assert {:ok, %MollieList{data: [%Method{id: "ideal"} | _methods]}} =
-             Methods.all(client(), include: "issuers")
+    assert {:ok, %MollieList{data: [%Method{id: "ideal"} = ideal | _methods]}} =
+             Methods.all(client(), include: "pricing")
+
+    assert [
+             %{
+               "description" => "The Netherlands",
+               "fixed" => %{"currency" => "EUR", "value" => "0.29"},
+               "variable" => "0.1"
+             }
+           ] = ideal.pricing
   end
 
   test "gets a payment method with query filters" do
