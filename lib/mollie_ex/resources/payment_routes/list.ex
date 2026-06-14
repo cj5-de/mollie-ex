@@ -22,7 +22,7 @@ defmodule MollieEx.Resources.PaymentRoutes.List do
          {:ok, testmode} <- Options.effective_testmode(client, opts) do
       RequestBuilder.build(opts,
         method: :get,
-        path: "/payments/" <> Options.encode_path_segment(payment_id) <> "/routes",
+        path: Options.resource_path(["payments", payment_id, "routes"]),
         path_template: "/payments/{paymentId}/routes",
         query: Options.query(testmode: testmode),
         idempotency_policy: :unsupported,

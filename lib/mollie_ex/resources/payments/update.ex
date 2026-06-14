@@ -27,7 +27,7 @@ defmodule MollieEx.Resources.Payments.Update do
          {:ok, body, testmode} <- body(client, params, opts) do
       RequestBuilder.build(opts,
         method: :patch,
-        path: "/payments/" <> Options.encode_path_segment(payment_id),
+        path: Options.resource_path(["payments", payment_id]),
         path_template: "/payments/{paymentId}",
         body: body,
         idempotency_policy: :optional,

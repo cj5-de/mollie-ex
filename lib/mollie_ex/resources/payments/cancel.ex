@@ -23,7 +23,7 @@ defmodule MollieEx.Resources.Payments.Cancel do
          {:ok, body, testmode} <- body(client, opts) do
       RequestBuilder.build(opts,
         method: :delete,
-        path: "/payments/" <> Options.encode_path_segment(payment_id),
+        path: Options.resource_path(["payments", payment_id]),
         path_template: "/payments/{paymentId}",
         body: body,
         idempotency_policy: :optional,

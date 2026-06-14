@@ -25,7 +25,7 @@ defmodule MollieEx.Resources.Customers.Update do
          {:ok, body, testmode} <- body(client, params, opts) do
       RequestBuilder.build(opts,
         method: :patch,
-        path: "/customers/" <> Options.encode_path_segment(customer_id),
+        path: Options.resource_path(["customers", customer_id]),
         path_template: "/customers/{customerId}",
         body: body,
         idempotency_policy: :optional,

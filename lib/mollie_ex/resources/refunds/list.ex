@@ -28,7 +28,7 @@ defmodule MollieEx.Resources.Refunds.List do
          {:ok, testmode} <- Options.effective_testmode(client, opts) do
       RequestBuilder.build(opts,
         method: :get,
-        path: "/payments/" <> Options.encode_path_segment(payment_id) <> "/refunds",
+        path: Options.resource_path(["payments", payment_id, "refunds"]),
         path_template: "/payments/{paymentId}/refunds",
         query: Options.query(from: from, limit: limit, embed: embed, testmode: testmode),
         idempotency_policy: :unsupported,

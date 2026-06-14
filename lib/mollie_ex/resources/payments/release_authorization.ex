@@ -25,7 +25,7 @@ defmodule MollieEx.Resources.Payments.ReleaseAuthorization do
          {:ok, body, testmode} <- body(client, opts) do
       RequestBuilder.build(opts,
         method: :post,
-        path: "/payments/" <> Options.encode_path_segment(payment_id) <> "/release-authorization",
+        path: Options.resource_path(["payments", payment_id, "release-authorization"]),
         path_template: "/payments/{paymentId}/release-authorization",
         body: body,
         idempotency_policy: :optional,

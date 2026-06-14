@@ -28,7 +28,7 @@ defmodule MollieEx.Resources.Chargebacks.List do
          {:ok, testmode} <- Options.effective_testmode(client, opts) do
       RequestBuilder.build(opts,
         method: :get,
-        path: "/payments/" <> Options.encode_path_segment(payment_id) <> "/chargebacks",
+        path: Options.resource_path(["payments", payment_id, "chargebacks"]),
         path_template: "/payments/{paymentId}/chargebacks",
         query: Options.query(from: from, limit: limit, embed: embed, testmode: testmode),
         idempotency_policy: :unsupported,

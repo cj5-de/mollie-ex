@@ -25,7 +25,7 @@ defmodule MollieEx.Resources.Customers.Get do
          {:ok, testmode} <- Options.effective_testmode(client, opts) do
       RequestBuilder.build(opts,
         method: :get,
-        path: "/customers/" <> Options.encode_path_segment(customer_id),
+        path: Options.resource_path(["customers", customer_id]),
         path_template: "/customers/{customerId}",
         query: Options.query(include: include, testmode: testmode),
         idempotency_policy: :unsupported,

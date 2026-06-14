@@ -26,7 +26,7 @@ defmodule MollieEx.Resources.Captures.Create do
          {:ok, body, testmode} <- body(client, params, opts) do
       RequestBuilder.build(opts,
         method: :post,
-        path: "/payments/" <> Options.encode_path_segment(payment_id) <> "/captures",
+        path: Options.resource_path(["payments", payment_id, "captures"]),
         path_template: "/payments/{paymentId}/captures",
         body: body,
         idempotency_policy: :optional,

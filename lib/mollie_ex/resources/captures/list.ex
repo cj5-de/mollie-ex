@@ -28,7 +28,7 @@ defmodule MollieEx.Resources.Captures.List do
          {:ok, testmode} <- Options.effective_testmode(client, opts) do
       RequestBuilder.build(opts,
         method: :get,
-        path: "/payments/" <> Options.encode_path_segment(payment_id) <> "/captures",
+        path: Options.resource_path(["payments", payment_id, "captures"]),
         path_template: "/payments/{paymentId}/captures",
         query: Options.query(from: from, limit: limit, embed: embed, testmode: testmode),
         idempotency_policy: :unsupported,

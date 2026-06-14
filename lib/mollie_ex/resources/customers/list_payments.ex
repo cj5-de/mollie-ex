@@ -32,7 +32,7 @@ defmodule MollieEx.Resources.Customers.ListPayments do
          {:ok, testmode} <- Options.effective_testmode(client, opts) do
       RequestBuilder.build(opts,
         method: :get,
-        path: "/customers/" <> Options.encode_path_segment(customer_id) <> "/payments",
+        path: Options.resource_path(["customers", customer_id, "payments"]),
         path_template: "/customers/{customerId}/payments",
         query:
           Options.query(

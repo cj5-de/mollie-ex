@@ -22,11 +22,7 @@ defmodule MollieEx.Resources.PaymentRoutes.Get do
          {:ok, route_id} <- Options.route_id(route_id) do
       RequestBuilder.build(opts,
         method: :get,
-        path:
-          "/payments/" <>
-            Options.encode_path_segment(payment_id) <>
-            "/routes/" <>
-            Options.encode_path_segment(route_id),
+        path: Options.resource_path(["payments", payment_id, "routes", route_id]),
         path_template: "/payments/{paymentId}/routes/{routeId}",
         idempotency_policy: :unsupported,
         operation: :payment_routes_get
