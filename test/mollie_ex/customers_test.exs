@@ -14,10 +14,6 @@ defmodule MollieEx.CustomersTest do
   setup {Req.Test, :verify_on_exit!}
 
   @api_key "test_customers_secret"
-  @customer_fixture Path.expand("../fixtures/mollie/customers/get_success.json", __DIR__)
-  @customer_list_fixture Path.expand("../fixtures/mollie/customers/list_success.json", __DIR__)
-  @payment_fixture Path.expand("../fixtures/mollie/payments/create_success.json", __DIR__)
-  @payment_list_fixture Path.expand("../fixtures/mollie/payments/list_success.json", __DIR__)
 
   test "creates a customer with pass-through metadata and caller idempotency key" do
     Req.Test.expect(__MODULE__, fn conn ->
@@ -37,7 +33,7 @@ defmodule MollieEx.CustomersTest do
         }
       })
 
-      customer_fixture_response(conn, 201)
+      fixture_response(conn, "customers/get_success.json", 201)
     end)
 
     assert {:ok, %Customer{} = customer} =
@@ -66,7 +62,7 @@ defmodule MollieEx.CustomersTest do
         "testmode" => false
       })
 
-      customer_fixture_response(conn, 201)
+      fixture_response(conn, "customers/get_success.json", 201)
     end)
 
     client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
@@ -88,7 +84,7 @@ defmodule MollieEx.CustomersTest do
         "testmode" => false
       })
 
-      customer_fixture_response(conn, 201)
+      fixture_response(conn, "customers/get_success.json", 201)
     end)
 
     client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
@@ -109,7 +105,7 @@ defmodule MollieEx.CustomersTest do
 
       assert_empty_body(conn)
 
-      customer_fixture_response(conn, 200)
+      fixture_response(conn, "customers/get_success.json", 200)
     end)
 
     client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
@@ -132,7 +128,7 @@ defmodule MollieEx.CustomersTest do
 
       assert_empty_body(conn)
 
-      customer_list_fixture_response(conn, 200)
+      fixture_response(conn, "customers/list_success.json", 200)
     end)
 
     client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
@@ -163,7 +159,7 @@ defmodule MollieEx.CustomersTest do
       assert header(conn, "idempotency-key") == nil
       assert_empty_body(conn)
 
-      payment_list_fixture_response(conn, 200)
+      fixture_response(conn, "payments/list_success.json", 200)
     end)
 
     client =
@@ -204,7 +200,7 @@ defmodule MollieEx.CustomersTest do
         "billingAddress" => %{"givenName" => "Ada"}
       })
 
-      payment_fixture_response(conn, 201)
+      fixture_response(conn, "payments/create_success.json", 201)
     end)
 
     params =
@@ -234,7 +230,7 @@ defmodule MollieEx.CustomersTest do
         "testmode" => false
       })
 
-      payment_fixture_response(conn, 201)
+      fixture_response(conn, "payments/create_success.json", 201)
     end)
 
     client =
@@ -262,7 +258,7 @@ defmodule MollieEx.CustomersTest do
         "testmode" => false
       })
 
-      payment_fixture_response(conn, 201)
+      fixture_response(conn, "payments/create_success.json", 201)
     end)
 
     client =
@@ -295,7 +291,7 @@ defmodule MollieEx.CustomersTest do
         }
       })
 
-      customer_fixture_response(conn, 200)
+      fixture_response(conn, "customers/get_success.json", 200)
     end)
 
     params = %{
@@ -317,7 +313,7 @@ defmodule MollieEx.CustomersTest do
         "testmode" => false
       })
 
-      customer_fixture_response(conn, 200)
+      fixture_response(conn, "customers/get_success.json", 200)
     end)
 
     client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
@@ -482,7 +478,7 @@ defmodule MollieEx.CustomersTest do
     Req.Test.expect(__MODULE__, fn conn ->
       assert header(conn, "idempotency-key") == "customer-123"
       assert_json_body(conn, expected_body)
-      customer_fixture_response(conn, 201)
+      fixture_response(conn, "customers/get_success.json", 201)
     end)
 
     assert {:ok, %Customer{id: "cst_123"}} =
@@ -513,7 +509,7 @@ defmodule MollieEx.CustomersTest do
     Req.Test.expect(__MODULE__, fn conn ->
       assert header(conn, "idempotency-key") == "customer-payment-123"
       assert_json_body(conn, expected_body)
-      payment_fixture_response(conn, 201)
+      fixture_response(conn, "payments/create_success.json", 201)
     end)
 
     assert {:ok, %Payment{id: "tr_123"}} =
@@ -538,7 +534,7 @@ defmodule MollieEx.CustomersTest do
     Req.Test.expect(__MODULE__, fn conn ->
       assert header(conn, "idempotency-key") == "customer-update-123"
       assert_json_body(conn, %{"name" => "Jane Updated"})
-      customer_fixture_response(conn, 200)
+      fixture_response(conn, "customers/get_success.json", 200)
     end)
 
     assert {:ok, %Customer{id: "cst_123"}} =
@@ -715,7 +711,7 @@ defmodule MollieEx.CustomersTest do
 
   test "returns decode errors for invalid customer delete responses" do
     Req.Test.expect(__MODULE__, fn conn ->
-      customer_fixture_response(conn, 200)
+      fixture_response(conn, "customers/get_success.json", 200)
     end)
 
     assert {:error, %Error{} = error} = Customers.delete(client(), "cst_123")
@@ -919,7 +915,7 @@ defmodule MollieEx.CustomersTest do
     attach_telemetry(prefix, [[:request, :start], [:request, :stop]])
 
     Req.Test.expect(__MODULE__, fn conn ->
-      customer_fixture_response(conn, 201)
+      fixture_response(conn, "customers/get_success.json", 201)
     end)
 
     assert {:ok, %Customer{}} =
@@ -939,7 +935,7 @@ defmodule MollieEx.CustomersTest do
     )
 
     Req.Test.expect(__MODULE__, fn conn ->
-      customer_fixture_response(conn, 200)
+      fixture_response(conn, "customers/get_success.json", 200)
     end)
 
     assert {:ok, %Customer{}} = Customers.get(client(telemetry_prefix: prefix), "cst_123")
@@ -954,7 +950,7 @@ defmodule MollieEx.CustomersTest do
     )
 
     Req.Test.expect(__MODULE__, fn conn ->
-      customer_list_fixture_response(conn, 200)
+      fixture_response(conn, "customers/list_success.json", 200)
     end)
 
     assert {:ok, %MollieList{}} = Customers.list(client(telemetry_prefix: prefix))
@@ -969,7 +965,7 @@ defmodule MollieEx.CustomersTest do
     )
 
     Req.Test.expect(__MODULE__, fn conn ->
-      payment_list_fixture_response(conn, 200)
+      fixture_response(conn, "payments/list_success.json", 200)
     end)
 
     assert {:ok, %MollieList{}} =
@@ -985,7 +981,7 @@ defmodule MollieEx.CustomersTest do
     )
 
     Req.Test.expect(__MODULE__, fn conn ->
-      payment_fixture_response(conn, 201)
+      fixture_response(conn, "payments/create_success.json", 201)
     end)
 
     assert {:ok, %Payment{}} =
@@ -1006,7 +1002,7 @@ defmodule MollieEx.CustomersTest do
     )
 
     Req.Test.expect(__MODULE__, fn conn ->
-      customer_fixture_response(conn, 200)
+      fixture_response(conn, "customers/get_success.json", 200)
     end)
 
     assert {:ok, %Customer{}} =
@@ -1144,22 +1140,12 @@ defmodule MollieEx.CustomersTest do
     }
   end
 
-  defp customer_fixture_response(conn, status),
-    do: fixture_response(conn, @customer_fixture, status)
+  defp customer_response(:create_payment, conn),
+    do: fixture_response(conn, "payments/create_success.json", 201)
 
-  defp customer_response(:create_payment, conn), do: payment_fixture_response(conn, 201)
-  defp customer_response(:list_payments, conn), do: payment_list_fixture_response(conn, 200)
-  defp customer_response(_operation, conn), do: customer_fixture_response(conn, 200)
+  defp customer_response(:list_payments, conn),
+    do: fixture_response(conn, "payments/list_success.json", 200)
 
-  defp customer_list_fixture_response(conn, status) do
-    fixture_response(conn, @customer_list_fixture, status)
-  end
-
-  defp payment_fixture_response(conn, status) do
-    fixture_response(conn, @payment_fixture, status)
-  end
-
-  defp payment_list_fixture_response(conn, status) do
-    fixture_response(conn, @payment_list_fixture, status)
-  end
+  defp customer_response(_operation, conn),
+    do: fixture_response(conn, "customers/get_success.json", 200)
 end

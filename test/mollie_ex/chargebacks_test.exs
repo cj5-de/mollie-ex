@@ -13,15 +13,6 @@ defmodule MollieEx.ChargebacksTest do
   setup {Req.Test, :verify_on_exit!}
 
   @api_key "test_chargebacks_secret"
-  @chargeback_fixture Path.expand("../fixtures/mollie/chargebacks/get_success.json", __DIR__)
-  @chargeback_all_fixture Path.expand(
-                            "../fixtures/mollie/chargebacks/all_success.json",
-                            __DIR__
-                          )
-  @chargeback_list_fixture Path.expand(
-                             "../fixtures/mollie/chargebacks/list_success.json",
-                             __DIR__
-                           )
 
   test "retrieves a chargeback" do
     Req.Test.expect(__MODULE__, fn conn ->
@@ -31,7 +22,7 @@ defmodule MollieEx.ChargebacksTest do
       assert header(conn, "authorization") == "Bearer #{@api_key}"
       assert_empty_body(conn)
 
-      chargeback_fixture_response(conn, 200)
+      fixture_response(conn, "chargebacks/get_success.json", 200)
     end)
 
     assert {:ok, %Chargeback{} = chargeback} =
@@ -70,7 +61,7 @@ defmodule MollieEx.ChargebacksTest do
       assert URI.decode_query(conn.query_string) == %{"embed" => "payment", "testmode" => "false"}
       assert_empty_body(conn)
 
-      chargeback_fixture_response(conn, 200)
+      fixture_response(conn, "chargebacks/get_success.json", 200)
     end)
 
     client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
@@ -93,7 +84,7 @@ defmodule MollieEx.ChargebacksTest do
 
       assert_empty_body(conn)
 
-      chargeback_all_fixture_response(conn, 200)
+      fixture_response(conn, "chargebacks/all_success.json", 200)
     end)
 
     assert {:ok, %MollieList{} = chargeback_list} =
@@ -119,7 +110,7 @@ defmodule MollieEx.ChargebacksTest do
 
       assert_empty_body(conn)
 
-      chargeback_list_fixture_response(conn, 200)
+      fixture_response(conn, "chargebacks/list_success.json", 200)
     end)
 
     assert {:ok, %MollieList{} = chargeback_list} =
@@ -136,7 +127,7 @@ defmodule MollieEx.ChargebacksTest do
   test "adds testmode query param for OAuth list requests" do
     Req.Test.expect(__MODULE__, fn conn ->
       assert URI.decode_query(conn.query_string) == %{"testmode" => "false"}
-      chargeback_list_fixture_response(conn, 200)
+      fixture_response(conn, "chargebacks/list_success.json", 200)
     end)
 
     client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
@@ -156,7 +147,7 @@ defmodule MollieEx.ChargebacksTest do
 
       assert_empty_body(conn)
 
-      chargeback_all_fixture_response(conn, 200)
+      fixture_response(conn, "chargebacks/all_success.json", 200)
     end)
 
     client =
@@ -204,7 +195,7 @@ defmodule MollieEx.ChargebacksTest do
 
     Req.Test.expect(__MODULE__, fn conn ->
       assert header(conn, "idempotency-key") == nil
-      chargeback_all_fixture_response(conn, 200)
+      fixture_response(conn, "chargebacks/all_success.json", 200)
     end)
 
     assert {:ok, %MollieList{}} = Chargebacks.all(client(max_retries: 1))
@@ -221,7 +212,7 @@ defmodule MollieEx.ChargebacksTest do
 
     Req.Test.expect(__MODULE__, fn conn ->
       assert header(conn, "idempotency-key") == nil
-      chargeback_fixture_response(conn, 200)
+      fixture_response(conn, "chargebacks/get_success.json", 200)
     end)
 
     assert {:ok, %Chargeback{id: "chb_123"}} =
@@ -414,7 +405,7 @@ defmodule MollieEx.ChargebacksTest do
     attach_telemetry(prefix, [[:request, :start], [:request, :stop]])
 
     Req.Test.expect(__MODULE__, fn conn ->
-      chargeback_all_fixture_response(conn, 200)
+      fixture_response(conn, "chargebacks/all_success.json", 200)
     end)
 
     assert {:ok, %MollieList{}} =
@@ -430,7 +421,7 @@ defmodule MollieEx.ChargebacksTest do
     )
 
     Req.Test.expect(__MODULE__, fn conn ->
-      chargeback_fixture_response(conn, 200)
+      fixture_response(conn, "chargebacks/get_success.json", 200)
     end)
 
     assert {:ok, %Chargeback{}} =
@@ -446,7 +437,7 @@ defmodule MollieEx.ChargebacksTest do
     )
 
     Req.Test.expect(__MODULE__, fn conn ->
-      chargeback_list_fixture_response(conn, 200)
+      fixture_response(conn, "chargebacks/list_success.json", 200)
     end)
 
     assert {:ok, %MollieList{}} =
@@ -533,16 +524,5 @@ defmodule MollieEx.ChargebacksTest do
     [api_key: @api_key]
     |> Keyword.merge(opts)
     |> then(&TestSupport.client(__MODULE__, &1))
-  end
-
-  defp chargeback_fixture_response(conn, status),
-    do: fixture_response(conn, @chargeback_fixture, status)
-
-  defp chargeback_all_fixture_response(conn, status) do
-    fixture_response(conn, @chargeback_all_fixture, status)
-  end
-
-  defp chargeback_list_fixture_response(conn, status) do
-    fixture_response(conn, @chargeback_list_fixture, status)
   end
 end

@@ -13,8 +13,6 @@ defmodule MollieEx.CapturesTest do
   setup {Req.Test, :verify_on_exit!}
 
   @api_key "test_captures_secret"
-  @capture_fixture Path.expand("../fixtures/mollie/captures/create_success.json", __DIR__)
-  @capture_list_fixture Path.expand("../fixtures/mollie/captures/list_success.json", __DIR__)
 
   test "creates a capture with camelCased body and caller idempotency key" do
     Req.Test.expect(__MODULE__, fn conn ->
@@ -33,7 +31,7 @@ defmodule MollieEx.CapturesTest do
         }
       })
 
-      capture_fixture_response(conn, 201)
+      fixture_response(conn, "captures/create_success.json", 201)
     end)
 
     params = %{
@@ -68,7 +66,7 @@ defmodule MollieEx.CapturesTest do
         "testmode" => false
       })
 
-      capture_fixture_response(conn, 201)
+      fixture_response(conn, "captures/create_success.json", 201)
     end)
 
     client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
@@ -89,7 +87,7 @@ defmodule MollieEx.CapturesTest do
         "testmode" => false
       })
 
-      capture_fixture_response(conn, 201)
+      fixture_response(conn, "captures/create_success.json", 201)
     end)
 
     client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
@@ -108,7 +106,7 @@ defmodule MollieEx.CapturesTest do
       assert URI.decode_query(conn.query_string) == %{"embed" => "payment", "testmode" => "false"}
       assert_empty_body(conn)
 
-      capture_fixture_response(conn, 200)
+      fixture_response(conn, "captures/create_success.json", 200)
     end)
 
     client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
@@ -130,7 +128,7 @@ defmodule MollieEx.CapturesTest do
 
       assert_empty_body(conn)
 
-      capture_list_fixture_response(conn, 200)
+      fixture_response(conn, "captures/list_success.json", 200)
     end)
 
     assert {:ok, %MollieList{} = capture_list} =
@@ -147,7 +145,7 @@ defmodule MollieEx.CapturesTest do
   test "adds testmode query param for OAuth list requests" do
     Req.Test.expect(__MODULE__, fn conn ->
       assert URI.decode_query(conn.query_string) == %{"testmode" => "false"}
-      capture_list_fixture_response(conn, 200)
+      fixture_response(conn, "captures/list_success.json", 200)
     end)
 
     client = TestSupport.client(__MODULE__, oauth_token: "access_test_secret", testmode: true)
@@ -209,7 +207,7 @@ defmodule MollieEx.CapturesTest do
     Req.Test.expect(__MODULE__, fn conn ->
       assert header(conn, "idempotency-key") == "capture-123"
       assert_json_body(conn, expected_body)
-      capture_fixture_response(conn, 201)
+      fixture_response(conn, "captures/create_success.json", 201)
     end)
 
     assert {:ok, %Capture{id: "cpt_123"}} =
@@ -232,7 +230,7 @@ defmodule MollieEx.CapturesTest do
 
     Req.Test.expect(__MODULE__, fn conn ->
       assert header(conn, "idempotency-key") == nil
-      capture_fixture_response(conn, 200)
+      fixture_response(conn, "captures/create_success.json", 200)
     end)
 
     assert {:ok, %Capture{id: "cpt_123"}} =
@@ -406,7 +404,7 @@ defmodule MollieEx.CapturesTest do
     attach_telemetry(prefix, [[:request, :start], [:request, :stop]])
 
     Req.Test.expect(__MODULE__, fn conn ->
-      capture_fixture_response(conn, 201)
+      fixture_response(conn, "captures/create_success.json", 201)
     end)
 
     assert {:ok, %Capture{}} =
@@ -427,7 +425,7 @@ defmodule MollieEx.CapturesTest do
     )
 
     Req.Test.expect(__MODULE__, fn conn ->
-      capture_fixture_response(conn, 200)
+      fixture_response(conn, "captures/create_success.json", 200)
     end)
 
     assert {:ok, %Capture{}} =
@@ -443,7 +441,7 @@ defmodule MollieEx.CapturesTest do
     )
 
     Req.Test.expect(__MODULE__, fn conn ->
-      capture_list_fixture_response(conn, 200)
+      fixture_response(conn, "captures/list_success.json", 200)
     end)
 
     assert {:ok, %MollieList{}} =
@@ -529,12 +527,5 @@ defmodule MollieEx.CapturesTest do
     [api_key: @api_key]
     |> Keyword.merge(opts)
     |> then(&TestSupport.client(__MODULE__, &1))
-  end
-
-  defp capture_fixture_response(conn, status),
-    do: fixture_response(conn, @capture_fixture, status)
-
-  defp capture_list_fixture_response(conn, status) do
-    fixture_response(conn, @capture_list_fixture, status)
   end
 end

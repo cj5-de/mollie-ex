@@ -5,11 +5,18 @@ defmodule MollieEx.TestSupport do
 
   alias MollieEx.Client
 
+  @fixtures_root Path.expand("../../fixtures/mollie", __DIR__)
+
   @spec client(module(), keyword()) :: Client.t()
   def client(test_module, opts) when is_atom(test_module) and is_list(opts) do
     opts
     |> Keyword.put(:transport, {:req_test, test_module})
     |> Client.new!()
+  end
+
+  @spec fixture_path(Path.t()) :: Path.t()
+  def fixture_path(path) when is_binary(path) do
+    if Path.type(path) == :absolute, do: path, else: Path.expand(path, @fixtures_root)
   end
 
   @spec json_body(Plug.Conn.t()) :: map()
@@ -41,10 +48,10 @@ defmodule MollieEx.TestSupport do
   end
 
   @spec fixture_response(Plug.Conn.t(), Path.t(), non_neg_integer()) :: Plug.Conn.t()
-  def fixture_response(conn, fixture_path, status) do
+  def fixture_response(conn, fixture, status) do
     conn
     |> Plug.Conn.put_resp_header("content-type", "application/hal+json")
-    |> Plug.Conn.send_resp(status, File.read!(fixture_path))
+    |> Plug.Conn.send_resp(status, fixture |> fixture_path() |> File.read!())
   end
 
   @spec empty_response(Plug.Conn.t(), non_neg_integer()) :: Plug.Conn.t()
