@@ -1,0 +1,36 @@
+{
+  "resource": "mandate",
+  "id": "mdt_123",
+  "mode": "test",
+  "status": "valid",
+  "method": "directdebit",
+  "details": {
+    "consumerName": "Example Customer",
+    "consumerAccount": "NL55INGB0000000000",
+    "consumerBic": "INGBNL2A"
+  },
+  "mandateReference": "EXAMPLE-CORP-MD13804",
+  "signatureDate": "2026-06-14",
+  "scopes": [
+    "customer-not-present"
+  ],
+  "customerId": "cst_123",
+  "createdAt": "2026-06-14T10:49:08.0Z",
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/customers/cst_123/mandates/mdt_123",
+      "type": "application/hal+json"
+    },
+    "customer": {
+      "href": "https://api.mollie.com/v2/customers/cst_123",
+      "type": "application/hal+json"
+    },
+    "documentation": {
+      "href": "https://docs.mollie.com/reference/get-mandate",
+      "type": "text/html"
+    }
+  },
+  "unexpectedFutureField": {
+    "visible": true
+  }
+}

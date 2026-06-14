@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Add `MollieEx.Methods.list/2`, `MollieEx.Methods.all/2`, and
+  `MollieEx.Methods.get/3`.
+- Add `MollieEx.Mandates.create/4`, `MollieEx.Mandates.get/4`,
+  `MollieEx.Mandates.list/3`, and `MollieEx.Mandates.revoke/4`.
+- Add `MollieEx.Subscriptions.create/4`, `MollieEx.Subscriptions.get/4`,
+  `MollieEx.Subscriptions.list/3`, `MollieEx.Subscriptions.all/2`,
+  `MollieEx.Subscriptions.update/5`, `MollieEx.Subscriptions.cancel/4`, and
+  `MollieEx.Subscriptions.list_payments/4`.
+- Add `MollieEx.Profiles.create/3`, `MollieEx.Profiles.list/2`,
+  `MollieEx.Profiles.get/3`, `MollieEx.Profiles.current/2`,
+  `MollieEx.Profiles.update/4`, and `MollieEx.Profiles.delete/3`.
+
 ## 0.3.0 - 2026-06-14
 
 ### Added

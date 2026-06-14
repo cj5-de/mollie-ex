@@ -1,0 +1,39 @@
+{
+  "resource": "method",
+  "id": "ideal",
+  "description": "iDEAL",
+  "minimumAmount": {
+    "value": "0.01",
+    "currency": "EUR"
+  },
+  "maximumAmount": {
+    "value": "50000.00",
+    "currency": "EUR"
+  },
+  "image": {
+    "size1x": "https://www.mollie.com/external/icons/payment-methods/ideal.png",
+    "size2x": "https://www.mollie.com/external/icons/payment-methods/ideal%402x.png",
+    "svg": "https://www.mollie.com/external/icons/payment-methods/ideal.svg"
+  },
+  "status": "activated",
+  "issuers": [
+    {
+      "resource": "issuer",
+      "id": "ideal_INGBNL2A",
+      "name": "ING"
+    }
+  ],
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/methods/ideal",
+      "type": "application/hal+json"
+    },
+    "documentation": {
+      "href": "https://docs.mollie.com/reference/get-method",
+      "type": "text/html"
+    }
+  },
+  "unexpectedFutureField": {
+    "visible": true
+  }
+}
