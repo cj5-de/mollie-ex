@@ -4,6 +4,8 @@ defmodule MollieEx.Resources.Options do
   alias MollieEx.Client
   alias MollieEx.Error
 
+  @profile_param_keys [:profile_id, "profile_id", "profileId"]
+  @testmode_param_keys [:testmode, "testmode"]
   @timeout_options [:pool_timeout, :receive_timeout, :request_timeout]
 
   @spec ensure_keyword(keyword() | term()) :: :ok | {:error, Error.t()}
@@ -92,6 +94,87 @@ defmodule MollieEx.Resources.Options do
   @spec drop_testmode(map()) :: map()
   def drop_testmode(body), do: Map.drop(body, ["testmode", :testmode])
 
+  @spec fetch_param(map(), [term()]) :: {:ok, term()} | :error
+  def fetch_param(params, keys) when is_map(params) and is_list(keys) do
+    Enum.reduce_while(keys, :error, fn key, :error ->
+      if Map.has_key?(params, key) do
+        {:halt, {:ok, Map.fetch!(params, key)}}
+      else
+        {:cont, :error}
+      end
+    end)
+  end
+
+  @spec param_or_default(map(), [term()], term()) :: term()
+  def param_or_default(params, keys, default) do
+    case fetch_param(params, keys) do
+      {:ok, value} -> value
+      :error -> default
+    end
+  end
+
+  @spec require_param(map(), [term()], term()) :: :ok | {:error, Error.t()}
+  def require_param(params, keys, reason) do
+    if has_param?(params, keys) do
+      :ok
+    else
+      configuration_error(reason)
+    end
+  end
+
+  @spec reject_profile_id(map()) :: :ok | {:error, Error.t()}
+  def reject_profile_id(params) do
+    if has_param?(params, @profile_param_keys) do
+      configuration_error(:unsupported_profile_id)
+    else
+      :ok
+    end
+  end
+
+  @spec reject_api_key_testmode(Client.t(), map(), keyword()) :: :ok | {:error, Error.t()}
+  def reject_api_key_testmode(%Client{auth: {:api_key, _credential}}, params, opts) do
+    if Keyword.has_key?(opts, :testmode) or has_param?(params, @testmode_param_keys) do
+      configuration_error(:unsupported_testmode)
+    else
+      :ok
+    end
+  end
+
+  def reject_api_key_testmode(%Client{}, _params, _opts), do: :ok
+
+  @spec reject_api_key_scoped_fields(Client.t(), keyword()) :: :ok | {:error, Error.t()}
+  def reject_api_key_scoped_fields(%Client{auth: {:api_key, _credential}}, opts) do
+    cond do
+      Keyword.has_key?(opts, :profile_id) ->
+        configuration_error(:unsupported_profile_id)
+
+      Keyword.has_key?(opts, :testmode) ->
+        configuration_error(:unsupported_testmode)
+
+      true ->
+        :ok
+    end
+  end
+
+  def reject_api_key_scoped_fields(%Client{}, _opts), do: :ok
+
+  @spec reject_api_key_scoped_fields(Client.t(), map(), keyword()) ::
+          :ok | {:error, Error.t()}
+  def reject_api_key_scoped_fields(%Client{auth: {:api_key, _credential}}, params, opts) do
+    cond do
+      Keyword.has_key?(opts, :profile_id) or has_param?(params, @profile_param_keys) ->
+        configuration_error(:unsupported_profile_id)
+
+      Keyword.has_key?(opts, :testmode) or has_param?(params, @testmode_param_keys) ->
+        configuration_error(:unsupported_testmode)
+
+      true ->
+        :ok
+    end
+  end
+
+  def reject_api_key_scoped_fields(%Client{}, _params, _opts), do: :ok
+
   @spec resource_id(String.t(), atom()) :: {:ok, String.t()} | {:error, Error.t()}
   def resource_id(id, reason) do
     id = String.trim(id)
@@ -139,6 +222,34 @@ defmodule MollieEx.Resources.Options do
   def profile_id(nil), do: configuration_error(:missing_profile_id)
   def profile_id(_profile_id), do: configuration_error(:invalid_profile_id)
 
+  @spec effective_profile_id(Client.t(), keyword()) ::
+          {:ok, String.t() | nil} | {:error, Error.t()}
+  def effective_profile_id(%Client{auth: {:api_key, _credential}}, _opts), do: {:ok, nil}
+
+  def effective_profile_id(%Client{} = client, opts) do
+    case Keyword.fetch(opts, :profile_id) do
+      {:ok, profile_id} -> profile_id
+      :error -> client.profile_id
+    end
+    |> profile_id()
+  end
+
+  @spec effective_profile_id(Client.t(), map(), keyword()) ::
+          {:ok, String.t() | nil} | {:error, Error.t()}
+  def effective_profile_id(%Client{auth: {:api_key, _credential}}, _params, _opts),
+    do: {:ok, nil}
+
+  def effective_profile_id(%Client{} = client, params, opts) do
+    case Keyword.fetch(opts, :profile_id) do
+      {:ok, profile_id} ->
+        profile_id
+
+      :error ->
+        param_or_default(params, @profile_param_keys, client.profile_id)
+    end
+    |> profile_id()
+  end
+
   @spec effective_testmode(Client.t(), keyword()) ::
           {:ok, boolean() | nil} | {:error, Error.t()}
   def effective_testmode(%Client{auth: {:api_key, _credential}}, opts) do
@@ -155,6 +266,18 @@ defmodule MollieEx.Resources.Options do
     |> testmode()
   end
 
+  @spec effective_testmode(Client.t(), map(), keyword()) ::
+          {:ok, boolean() | nil} | {:error, Error.t()}
+  def effective_testmode(%Client{auth: {:api_key, _credential}}, _params, _opts), do: {:ok, nil}
+
+  def effective_testmode(%Client{} = client, params, opts) do
+    case Keyword.fetch(opts, :testmode) do
+      {:ok, testmode} -> testmode
+      :error -> param_or_default(params, @testmode_param_keys, client.testmode)
+    end
+    |> testmode()
+  end
+
   @spec testmode(boolean() | nil | term()) :: {:ok, boolean() | nil} | {:error, Error.t()}
   def testmode(testmode) when is_boolean(testmode), do: {:ok, testmode}
   def testmode(nil), do: {:ok, nil}
@@ -167,6 +290,8 @@ defmodule MollieEx.Resources.Options do
   def configuration_error(reason) do
     {:error, Error.exception(type: :configuration, reason: reason)}
   end
+
+  defp has_param?(params, keys), do: Enum.any?(keys, &Map.has_key?(params, &1))
 
   defp non_empty_string_option("", key), do: configuration_error({:invalid_option, key})
   defp non_empty_string_option(value, _key), do: {:ok, value}

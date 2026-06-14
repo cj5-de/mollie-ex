@@ -21,7 +21,7 @@ defmodule MollieEx.Resources.Payments.ReleaseAuthorization do
     with :ok <- Options.ensure_keyword(opts),
          :ok <- Options.reject_unknown(opts, @allowed_options),
          {:ok, payment_id} <- Options.payment_id(payment_id),
-         :ok <- reject_api_key_scoped_fields(client, opts),
+         :ok <- Options.reject_api_key_scoped_fields(client, opts),
          {:ok, body, testmode} <- body(client, opts) do
       request = %Request{
         method: :post,
@@ -43,24 +43,9 @@ defmodule MollieEx.Resources.Payments.ReleaseAuthorization do
 
   def build(%Client{}, _payment_id, _opts), do: configuration_error(:invalid_payment_id)
 
-  defp reject_api_key_scoped_fields(%Client{auth: {:api_key, _credential}}, opts) do
-    cond do
-      Keyword.has_key?(opts, :profile_id) ->
-        configuration_error(:unsupported_profile_id)
-
-      Keyword.has_key?(opts, :testmode) ->
-        configuration_error(:unsupported_testmode)
-
-      true ->
-        :ok
-    end
-  end
-
-  defp reject_api_key_scoped_fields(%Client{}, _opts), do: :ok
-
   defp body(%Client{} = client, opts) do
-    with {:ok, profile_id} <- effective_profile_id(client, opts),
-         {:ok, testmode} <- effective_testmode(client, opts) do
+    with {:ok, profile_id} <- Options.effective_profile_id(client, opts),
+         {:ok, testmode} <- Options.effective_testmode(client, opts) do
       body =
         %{}
         |> Options.put_body("profileId", profile_id)
@@ -69,25 +54,6 @@ defmodule MollieEx.Resources.Payments.ReleaseAuthorization do
 
       {:ok, body, testmode}
     end
-  end
-
-  defp effective_profile_id(%Client{auth: {:api_key, _credential}}, _opts),
-    do: {:ok, nil}
-
-  defp effective_profile_id(%Client{} = client, opts) do
-    case Keyword.fetch(opts, :profile_id) do
-      {:ok, profile_id} -> profile_id
-      :error -> client.profile_id
-    end
-    |> Options.profile_id()
-  end
-
-  defp effective_testmode(%Client{auth: {:api_key, _credential}}, _opts), do: {:ok, nil}
-
-  defp effective_testmode(%Client{} = client, opts) do
-    opts
-    |> Keyword.get(:testmode, client.testmode)
-    |> Options.testmode()
   end
 
   defp empty_to_nil(map) when map_size(map) == 0, do: nil

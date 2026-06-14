@@ -22,7 +22,7 @@ defmodule MollieEx.Resources.Chargebacks.All do
   def build(%Client{} = client, opts) when is_list(opts) do
     with :ok <- Options.ensure_keyword(opts),
          :ok <- Options.reject_unknown(opts, @allowed_options),
-         :ok <- reject_api_key_scoped_fields(client, opts),
+         :ok <- Options.reject_api_key_scoped_fields(client, opts),
          {:ok, from} <- Options.string_query_option(opts, :from),
          {:ok, limit} <- Options.limit(opts),
          {:ok, sort} <- Options.sort(opts),
@@ -52,21 +52,6 @@ defmodule MollieEx.Resources.Chargebacks.All do
   end
 
   def build(%Client{}, _opts), do: configuration_error(:invalid_options)
-
-  defp reject_api_key_scoped_fields(%Client{auth: {:api_key, _credential}}, opts) do
-    cond do
-      Keyword.has_key?(opts, :profile_id) ->
-        configuration_error(:unsupported_profile_id)
-
-      Keyword.has_key?(opts, :testmode) ->
-        configuration_error(:unsupported_testmode)
-
-      true ->
-        :ok
-    end
-  end
-
-  defp reject_api_key_scoped_fields(%Client{}, _opts), do: :ok
 
   defp effective_profile_id(%Client{auth: {:api_key, _credential}}, _opts), do: {:ok, nil}
 
