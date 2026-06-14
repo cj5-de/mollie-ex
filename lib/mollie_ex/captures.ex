@@ -64,7 +64,7 @@ defmodule MollieEx.Captures do
   def create(%Client{} = client, payment_id, params, opts)
       when is_binary(payment_id) and is_map(params) and is_list(opts) do
     with {:ok, request, transport_opts} <- Create.build(client, payment_id, params, opts) do
-      request_capture(client, request, transport_opts, :captures_create)
+      RequestRunner.decode_resource(client, request, transport_opts, Capture, :captures_create)
     end
   end
 
@@ -88,7 +88,7 @@ defmodule MollieEx.Captures do
   def get(%Client{} = client, payment_id, capture_id, opts)
       when is_binary(payment_id) and is_binary(capture_id) and is_list(opts) do
     with {:ok, request, transport_opts} <- Get.build(client, payment_id, capture_id, opts) do
-      request_capture(client, request, transport_opts, :captures_get)
+      RequestRunner.decode_resource(client, request, transport_opts, Capture, :captures_get)
     end
   end
 
@@ -113,7 +113,14 @@ defmodule MollieEx.Captures do
 
   def list(%Client{} = client, payment_id, opts) when is_binary(payment_id) and is_list(opts) do
     with {:ok, request, transport_opts} <- ListRequest.build(client, payment_id, opts) do
-      request_capture_list(client, request, transport_opts)
+      RequestRunner.decode_resource_list(
+        client,
+        request,
+        transport_opts,
+        "captures",
+        Capture,
+        :captures_list
+      )
     end
   end
 
@@ -125,20 +132,5 @@ defmodule MollieEx.Captures do
 
   defp configuration_error(reason) do
     {:error, Error.exception(type: :configuration, reason: reason)}
-  end
-
-  defp request_capture(%Client{} = client, request, transport_opts, operation) do
-    RequestRunner.decode(client, request, transport_opts, &Capture.from_response(&1, operation))
-  end
-
-  defp request_capture_list(%Client{} = client, request, transport_opts) do
-    RequestRunner.decode_list(
-      client,
-      request,
-      transport_opts,
-      "captures",
-      :captures_list,
-      &Capture.from_response(&1, :captures_list)
-    )
   end
 end

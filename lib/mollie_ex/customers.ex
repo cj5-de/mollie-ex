@@ -97,7 +97,7 @@ defmodule MollieEx.Customers do
 
   def create(%Client{} = client, params, opts) when is_map(params) and is_list(opts) do
     with {:ok, request, transport_opts} <- Create.build(client, params, opts) do
-      request_customer(client, request, transport_opts, :customers_create)
+      RequestRunner.decode_resource(client, request, transport_opts, Customer, :customers_create)
     end
   end
 
@@ -122,7 +122,13 @@ defmodule MollieEx.Customers do
       when is_binary(customer_id) and is_map(params) and is_list(opts) do
     with {:ok, request, transport_opts} <-
            CreatePayment.build(client, customer_id, params, opts) do
-      request_payment(client, request, transport_opts, :customers_create_payment)
+      RequestRunner.decode_resource(
+        client,
+        request,
+        transport_opts,
+        Payment,
+        :customers_create_payment
+      )
     end
   end
 
@@ -149,7 +155,7 @@ defmodule MollieEx.Customers do
   def get(%Client{} = client, customer_id, opts)
       when is_binary(customer_id) and is_list(opts) do
     with {:ok, request, transport_opts} <- Get.build(client, customer_id, opts) do
-      request_customer(client, request, transport_opts, :customers_get)
+      RequestRunner.decode_resource(client, request, transport_opts, Customer, :customers_get)
     end
   end
 
@@ -169,7 +175,14 @@ defmodule MollieEx.Customers do
 
   def list(%Client{} = client, opts) when is_list(opts) do
     with {:ok, request, transport_opts} <- ListRequest.build(client, opts) do
-      request_customer_list(client, request, transport_opts)
+      RequestRunner.decode_resource_list(
+        client,
+        request,
+        transport_opts,
+        "customers",
+        Customer,
+        :customers_list
+      )
     end
   end
 
@@ -187,7 +200,14 @@ defmodule MollieEx.Customers do
   def list_payments(%Client{} = client, customer_id, opts)
       when is_binary(customer_id) and is_list(opts) do
     with {:ok, request, transport_opts} <- ListPayments.build(client, customer_id, opts) do
-      request_payment_list(client, request, transport_opts)
+      RequestRunner.decode_resource_list(
+        client,
+        request,
+        transport_opts,
+        "payments",
+        Payment,
+        :customers_list_payments
+      )
     end
   end
 
@@ -211,7 +231,7 @@ defmodule MollieEx.Customers do
   def update(%Client{} = client, customer_id, params, opts)
       when is_binary(customer_id) and is_map(params) and is_list(opts) do
     with {:ok, request, transport_opts} <- Update.build(client, customer_id, params, opts) do
-      request_customer(client, request, transport_opts, :customers_update)
+      RequestRunner.decode_resource(client, request, transport_opts, Customer, :customers_update)
     end
   end
 
@@ -240,7 +260,7 @@ defmodule MollieEx.Customers do
   def delete(%Client{} = client, customer_id, opts)
       when is_binary(customer_id) and is_list(opts) do
     with {:ok, request, transport_opts} <- Delete.build(client, customer_id, opts) do
-      request_no_content(client, request, transport_opts)
+      RequestRunner.expect_no_content(client, request, transport_opts)
     end
   end
 
@@ -252,46 +272,5 @@ defmodule MollieEx.Customers do
 
   defp configuration_error(reason) do
     {:error, Error.exception(type: :configuration, reason: reason)}
-  end
-
-  defp request_customer(%Client{} = client, request, transport_opts, operation) do
-    RequestRunner.decode(client, request, transport_opts, &Customer.from_response(&1, operation))
-  end
-
-  defp request_customer_list(%Client{} = client, request, transport_opts) do
-    RequestRunner.decode_list(
-      client,
-      request,
-      transport_opts,
-      "customers",
-      :customers_list,
-      &Customer.from_response(&1, :customers_list)
-    )
-  end
-
-  defp request_payment(%Client{} = client, request, transport_opts, operation) do
-    RequestRunner.decode(client, request, transport_opts, &Payment.from_response(&1, operation))
-  end
-
-  defp request_payment_list(%Client{} = client, request, transport_opts) do
-    RequestRunner.decode_list(
-      client,
-      request,
-      transport_opts,
-      "payments",
-      :customers_list_payments,
-      &Payment.from_response(&1, :customers_list_payments)
-    )
-  end
-
-  defp request_no_content(%Client{} = client, request, transport_opts) do
-    RequestRunner.expect_empty(
-      client,
-      request,
-      transport_opts,
-      204,
-      :no_content,
-      :invalid_no_content_response
-    )
   end
 end

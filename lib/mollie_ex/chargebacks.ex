@@ -58,7 +58,14 @@ defmodule MollieEx.Chargebacks do
 
   def all(%Client{} = client, opts) when is_list(opts) do
     with {:ok, request, transport_opts} <- All.build(client, opts) do
-      request_chargeback_list(client, request, transport_opts, :chargebacks_all)
+      RequestRunner.decode_resource_list(
+        client,
+        request,
+        transport_opts,
+        "chargebacks",
+        Chargeback,
+        :chargebacks_all
+      )
     end
   end
 
@@ -76,7 +83,7 @@ defmodule MollieEx.Chargebacks do
   def get(%Client{} = client, payment_id, chargeback_id, opts)
       when is_binary(payment_id) and is_binary(chargeback_id) and is_list(opts) do
     with {:ok, request, transport_opts} <- Get.build(client, payment_id, chargeback_id, opts) do
-      request_chargeback(client, request, transport_opts, :chargebacks_get)
+      RequestRunner.decode_resource(client, request, transport_opts, Chargeback, :chargebacks_get)
     end
   end
 
@@ -101,7 +108,14 @@ defmodule MollieEx.Chargebacks do
 
   def list(%Client{} = client, payment_id, opts) when is_binary(payment_id) and is_list(opts) do
     with {:ok, request, transport_opts} <- ListRequest.build(client, payment_id, opts) do
-      request_chargeback_list(client, request, transport_opts, :chargebacks_list)
+      RequestRunner.decode_resource_list(
+        client,
+        request,
+        transport_opts,
+        "chargebacks",
+        Chargeback,
+        :chargebacks_list
+      )
     end
   end
 
@@ -113,25 +127,5 @@ defmodule MollieEx.Chargebacks do
 
   defp configuration_error(reason) do
     {:error, Error.exception(type: :configuration, reason: reason)}
-  end
-
-  defp request_chargeback(%Client{} = client, request, transport_opts, operation) do
-    RequestRunner.decode(
-      client,
-      request,
-      transport_opts,
-      &Chargeback.from_response(&1, operation)
-    )
-  end
-
-  defp request_chargeback_list(%Client{} = client, request, transport_opts, operation) do
-    RequestRunner.decode_list(
-      client,
-      request,
-      transport_opts,
-      "chargebacks",
-      operation,
-      &Chargeback.from_response(&1, operation)
-    )
   end
 end

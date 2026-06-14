@@ -7,6 +7,7 @@ defmodule MollieEx.Resources.RequestRunner do
   alias MollieEx.Resources.ListDecoder
 
   @type decode_result :: {:ok, term()} | {:error, Error.t()}
+  @type decoder_module :: module()
   @type decoder :: (Response.t() -> decode_result())
   @type item_decoder :: (Response.t() -> decode_result())
 
@@ -14,6 +15,21 @@ defmodule MollieEx.Resources.RequestRunner do
   def decode(%Client{} = client, %Request{} = request, transport_opts, decoder)
       when is_list(transport_opts) and is_function(decoder, 1) do
     run(client, request, transport_opts, decoder)
+  end
+
+  @spec decode_resource(Client.t(), Request.t(), keyword(), decoder_module(), atom()) ::
+          decode_result()
+  def decode_resource(
+        %Client{} = client,
+        %Request{} = request,
+        transport_opts,
+        decoder_module,
+        operation
+      )
+      when is_list(transport_opts) and is_atom(decoder_module) and is_atom(operation) do
+    decode(client, request, transport_opts, fn %Response{} = response ->
+      decoder_module.from_response(response, operation)
+    end)
   end
 
   @spec decode_list(Client.t(), Request.t(), keyword(), String.t(), atom(), item_decoder()) ::
@@ -33,6 +49,30 @@ defmodule MollieEx.Resources.RequestRunner do
     end)
   end
 
+  @spec decode_resource_list(
+          Client.t(),
+          Request.t(),
+          keyword(),
+          String.t(),
+          decoder_module(),
+          atom()
+        ) :: decode_result()
+  def decode_resource_list(
+        %Client{} = client,
+        %Request{} = request,
+        transport_opts,
+        embedded_key,
+        decoder_module,
+        operation
+      )
+      when is_list(transport_opts) and is_binary(embedded_key) and is_atom(decoder_module) and
+             is_atom(operation) do
+    decode_list(client, request, transport_opts, embedded_key, operation, fn %Response{} =
+                                                                               response ->
+      decoder_module.from_response(response, operation)
+    end)
+  end
+
   @spec expect_empty(Client.t(), Request.t(), keyword(), non_neg_integer(), term(), atom()) ::
           decode_result()
   def expect_empty(
@@ -47,6 +87,18 @@ defmodule MollieEx.Resources.RequestRunner do
     decode(client, request, transport_opts, fn %Response{} = response ->
       decode_empty_response(response, request, expected_status, success_value, invalid_reason)
     end)
+  end
+
+  @spec expect_no_content(Client.t(), Request.t(), keyword()) :: decode_result()
+  def expect_no_content(%Client{} = client, %Request{} = request, transport_opts)
+      when is_list(transport_opts) do
+    expect_empty(client, request, transport_opts, 204, :no_content, :invalid_no_content_response)
+  end
+
+  @spec expect_accepted(Client.t(), Request.t(), keyword()) :: decode_result()
+  def expect_accepted(%Client{} = client, %Request{} = request, transport_opts)
+      when is_list(transport_opts) do
+    expect_empty(client, request, transport_opts, 202, :accepted, :invalid_accepted_response)
   end
 
   defp run(%Client{} = client, %Request{} = request, transport_opts, decoder) do
