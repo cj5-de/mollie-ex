@@ -249,6 +249,16 @@ defmodule MollieEx.Resources.Options do
   def payment_link_id(payment_link_id),
     do: resource_id(payment_link_id, :invalid_payment_link_id)
 
+  @spec method_id(String.t()) :: {:ok, String.t()} | {:error, Error.t()}
+  def method_id(method_id), do: resource_id(method_id, :invalid_method_id)
+
+  @spec mandate_id(String.t()) :: {:ok, String.t()} | {:error, Error.t()}
+  def mandate_id(mandate_id), do: resource_id(mandate_id, :invalid_mandate_id)
+
+  @spec subscription_id(String.t()) :: {:ok, String.t()} | {:error, Error.t()}
+  def subscription_id(subscription_id),
+    do: resource_id(subscription_id, :invalid_subscription_id)
+
   @spec profile_id(term()) :: {:ok, String.t()} | {:error, Error.t()}
   def profile_id(profile_id) when is_binary(profile_id) do
     profile_id = String.trim(profile_id)
@@ -323,6 +333,16 @@ defmodule MollieEx.Resources.Options do
   def testmode(testmode) when is_boolean(testmode), do: {:ok, testmode}
   def testmode(nil), do: {:ok, nil}
   def testmode(_testmode), do: configuration_error(:invalid_testmode)
+
+  @spec require_api_key_client(Client.t()) :: :ok | {:error, Error.t()}
+  def require_api_key_client(%Client{auth: {:api_key, _credential}}), do: :ok
+  def require_api_key_client(%Client{}), do: configuration_error(:unsupported_auth_mode)
+
+  @spec reject_api_key_client(Client.t()) :: :ok | {:error, Error.t()}
+  def reject_api_key_client(%Client{auth: {:api_key, _credential}}),
+    do: configuration_error(:unsupported_auth_mode)
+
+  def reject_api_key_client(%Client{}), do: :ok
 
   @spec encode_path_segment(String.t()) :: String.t()
   def encode_path_segment(value), do: URI.encode(value, &URI.char_unreserved?/1)

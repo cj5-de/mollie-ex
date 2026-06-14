@@ -1,0 +1,47 @@
+{
+  "count": 1,
+  "_embedded": {
+    "profiles": [
+      {
+        "resource": "profile",
+        "id": "pfl_list_123",
+        "mode": "test",
+        "name": "Example webshop",
+        "website": "https://example.test",
+        "email": "info@example.test",
+        "phone": "+31208202070",
+        "description": "Example products",
+        "countriesOfActivity": [
+          "NL"
+        ],
+        "businessCategory": "OTHER_MERCHANDISE",
+        "status": "verified",
+        "review": {
+          "status": "pending"
+        },
+        "createdAt": "2026-06-14T10:49:08.0Z",
+        "_links": {
+          "self": {
+            "href": "https://api.mollie.com/v2/profiles/pfl_list_123",
+            "type": "application/hal+json"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/profiles",
+      "type": "application/hal+json"
+    },
+    "previous": null,
+    "next": {
+      "href": "https://api.mollie.com/v2/profiles?from=pfl_list_123&limit=5",
+      "type": "application/hal+json"
+    },
+    "documentation": {
+      "href": "https://docs.mollie.com/reference/list-profiles",
+      "type": "text/html"
+    }
+  }
+}

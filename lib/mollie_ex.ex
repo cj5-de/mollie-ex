@@ -14,6 +14,9 @@ defmodule MollieEx do
   `MollieEx.PaymentRoutes`.
   Payment links are available through `MollieEx.PaymentLinks`.
   Customers are available through `MollieEx.Customers`.
+  Payment methods, mandates, subscriptions, and profiles are available through
+  `MollieEx.Methods`, `MollieEx.Mandates`, `MollieEx.Subscriptions`, and
+  `MollieEx.Profiles`.
 
   Full usage guides are available in the HexDocs sidebar:
 

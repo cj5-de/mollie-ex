@@ -1,0 +1,49 @@
+{
+  "count": 1,
+  "_embedded": {
+    "mandates": [
+      {
+        "resource": "mandate",
+        "id": "mdt_list_123",
+        "mode": "test",
+        "status": "valid",
+        "method": "directdebit",
+        "details": {
+          "consumerName": "Example Customer"
+        },
+        "mandateReference": "EXAMPLE-CORP-MD13804",
+        "signatureDate": "2026-06-14",
+        "scopes": [
+          "customer-not-present"
+        ],
+        "customerId": "cst_123",
+        "createdAt": "2026-06-14T10:49:08.0Z",
+        "_links": {
+          "self": {
+            "href": "https://api.mollie.com/v2/customers/cst_123/mandates/mdt_list_123",
+            "type": "application/hal+json"
+          },
+          "customer": {
+            "href": "https://api.mollie.com/v2/customers/cst_123",
+            "type": "application/hal+json"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/customers/cst_123/mandates",
+      "type": "application/hal+json"
+    },
+    "previous": null,
+    "next": {
+      "href": "https://api.mollie.com/v2/customers/cst_123/mandates?from=mdt_list_123&limit=5",
+      "type": "application/hal+json"
+    },
+    "documentation": {
+      "href": "https://docs.mollie.com/reference/list-mandates",
+      "type": "text/html"
+    }
+  }
+}

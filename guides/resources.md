@@ -268,6 +268,115 @@ Create, retrieve, list, update, delete, and inspect payments for customers:
   )
 ```
 
+## Methods
+
+Retrieve enabled or all payment methods:
+
+```elixir
+{:ok, methods} = MollieEx.Methods.list(client, include: "issuers")
+{:ok, all_methods} = MollieEx.Methods.all(client)
+{:ok, ideal} = MollieEx.Methods.get(client, "ideal", currency: "EUR")
+```
+
+## Mandates
+
+Create, retrieve, list, and revoke customer mandates:
+
+```elixir
+{:ok, mandate} =
+  MollieEx.Mandates.create(
+    client,
+    customer.id,
+    %{
+      method: "directdebit",
+      consumer_name: "Jane Doe",
+      consumer_account: "NL55INGB0000000000",
+      signature_date: "2026-06-14"
+    },
+    idempotency_key: "fd4f5141-6f16-4220-b9d9-6e43ce80f7dc"
+  )
+
+{:ok, mandate} = MollieEx.Mandates.get(client, customer.id, mandate.id)
+{:ok, mandates} = MollieEx.Mandates.list(client, customer.id, limit: 10)
+
+{:ok, :no_content} =
+  MollieEx.Mandates.revoke(
+    client,
+    customer.id,
+    mandate.id,
+    idempotency_key: "f9160307-fd02-4522-8d32-98ff7375c7d7"
+  )
+```
+
+## Subscriptions
+
+Create and manage customer subscriptions:
+
+```elixir
+{:ok, subscription} =
+  MollieEx.Subscriptions.create(
+    client,
+    customer.id,
+    %{
+      amount: %{currency: "EUR", value: "25.00"},
+      interval: "1 month",
+      description: "Monthly plan",
+      webhook_url: "https://example.com/webhooks/mollie"
+    },
+    idempotency_key: "270fa354-28bc-4a86-a230-47340647c490"
+  )
+
+{:ok, subscription} = MollieEx.Subscriptions.get(client, customer.id, subscription.id)
+{:ok, subscriptions} = MollieEx.Subscriptions.list(client, customer.id, limit: 10)
+{:ok, all_subscriptions} = MollieEx.Subscriptions.all(client, limit: 10)
+
+{:ok, subscription} =
+  MollieEx.Subscriptions.update(
+    client,
+    customer.id,
+    subscription.id,
+    %{amount: %{currency: "EUR", value: "30.00"}},
+    idempotency_key: "1f7509f9-6d85-4501-8152-341ce953c1dc"
+  )
+
+{:ok, subscription_payments} =
+  MollieEx.Subscriptions.list_payments(client, customer.id, subscription.id, limit: 10)
+
+{:ok, canceled_subscription} =
+  MollieEx.Subscriptions.cancel(
+    client,
+    customer.id,
+    subscription.id,
+    idempotency_key: "69c9801a-b8b6-4bd9-8f93-c1f22a5ca67d"
+  )
+```
+
+## Profiles
+
+Manage profiles with organization-level or OAuth-style bearer credentials:
+
+```elixir
+{:ok, profile} =
+  MollieEx.Profiles.create(
+    organization_client,
+    %{
+      name: "Example webshop",
+      website: "https://example.com",
+      email: "info@example.com",
+      phone: "+31208202070",
+      business_category: "OTHER_MERCHANDISE"
+    },
+    idempotency_key: "e44f783b-c2cd-49ef-85c8-e05a9b3a3f48"
+  )
+
+{:ok, profiles} = MollieEx.Profiles.list(organization_client, limit: 10)
+{:ok, profile} = MollieEx.Profiles.get(organization_client, profile.id)
+{:ok, profile} = MollieEx.Profiles.update(organization_client, profile.id, %{name: "Updated"})
+{:ok, :no_content} = MollieEx.Profiles.delete(organization_client, profile.id)
+
+{:ok, current_profile} = MollieEx.Profiles.current(api_key_client)
+```
+
 ## Idempotency
 
 MollieEx accepts idempotency keys for write operations, but does not generate
