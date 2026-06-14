@@ -10,7 +10,7 @@ defmodule MollieEx.Chargebacks do
   {:ok, chargebacks} = MollieEx.Chargebacks.list(client, "tr_123", limit: 10)
   ```
   """
-  @moduledoc since: "0.1.0"
+  @moduledoc since: "0.2.0"
 
   alias MollieEx.Chargeback
   alias MollieEx.Client
@@ -51,7 +51,7 @@ defmodule MollieEx.Chargebacks do
   This is the top-level chargeback list endpoint. Use `list/3` to list
   chargebacks for a specific payment.
   """
-  @doc since: "0.1.0"
+  @doc since: "0.3.0"
   @spec all(Client.t(), [all_option()]) ::
           {:ok, MollieList.t(Chargeback.t())} | {:error, Error.t()}
   def all(client, opts \\ [])
@@ -68,7 +68,7 @@ defmodule MollieEx.Chargebacks do
   @doc """
   Retrieves a Mollie chargeback by payment ID and chargeback ID.
   """
-  @doc since: "0.1.0"
+  @doc since: "0.2.0"
   @spec get(Client.t(), String.t(), String.t(), [get_option()]) ::
           {:ok, Chargeback.t()} | {:error, Error.t()}
   def get(client, payment_id, chargeback_id, opts \\ [])
@@ -94,7 +94,7 @@ defmodule MollieEx.Chargebacks do
   @doc """
   Lists Mollie chargebacks for a payment.
   """
-  @doc since: "0.1.0"
+  @doc since: "0.2.0"
   @spec list(Client.t(), String.t(), [list_option()]) ::
           {:ok, MollieList.t(Chargeback.t())} | {:error, Error.t()}
   def list(client, payment_id, opts \\ [])

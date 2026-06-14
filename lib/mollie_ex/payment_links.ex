@@ -20,7 +20,7 @@ defmodule MollieEx.PaymentLinks do
     )
   ```
   """
-  @moduledoc since: "0.1.0"
+  @moduledoc since: "0.2.0"
 
   alias MollieEx.Client
   alias MollieEx.Error
@@ -79,7 +79,7 @@ defmodule MollieEx.PaymentLinks do
   Payment link creation supports caller-owned idempotency keys. The SDK never
   generates idempotency keys implicitly.
   """
-  @doc since: "0.1.0"
+  @doc since: "0.2.0"
   @spec create(Client.t(), create_params(), [create_option()]) ::
           {:ok, PaymentLink.t()} | {:error, Error.t()}
   def create(client, params, opts \\ [])
@@ -99,7 +99,7 @@ defmodule MollieEx.PaymentLinks do
   @doc """
   Retrieves a Mollie payment link by ID.
   """
-  @doc since: "0.1.0"
+  @doc since: "0.2.0"
   @spec get(Client.t(), String.t(), [get_option()]) ::
           {:ok, PaymentLink.t()} | {:error, Error.t()}
   def get(client, payment_link_id, opts \\ [])
@@ -122,7 +122,7 @@ defmodule MollieEx.PaymentLinks do
   @doc """
   Lists Mollie payment links.
   """
-  @doc since: "0.1.0"
+  @doc since: "0.2.0"
   @spec list(Client.t(), [list_option()]) ::
           {:ok, MollieList.t(PaymentLink.t())} | {:error, Error.t()}
   def list(client, opts \\ [])
@@ -139,7 +139,7 @@ defmodule MollieEx.PaymentLinks do
   @doc """
   Lists payments created for a Mollie payment link.
   """
-  @doc since: "0.1.0"
+  @doc since: "0.3.0"
   @spec list_payments(Client.t(), String.t(), [list_payments_option()]) ::
           {:ok, MollieList.t(Payment.t())} | {:error, Error.t()}
   def list_payments(client, payment_link_id, opts \\ [])
@@ -165,7 +165,7 @@ defmodule MollieEx.PaymentLinks do
   Payment link updates support caller-owned idempotency keys. The SDK never
   generates idempotency keys implicitly.
   """
-  @doc since: "0.1.0"
+  @doc since: "0.3.0"
   @spec update(Client.t(), String.t(), update_params(), [update_option()]) ::
           {:ok, PaymentLink.t()} | {:error, Error.t()}
   def update(client, payment_link_id, params, opts \\ [])
@@ -195,7 +195,7 @@ defmodule MollieEx.PaymentLinks do
   Payment link deletion supports caller-owned idempotency keys. The SDK never
   generates idempotency keys implicitly.
   """
-  @doc since: "0.1.0"
+  @doc since: "0.3.0"
   @spec delete(Client.t(), String.t(), [delete_option()]) ::
           {:ok, :no_content} | {:error, Error.t()}
   def delete(client, payment_link_id, opts \\ [])

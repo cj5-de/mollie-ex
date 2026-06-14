@@ -20,7 +20,7 @@ defmodule MollieEx.Customers do
     )
   ```
   """
-  @moduledoc since: "0.1.0"
+  @moduledoc since: "0.2.0"
 
   alias MollieEx.Client
   alias MollieEx.Customer
@@ -90,7 +90,7 @@ defmodule MollieEx.Customers do
   Customer creation supports caller-owned idempotency keys. The SDK never
   generates idempotency keys implicitly.
   """
-  @doc since: "0.1.0"
+  @doc since: "0.2.0"
   @spec create(Client.t(), create_params(), [create_option()]) ::
           {:ok, Customer.t()} | {:error, Error.t()}
   def create(client, params, opts \\ [])
@@ -113,7 +113,7 @@ defmodule MollieEx.Customers do
   Customer payment creation supports caller-owned idempotency keys. The SDK
   never generates idempotency keys implicitly.
   """
-  @doc since: "0.1.0"
+  @doc since: "0.3.0"
   @spec create_payment(Client.t(), String.t(), create_payment_params(), [create_payment_option()]) ::
           {:ok, Payment.t()} | {:error, Error.t()}
   def create_payment(client, customer_id, params, opts \\ [])
@@ -141,7 +141,7 @@ defmodule MollieEx.Customers do
   @doc """
   Retrieves a Mollie customer by ID.
   """
-  @doc since: "0.1.0"
+  @doc since: "0.2.0"
   @spec get(Client.t(), String.t(), [get_option()]) ::
           {:ok, Customer.t()} | {:error, Error.t()}
   def get(client, customer_id, opts \\ [])
@@ -162,7 +162,7 @@ defmodule MollieEx.Customers do
   @doc """
   Lists Mollie customers.
   """
-  @doc since: "0.1.0"
+  @doc since: "0.2.0"
   @spec list(Client.t(), [list_option()]) ::
           {:ok, MollieList.t(Customer.t())} | {:error, Error.t()}
   def list(client, opts \\ [])
@@ -179,7 +179,7 @@ defmodule MollieEx.Customers do
   @doc """
   Lists payments linked to a Mollie customer.
   """
-  @doc since: "0.1.0"
+  @doc since: "0.3.0"
   @spec list_payments(Client.t(), String.t(), [list_payments_option()]) ::
           {:ok, MollieList.t(Payment.t())} | {:error, Error.t()}
   def list_payments(client, customer_id, opts \\ [])
@@ -203,7 +203,7 @@ defmodule MollieEx.Customers do
   Customer updates support caller-owned idempotency keys. The SDK never
   generates idempotency keys implicitly.
   """
-  @doc since: "0.1.0"
+  @doc since: "0.2.0"
   @spec update(Client.t(), String.t(), update_params(), [update_option()]) ::
           {:ok, Customer.t()} | {:error, Error.t()}
   def update(client, customer_id, params, opts \\ [])
@@ -232,7 +232,7 @@ defmodule MollieEx.Customers do
   Customer deletion supports caller-owned idempotency keys. The SDK never
   generates idempotency keys implicitly.
   """
-  @doc since: "0.1.0"
+  @doc since: "0.2.0"
   @spec delete(Client.t(), String.t(), [delete_option()]) ::
           {:ok, :no_content} | {:error, Error.t()}
   def delete(client, customer_id, opts \\ [])
