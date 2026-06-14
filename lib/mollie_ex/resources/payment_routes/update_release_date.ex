@@ -26,11 +26,7 @@ defmodule MollieEx.Resources.PaymentRoutes.UpdateReleaseDate do
          {:ok, testmode} <- Options.effective_testmode(client, opts) do
       RequestBuilder.build(opts,
         method: :patch,
-        path:
-          "/payments/" <>
-            Options.encode_path_segment(payment_id) <>
-            "/routes/" <>
-            Options.encode_path_segment(route_id),
+        path: Options.resource_path(["payments", payment_id, "routes", route_id]),
         path_template: "/payments/{paymentId}/routes/{routeId}",
         body: body(release_date, testmode),
         idempotency_policy: :optional,

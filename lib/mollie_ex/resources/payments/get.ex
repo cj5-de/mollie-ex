@@ -26,7 +26,7 @@ defmodule MollieEx.Resources.Payments.Get do
          {:ok, testmode} <- Options.effective_testmode(client, opts) do
       RequestBuilder.build(opts,
         method: :get,
-        path: "/payments/" <> Options.encode_path_segment(payment_id),
+        path: Options.resource_path(["payments", payment_id]),
         path_template: "/payments/{paymentId}",
         query: Options.query(include: include, embed: embed, testmode: testmode),
         idempotency_policy: :unsupported,

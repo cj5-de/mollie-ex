@@ -30,7 +30,7 @@ defmodule MollieEx.Resources.Customers.CreatePayment do
          {:ok, body, testmode} <- body(client, params, opts) do
       RequestBuilder.build(opts,
         method: :post,
-        path: "/customers/" <> Options.encode_path_segment(customer_id) <> "/payments",
+        path: Options.resource_path(["customers", customer_id, "payments"]),
         path_template: "/customers/{customerId}/payments",
         query: Options.query(include: include),
         body: body,

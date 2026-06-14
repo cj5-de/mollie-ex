@@ -27,6 +27,22 @@ defmodule MollieEx.Resources.OptionsTest do
     end
   end
 
+  describe "resource_path/1" do
+    test "joins static path segments with a leading slash" do
+      assert Options.resource_path(["payments"]) == "/payments"
+    end
+
+    test "joins nested resource path segments" do
+      assert Options.resource_path(["payments", "tr_123", "refunds", "re_123"]) ==
+               "/payments/tr_123/refunds/re_123"
+    end
+
+    test "encodes unsafe dynamic path segment characters" do
+      assert Options.resource_path(["payments", "tr_123/with space", "refunds"]) ==
+               "/payments/tr_123%2Fwith%20space/refunds"
+    end
+  end
+
   describe "validate_options/2" do
     test "accepts keyword options with only allowed keys" do
       assert :ok = Options.validate_options([from: "tr_123", limit: 10], [:from, :limit])

@@ -24,7 +24,7 @@ defmodule MollieEx.Resources.PaymentLinks.Delete do
          {:ok, testmode} <- Options.effective_testmode(client, opts) do
       RequestBuilder.build(opts,
         method: :delete,
-        path: "/payment-links/" <> Options.encode_path_segment(payment_link_id),
+        path: Options.resource_path(["payment-links", payment_link_id]),
         path_template: "/payment-links/{paymentLinkId}",
         body: Options.body_testmode(testmode),
         idempotency_policy: :optional,

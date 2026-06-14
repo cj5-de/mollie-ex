@@ -327,6 +327,9 @@ defmodule MollieEx.Resources.Options do
   @spec encode_path_segment(String.t()) :: String.t()
   def encode_path_segment(value), do: URI.encode(value, &URI.char_unreserved?/1)
 
+  @spec resource_path(nonempty_list(String.t())) :: String.t()
+  def resource_path(segments), do: "/" <> Enum.map_join(segments, "/", &encode_path_segment/1)
+
   @spec configuration_error(term()) :: {:error, Error.t()}
   def configuration_error(reason) do
     {:error, Error.exception(type: :configuration, reason: reason)}

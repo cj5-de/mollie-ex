@@ -26,7 +26,7 @@ defmodule MollieEx.Resources.Refunds.Create do
          {:ok, body, testmode} <- body(client, params, opts) do
       RequestBuilder.build(opts,
         method: :post,
-        path: "/payments/" <> Options.encode_path_segment(payment_id) <> "/refunds",
+        path: Options.resource_path(["payments", payment_id, "refunds"]),
         path_template: "/payments/{paymentId}/refunds",
         body: body,
         idempotency_policy: :optional,
