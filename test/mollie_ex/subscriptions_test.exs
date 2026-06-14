@@ -126,6 +126,40 @@ defmodule MollieEx.SubscriptionsTest do
              Subscriptions.all(client)
   end
 
+  test "lists all subscriptions with client profile unless explicitly omitted" do
+    client =
+      TestSupport.client(__MODULE__,
+        organization_token: "org_test_secret",
+        profile_id: "pfl_default",
+        testmode: true
+      )
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/v2/subscriptions"
+
+      assert URI.decode_query(conn.query_string) == %{
+               "profileId" => "pfl_default",
+               "testmode" => "true"
+             }
+
+      fixture_response(conn, "subscriptions/list_success.json", 200)
+    end)
+
+    assert {:ok, %MollieList{data: [%Subscription{id: "sub_list_123"}]}} =
+             Subscriptions.all(client)
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/v2/subscriptions"
+      assert URI.decode_query(conn.query_string) == %{"testmode" => "true"}
+      fixture_response(conn, "subscriptions/list_success.json", 200)
+    end)
+
+    assert {:ok, %MollieList{data: [%Subscription{id: "sub_list_123"}]}} =
+             Subscriptions.all(client, profile_id: nil)
+  end
+
   test "updates a subscription with caller idempotency key" do
     Req.Test.expect(__MODULE__, fn conn ->
       assert conn.method == "PATCH"
