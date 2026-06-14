@@ -14,6 +14,10 @@ defmodule MollieEx.ChargebacksTest do
 
   @api_key "test_chargebacks_secret"
   @chargeback_fixture Path.expand("../fixtures/mollie/chargebacks/get_success.json", __DIR__)
+  @chargeback_all_fixture Path.expand(
+                            "../fixtures/mollie/chargebacks/all_success.json",
+                            __DIR__
+                          )
   @chargeback_list_fixture Path.expand(
                              "../fixtures/mollie/chargebacks/list_success.json",
                              __DIR__
@@ -75,6 +79,33 @@ defmodule MollieEx.ChargebacksTest do
              Chargebacks.get(client, "tr_123", "chb_123", embed: "payment", testmode: false)
   end
 
+  test "lists all chargebacks with top-level pagination options" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/v2/chargebacks"
+
+      assert URI.decode_query(conn.query_string) == %{
+               "embed" => "payment",
+               "from" => "chb_from",
+               "limit" => "1",
+               "sort" => "desc"
+             }
+
+      assert_empty_body(conn)
+
+      chargeback_all_fixture_response(conn, 200)
+    end)
+
+    assert {:ok, %MollieList{} = chargeback_list} =
+             Chargebacks.all(client(), from: "chb_from", limit: 1, sort: :desc, embed: "payment")
+
+    assert chargeback_list.count == 1
+    assert [%Chargeback{id: "chb_all_123", payment_id: "tr_123"}] = chargeback_list.data
+
+    assert %Link{href: "https://api.mollie.com/v2/chargebacks?from=chb_next&limit=1"} =
+             chargeback_list.links["next"]
+  end
+
   test "lists chargebacks with pagination and embed options" do
     Req.Test.expect(__MODULE__, fn conn ->
       assert conn.method == "GET"
@@ -113,6 +144,32 @@ defmodule MollieEx.ChargebacksTest do
     assert {:ok, %MollieList{}} = Chargebacks.list(client, "tr_123", testmode: false)
   end
 
+  test "adds profileId and testmode for OAuth top-level chargeback list requests" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/v2/chargebacks"
+
+      assert URI.decode_query(conn.query_string) == %{
+               "profileId" => "pfl_override",
+               "testmode" => "false"
+             }
+
+      assert_empty_body(conn)
+
+      chargeback_all_fixture_response(conn, 200)
+    end)
+
+    client =
+      TestSupport.client(__MODULE__,
+        oauth_token: "access_test_secret",
+        profile_id: "pfl_default",
+        testmode: true
+      )
+
+    assert {:ok, %MollieList{}} =
+             Chargebacks.all(client, profile_id: "pfl_override", testmode: false)
+  end
+
   test "rejects testmode for API-key chargeback requests before sending" do
     test_pid = self()
 
@@ -124,10 +181,33 @@ defmodule MollieEx.ChargebacksTest do
     assert {:error, %Error{reason: :unsupported_testmode}} =
              Chargebacks.get(client(), "tr_123", "chb_123", testmode: true)
 
+    assert {:error, %Error{reason: :unsupported_profile_id}} =
+             Chargebacks.all(client(), profile_id: "pfl_123")
+
+    assert {:error, %Error{reason: :unsupported_testmode}} =
+             Chargebacks.all(client(), testmode: true)
+
     assert {:error, %Error{reason: :unsupported_testmode}} =
              Chargebacks.list(client(), "tr_123", testmode: true)
 
     refute_receive :request_sent, 10
+  end
+
+  test "retries safe top-level chargeback list requests without idempotency key" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == nil
+
+      conn
+      |> Plug.Conn.put_status(503)
+      |> Req.Test.json(%{"status" => 503})
+    end)
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == nil
+      chargeback_all_fixture_response(conn, 200)
+    end)
+
+    assert {:ok, %MollieList{}} = Chargebacks.all(client(max_retries: 1))
   end
 
   test "retries safe chargeback get requests without idempotency key" do
@@ -150,6 +230,7 @@ defmodule MollieEx.ChargebacksTest do
 
   test "returns API errors for chargeback calls" do
     cases = [
+      {:all, 400, :api_error},
       {:get, 404, :not_found},
       {:list, 401, :authentication}
     ]
@@ -174,6 +255,7 @@ defmodule MollieEx.ChargebacksTest do
 
   test "returns timeout errors for chargeback calls" do
     for {operation, expected_operation} <- [
+          {:all, :chargebacks_all},
           {:get, :chargebacks_get},
           {:list, :chargebacks_list}
         ] do
@@ -225,6 +307,18 @@ defmodule MollieEx.ChargebacksTest do
     assert error.operation == :chargebacks_list
   end
 
+  test "returns decode errors for invalid top-level chargeback list response shapes" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      Req.Test.json(conn, %{"count" => 1, "_embedded" => %{"chargebacks" => %{}}, "_links" => %{}})
+    end)
+
+    assert {:error, %Error{} = error} = Chargebacks.all(client())
+    assert error.type == :decode
+    assert error.status == 200
+    assert error.reason == :invalid_list_response
+    assert error.operation == :chargebacks_all
+  end
+
   test "returns decode errors for invalid embedded chargeback list items" do
     invalid_chargeback = %{"resource" => "chargeback"}
 
@@ -265,13 +359,28 @@ defmodule MollieEx.ChargebacksTest do
              Chargebacks.list(client(), "")
 
     assert {:error, %Error{reason: :invalid_options}} =
+             Chargebacks.all(client(), "bad")
+
+    assert {:error, %Error{reason: :invalid_options}} =
              Chargebacks.get(client(), "tr_123", "chb_123", "bad")
 
     assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
              Chargebacks.get(client(), "tr_123", "chb_123", unknown: true)
 
     assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
+             Chargebacks.all(client(), unknown: true)
+
+    assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
              Chargebacks.list(client(), "tr_123", unknown: true)
+
+    assert {:error, %Error{reason: :invalid_profile_id}} =
+             Chargebacks.all(
+               TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
+               profile_id: ""
+             )
+
+    assert {:error, %Error{reason: {:invalid_option, :sort}}} =
+             Chargebacks.all(client(), sort: "sideways")
 
     assert {:error, %Error{reason: {:invalid_option, :embed}}} =
              Chargebacks.get(client(), "tr_123", "chb_123", embed: 123)
@@ -303,6 +412,22 @@ defmodule MollieEx.ChargebacksTest do
   test "emits safe request telemetry for successful chargeback calls" do
     prefix = [:mollie_chargebacks_test_success]
     attach_telemetry(prefix, [[:request, :start], [:request, :stop]])
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      chargeback_all_fixture_response(conn, 200)
+    end)
+
+    assert {:ok, %MollieList{}} =
+             Chargebacks.all(client(telemetry_prefix: prefix))
+
+    assert_success_telemetry(
+      prefix,
+      :chargebacks_all,
+      "GET",
+      "/chargebacks",
+      200,
+      [@api_key, "chb_123", "authorization"]
+    )
 
     Req.Test.expect(__MODULE__, fn conn ->
       chargeback_fixture_response(conn, 200)
@@ -400,6 +525,7 @@ defmodule MollieEx.ChargebacksTest do
     refute telemetry_text =~ "authorization"
   end
 
+  defp call_operation(:all, client), do: Chargebacks.all(client)
   defp call_operation(:get, client), do: Chargebacks.get(client, "tr_123", "chb_123")
   defp call_operation(:list, client), do: Chargebacks.list(client, "tr_123")
 
@@ -411,6 +537,10 @@ defmodule MollieEx.ChargebacksTest do
 
   defp chargeback_fixture_response(conn, status),
     do: fixture_response(conn, @chargeback_fixture, status)
+
+  defp chargeback_all_fixture_response(conn, status) do
+    fixture_response(conn, @chargeback_all_fixture, status)
+  end
 
   defp chargeback_list_fixture_response(conn, status) do
     fixture_response(conn, @chargeback_list_fixture, status)

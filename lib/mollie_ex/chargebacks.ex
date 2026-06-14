@@ -1,6 +1,6 @@
 defmodule MollieEx.Chargebacks do
   @moduledoc """
-  Retrieve and list Mollie payment chargebacks.
+  Retrieve and list Mollie chargebacks.
 
   All functions return result tuples. They do not raise for ordinary API,
   transport, or validation failures.
@@ -16,10 +16,20 @@ defmodule MollieEx.Chargebacks do
   alias MollieEx.Client
   alias MollieEx.Error
   alias MollieEx.List, as: MollieList
-  alias MollieEx.Resources.Chargebacks.Get
+  alias MollieEx.Resources.Chargebacks.{All, Get}
   alias MollieEx.Resources.Chargebacks.List, as: ListRequest
   alias MollieEx.Resources.RequestRunner
 
+  @type all_option ::
+          {:from, String.t()}
+          | {:limit, pos_integer()}
+          | {:sort, :asc | :desc | String.t()}
+          | {:embed, String.t()}
+          | {:profile_id, String.t()}
+          | {:testmode, boolean()}
+          | {:pool_timeout, pos_integer()}
+          | {:receive_timeout, pos_integer()}
+          | {:request_timeout, pos_integer()}
   @type get_option ::
           {:embed, String.t()}
           | {:testmode, boolean()}
@@ -34,6 +44,26 @@ defmodule MollieEx.Chargebacks do
           | {:pool_timeout, pos_integer()}
           | {:receive_timeout, pos_integer()}
           | {:request_timeout, pos_integer()}
+
+  @doc """
+  Lists all Mollie chargebacks.
+
+  This is the top-level chargeback list endpoint. Use `list/3` to list
+  chargebacks for a specific payment.
+  """
+  @doc since: "0.1.0"
+  @spec all(Client.t(), [all_option()]) ::
+          {:ok, MollieList.t(Chargeback.t())} | {:error, Error.t()}
+  def all(client, opts \\ [])
+
+  def all(%Client{} = client, opts) when is_list(opts) do
+    with {:ok, request, transport_opts} <- All.build(client, opts) do
+      request_chargeback_list(client, request, transport_opts, :chargebacks_all)
+    end
+  end
+
+  def all(%Client{}, _opts), do: configuration_error(:invalid_options)
+  def all(_client, _opts), do: configuration_error(:invalid_client)
 
   @doc """
   Retrieves a Mollie chargeback by payment ID and chargeback ID.
@@ -71,7 +101,7 @@ defmodule MollieEx.Chargebacks do
 
   def list(%Client{} = client, payment_id, opts) when is_binary(payment_id) and is_list(opts) do
     with {:ok, request, transport_opts} <- ListRequest.build(client, payment_id, opts) do
-      request_chargeback_list(client, request, transport_opts)
+      request_chargeback_list(client, request, transport_opts, :chargebacks_list)
     end
   end
 
@@ -94,14 +124,14 @@ defmodule MollieEx.Chargebacks do
     )
   end
 
-  defp request_chargeback_list(%Client{} = client, request, transport_opts) do
+  defp request_chargeback_list(%Client{} = client, request, transport_opts, operation) do
     RequestRunner.decode_list(
       client,
       request,
       transport_opts,
       "chargebacks",
-      :chargebacks_list,
-      &Chargeback.from_response(&1, :chargebacks_list)
+      operation,
+      &Chargeback.from_response(&1, operation)
     )
   end
 end
