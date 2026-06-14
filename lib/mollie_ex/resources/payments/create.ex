@@ -38,10 +38,8 @@ defmodule MollieEx.Resources.Payments.Create do
     end
   end
 
-  def build(%Client{}, _params, _opts), do: configuration_error(:invalid_payment_params)
+  def build(%Client{}, _params, _opts), do: Options.configuration_error(:invalid_payment_params)
 
   defp body(%Client{} = client, params, opts),
     do: Options.body_with_profile(client, params, opts, @structured_body_keys, [])
-
-  defp configuration_error(reason), do: Options.configuration_error(reason)
 end

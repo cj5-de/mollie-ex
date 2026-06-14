@@ -38,16 +38,14 @@ defmodule MollieEx.Resources.PaymentLinks.Update do
   end
 
   def build(%Client{}, _payment_link_id, _params, opts) when not is_list(opts),
-    do: configuration_error(:invalid_options)
+    do: Options.configuration_error(:invalid_options)
 
   def build(%Client{}, _payment_link_id, params, _opts) when not is_map(params),
-    do: configuration_error(:invalid_payment_link_params)
+    do: Options.configuration_error(:invalid_payment_link_params)
 
   def build(%Client{}, _payment_link_id, _params, _opts),
-    do: configuration_error(:invalid_payment_link_id)
+    do: Options.configuration_error(:invalid_payment_link_id)
 
   defp body(%Client{} = client, params, opts),
     do: Options.body_with_testmode(client, params, opts, @structured_body_keys)
-
-  defp configuration_error(reason), do: Options.configuration_error(reason)
 end

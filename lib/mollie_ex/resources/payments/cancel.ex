@@ -34,15 +34,13 @@ defmodule MollieEx.Resources.Payments.Cancel do
   end
 
   def build(%Client{}, _payment_id, opts) when not is_list(opts),
-    do: configuration_error(:invalid_options)
+    do: Options.configuration_error(:invalid_options)
 
-  def build(%Client{}, _payment_id, _opts), do: configuration_error(:invalid_payment_id)
+  def build(%Client{}, _payment_id, _opts), do: Options.configuration_error(:invalid_payment_id)
 
   defp body(%Client{} = client, opts) do
     with {:ok, testmode} <- Options.effective_testmode(client, opts) do
       {:ok, Options.body_testmode(testmode), testmode}
     end
   end
-
-  defp configuration_error(reason), do: Options.configuration_error(reason)
 end

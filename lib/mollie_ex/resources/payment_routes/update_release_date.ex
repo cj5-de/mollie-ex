@@ -41,18 +41,18 @@ defmodule MollieEx.Resources.PaymentRoutes.UpdateReleaseDate do
   end
 
   def build(%Client{}, _payment_id, _route_id, _release_date, opts) when not is_list(opts),
-    do: configuration_error(:invalid_options)
+    do: Options.configuration_error(:invalid_options)
 
   def build(%Client{}, payment_id, _route_id, _release_date, _opts)
       when not is_binary(payment_id),
-      do: configuration_error(:invalid_payment_id)
+      do: Options.configuration_error(:invalid_payment_id)
 
   def build(%Client{}, _payment_id, route_id, _release_date, _opts)
       when not is_binary(route_id),
-      do: configuration_error(:invalid_route_id)
+      do: Options.configuration_error(:invalid_route_id)
 
   def build(%Client{}, _payment_id, _route_id, _release_date, _opts),
-    do: configuration_error(:invalid_release_date)
+    do: Options.configuration_error(:invalid_release_date)
 
   defp release_date(release_date) when is_binary(release_date) do
     release_date
@@ -60,14 +60,14 @@ defmodule MollieEx.Resources.PaymentRoutes.UpdateReleaseDate do
     |> parse_release_date()
   end
 
-  defp release_date(_release_date), do: configuration_error(:invalid_release_date)
+  defp release_date(_release_date), do: Options.configuration_error(:invalid_release_date)
 
-  defp parse_release_date(""), do: configuration_error(:invalid_release_date)
+  defp parse_release_date(""), do: Options.configuration_error(:invalid_release_date)
 
   defp parse_release_date(release_date) do
     case Date.from_iso8601(release_date) do
       {:ok, date} -> {:ok, Date.to_iso8601(date)}
-      {:error, _reason} -> configuration_error(:invalid_release_date)
+      {:error, _reason} -> Options.configuration_error(:invalid_release_date)
     end
   end
 
@@ -75,6 +75,4 @@ defmodule MollieEx.Resources.PaymentRoutes.UpdateReleaseDate do
     %{"releaseDate" => release_date}
     |> Options.put_body("testmode", testmode)
   end
-
-  defp configuration_error(reason), do: Options.configuration_error(reason)
 end

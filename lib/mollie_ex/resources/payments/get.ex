@@ -36,7 +36,5 @@ defmodule MollieEx.Resources.Payments.Get do
     end
   end
 
-  def build(%Client{}, _payment_id, _opts), do: configuration_error(:invalid_payment_id)
-
-  defp configuration_error(reason), do: Options.configuration_error(reason)
+  def build(%Client{}, _payment_id, _opts), do: Options.configuration_error(:invalid_payment_id)
 end

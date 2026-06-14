@@ -42,12 +42,11 @@ defmodule MollieEx.Resources.PaymentLinks.Create do
   end
 
   def build(%Client{}, _params, opts) when not is_list(opts),
-    do: configuration_error(:invalid_options)
+    do: Options.configuration_error(:invalid_options)
 
-  def build(%Client{}, _params, _opts), do: configuration_error(:invalid_payment_link_params)
+  def build(%Client{}, _params, _opts),
+    do: Options.configuration_error(:invalid_payment_link_params)
 
   defp body(%Client{} = client, params, opts),
     do: Options.body_with_profile(client, params, opts, @structured_body_keys, [])
-
-  defp configuration_error(reason), do: Options.configuration_error(reason)
 end
