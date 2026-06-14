@@ -86,7 +86,13 @@ defmodule MollieEx.PaymentLinks do
 
   def create(%Client{} = client, params, opts) when is_map(params) and is_list(opts) do
     with {:ok, request, transport_opts} <- Create.build(client, params, opts) do
-      request_payment_link(client, request, transport_opts, :payment_links_create)
+      RequestRunner.decode_resource(
+        client,
+        request,
+        transport_opts,
+        PaymentLink,
+        :payment_links_create
+      )
     end
   end
 
@@ -107,7 +113,13 @@ defmodule MollieEx.PaymentLinks do
   def get(%Client{} = client, payment_link_id, opts)
       when is_binary(payment_link_id) and is_list(opts) do
     with {:ok, request, transport_opts} <- Get.build(client, payment_link_id, opts) do
-      request_payment_link(client, request, transport_opts, :payment_links_get)
+      RequestRunner.decode_resource(
+        client,
+        request,
+        transport_opts,
+        PaymentLink,
+        :payment_links_get
+      )
     end
   end
 
@@ -129,7 +141,14 @@ defmodule MollieEx.PaymentLinks do
 
   def list(%Client{} = client, opts) when is_list(opts) do
     with {:ok, request, transport_opts} <- ListRequest.build(client, opts) do
-      request_payment_link_list(client, request, transport_opts)
+      RequestRunner.decode_resource_list(
+        client,
+        request,
+        transport_opts,
+        "payment_links",
+        PaymentLink,
+        :payment_links_list
+      )
     end
   end
 
@@ -147,7 +166,14 @@ defmodule MollieEx.PaymentLinks do
   def list_payments(%Client{} = client, payment_link_id, opts)
       when is_binary(payment_link_id) and is_list(opts) do
     with {:ok, request, transport_opts} <- ListPayments.build(client, payment_link_id, opts) do
-      request_payment_list(client, request, transport_opts)
+      RequestRunner.decode_resource_list(
+        client,
+        request,
+        transport_opts,
+        "payments",
+        Payment,
+        :payment_links_list_payments
+      )
     end
   end
 
@@ -174,7 +200,13 @@ defmodule MollieEx.PaymentLinks do
       when is_binary(payment_link_id) and is_map(params) and is_list(opts) do
     with {:ok, request, transport_opts} <-
            Update.build(client, payment_link_id, params, opts) do
-      request_payment_link(client, request, transport_opts, :payment_links_update)
+      RequestRunner.decode_resource(
+        client,
+        request,
+        transport_opts,
+        PaymentLink,
+        :payment_links_update
+      )
     end
   end
 
@@ -203,7 +235,7 @@ defmodule MollieEx.PaymentLinks do
   def delete(%Client{} = client, payment_link_id, opts)
       when is_binary(payment_link_id) and is_list(opts) do
     with {:ok, request, transport_opts} <- Delete.build(client, payment_link_id, opts) do
-      request_no_content(client, request, transport_opts)
+      RequestRunner.expect_no_content(client, request, transport_opts)
     end
   end
 
@@ -217,47 +249,5 @@ defmodule MollieEx.PaymentLinks do
 
   defp configuration_error(reason) do
     {:error, Error.exception(type: :configuration, reason: reason)}
-  end
-
-  defp request_payment_link(%Client{} = client, request, transport_opts, operation) do
-    RequestRunner.decode(
-      client,
-      request,
-      transport_opts,
-      &PaymentLink.from_response(&1, operation)
-    )
-  end
-
-  defp request_payment_link_list(%Client{} = client, request, transport_opts) do
-    RequestRunner.decode_list(
-      client,
-      request,
-      transport_opts,
-      "payment_links",
-      :payment_links_list,
-      &PaymentLink.from_response(&1, :payment_links_list)
-    )
-  end
-
-  defp request_payment_list(%Client{} = client, request, transport_opts) do
-    RequestRunner.decode_list(
-      client,
-      request,
-      transport_opts,
-      "payments",
-      :payment_links_list_payments,
-      &Payment.from_response(&1, :payment_links_list_payments)
-    )
-  end
-
-  defp request_no_content(%Client{} = client, request, transport_opts) do
-    RequestRunner.expect_empty(
-      client,
-      request,
-      transport_opts,
-      204,
-      :no_content,
-      :invalid_no_content_response
-    )
   end
 end

@@ -68,7 +68,13 @@ defmodule MollieEx.PaymentRoutes do
   def create(%Client{} = client, payment_id, params, opts)
       when is_binary(payment_id) and is_map(params) and is_list(opts) do
     with {:ok, request, transport_opts} <- Create.build(client, payment_id, params, opts) do
-      request_route(client, request, transport_opts, :payment_routes_create)
+      RequestRunner.decode_resource(
+        client,
+        request,
+        transport_opts,
+        Route,
+        :payment_routes_create
+      )
     end
   end
 
@@ -92,7 +98,7 @@ defmodule MollieEx.PaymentRoutes do
   def get(%Client{} = client, payment_id, route_id, opts)
       when is_binary(payment_id) and is_binary(route_id) and is_list(opts) do
     with {:ok, request, transport_opts} <- Get.build(client, payment_id, route_id, opts) do
-      request_route(client, request, transport_opts, :payment_routes_get)
+      RequestRunner.decode_resource(client, request, transport_opts, Route, :payment_routes_get)
     end
   end
 
@@ -128,7 +134,13 @@ defmodule MollieEx.PaymentRoutes do
       when is_binary(payment_id) and is_binary(route_id) and is_list(opts) do
     with {:ok, request, transport_opts} <-
            UpdateReleaseDate.build(client, payment_id, route_id, release_date, opts) do
-      request_route(client, request, transport_opts, :payment_routes_update_release_date)
+      RequestRunner.decode_resource(
+        client,
+        request,
+        transport_opts,
+        Route,
+        :payment_routes_update_release_date
+      )
     end
   end
 
@@ -160,7 +172,14 @@ defmodule MollieEx.PaymentRoutes do
 
   def list(%Client{} = client, payment_id, opts) when is_binary(payment_id) and is_list(opts) do
     with {:ok, request, transport_opts} <- ListRequest.build(client, payment_id, opts) do
-      request_route_list(client, request, transport_opts)
+      RequestRunner.decode_resource_list(
+        client,
+        request,
+        transport_opts,
+        "routes",
+        Route,
+        :payment_routes_list
+      )
     end
   end
 
@@ -172,20 +191,5 @@ defmodule MollieEx.PaymentRoutes do
 
   defp configuration_error(reason) do
     {:error, Error.exception(type: :configuration, reason: reason)}
-  end
-
-  defp request_route(%Client{} = client, request, transport_opts, operation) do
-    RequestRunner.decode(client, request, transport_opts, &Route.from_response(&1, operation))
-  end
-
-  defp request_route_list(%Client{} = client, request, transport_opts) do
-    RequestRunner.decode_list(
-      client,
-      request,
-      transport_opts,
-      "routes",
-      :payment_routes_list,
-      &Route.from_response(&1, :payment_routes_list)
-    )
   end
 end
