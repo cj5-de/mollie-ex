@@ -52,16 +52,12 @@ defmodule MollieEx.Resources.Customers.Update do
     with {:ok, testmode} <- Options.effective_testmode(client, params, opts) do
       body =
         params
-        |> encode_body_params()
+        |> Casing.to_mollie_body([])
         |> Options.drop_testmode()
         |> Options.put_body("testmode", testmode)
 
       {:ok, body, testmode}
     end
-  end
-
-  defp encode_body_params(params) do
-    Map.new(params, fn {key, value} -> {Casing.to_mollie_key(key), value} end)
   end
 
   defp configuration_error(reason), do: Options.configuration_error(reason)

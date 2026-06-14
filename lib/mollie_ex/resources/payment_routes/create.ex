@@ -54,25 +54,13 @@ defmodule MollieEx.Resources.PaymentRoutes.Create do
          {:ok, testmode} <- Options.effective_testmode(client, params, opts) do
       body =
         params
-        |> encode_body_params()
+        |> Casing.to_mollie_body(@structured_body_keys)
         |> Options.drop_testmode()
         |> Options.put_body("testmode", testmode)
 
       {:ok, body, testmode}
     end
   end
-
-  defp encode_body_params(params) do
-    Map.new(params, fn {key, value} ->
-      mollie_key = Casing.to_mollie_key(key)
-      {mollie_key, encode_body_value(mollie_key, value)}
-    end)
-  end
-
-  defp encode_body_value(key, value) when key in @structured_body_keys,
-    do: Casing.to_mollie(value)
-
-  defp encode_body_value(_key, value), do: value
 
   defp configuration_error(reason), do: Options.configuration_error(reason)
 end
