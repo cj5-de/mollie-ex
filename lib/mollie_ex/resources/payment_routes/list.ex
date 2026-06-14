@@ -17,8 +17,7 @@ defmodule MollieEx.Resources.PaymentRoutes.List do
   @spec build(Client.t(), String.t(), keyword()) ::
           {:ok, Request.t(), keyword()} | {:error, Error.t()}
   def build(%Client{} = client, payment_id, opts) when is_binary(payment_id) and is_list(opts) do
-    with :ok <- Options.ensure_keyword(opts),
-         :ok <- Options.reject_unknown(opts, @allowed_options),
+    with :ok <- Options.validate_options(opts, @allowed_options),
          {:ok, payment_id} <- Options.payment_id(payment_id),
          {:ok, testmode} <- Options.effective_testmode(client, opts) do
       RequestBuilder.build(opts,

@@ -20,8 +20,7 @@ defmodule MollieEx.Resources.Captures.Create do
           {:ok, Request.t(), keyword()} | {:error, Error.t()}
   def build(%Client{} = client, payment_id, params, opts)
       when is_binary(payment_id) and is_map(params) and is_list(opts) do
-    with :ok <- Options.ensure_keyword(opts),
-         :ok <- Options.reject_unknown(opts, @allowed_options),
+    with :ok <- Options.validate_options(opts, @allowed_options),
          :ok <- Options.reject_api_key_testmode(client, params, opts),
          {:ok, payment_id} <- Options.payment_id(payment_id),
          {:ok, body, testmode} <- body(client, params, opts) do

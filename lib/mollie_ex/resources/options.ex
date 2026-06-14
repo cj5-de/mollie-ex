@@ -16,6 +16,13 @@ defmodule MollieEx.Resources.Options do
 
   def ensure_keyword(_opts), do: configuration_error(:invalid_options)
 
+  @spec validate_options(keyword() | term(), [atom()]) :: :ok | {:error, Error.t()}
+  def validate_options(opts, allowed) when is_list(allowed) do
+    with :ok <- ensure_keyword(opts) do
+      reject_unknown(opts, allowed)
+    end
+  end
+
   @spec reject_unknown(keyword(), [atom()]) :: :ok | {:error, Error.t()}
   def reject_unknown(opts, allowed) do
     case opts |> Keyword.keys() |> Enum.reject(&(&1 in allowed)) do

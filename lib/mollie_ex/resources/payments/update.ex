@@ -20,8 +20,7 @@ defmodule MollieEx.Resources.Payments.Update do
           {:ok, Request.t(), keyword()} | {:error, Error.t()}
   def build(%Client{} = client, payment_id, params, opts)
       when is_binary(payment_id) and is_map(params) and is_list(opts) do
-    with :ok <- Options.ensure_keyword(opts),
-         :ok <- Options.reject_unknown(opts, @allowed_options),
+    with :ok <- Options.validate_options(opts, @allowed_options),
          {:ok, payment_id} <- Options.payment_id(payment_id),
          :ok <- Options.reject_profile_id(params),
          :ok <- Options.reject_api_key_testmode(client, params, opts),
