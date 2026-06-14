@@ -41,16 +41,14 @@ defmodule MollieEx.Resources.Refunds.Cancel do
 
   def build(%Client{}, payment_id, _refund_id, opts)
       when is_binary(payment_id) and not is_list(opts),
-      do: configuration_error(:invalid_options)
+      do: Options.configuration_error(:invalid_options)
 
   def build(%Client{}, _payment_id, _refund_id, opts) when not is_list(opts),
-    do: configuration_error(:invalid_options)
+    do: Options.configuration_error(:invalid_options)
 
   def build(%Client{}, payment_id, _refund_id, _opts) when not is_binary(payment_id),
-    do: configuration_error(:invalid_payment_id)
+    do: Options.configuration_error(:invalid_payment_id)
 
   def build(%Client{}, _payment_id, _refund_id, _opts),
-    do: configuration_error(:invalid_refund_id)
-
-  defp configuration_error(reason), do: Options.configuration_error(reason)
+    do: Options.configuration_error(:invalid_refund_id)
 end

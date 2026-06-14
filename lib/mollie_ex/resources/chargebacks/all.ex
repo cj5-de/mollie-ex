@@ -49,7 +49,7 @@ defmodule MollieEx.Resources.Chargebacks.All do
     end
   end
 
-  def build(%Client{}, _opts), do: configuration_error(:invalid_options)
+  def build(%Client{}, _opts), do: Options.configuration_error(:invalid_options)
 
   defp effective_profile_id(%Client{auth: {:api_key, _credential}}, _opts), do: {:ok, nil}
 
@@ -63,6 +63,4 @@ defmodule MollieEx.Resources.Chargebacks.All do
 
   defp optional_profile_id(nil), do: {:ok, nil}
   defp optional_profile_id(profile_id), do: Options.profile_id(profile_id)
-
-  defp configuration_error(reason), do: Options.configuration_error(reason)
 end

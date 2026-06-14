@@ -42,16 +42,14 @@ defmodule MollieEx.Resources.Customers.CreatePayment do
   end
 
   def build(%Client{}, _customer_id, _params, opts) when not is_list(opts),
-    do: configuration_error(:invalid_options)
+    do: Options.configuration_error(:invalid_options)
 
   def build(%Client{}, _customer_id, params, _opts) when not is_map(params),
-    do: configuration_error(:invalid_payment_params)
+    do: Options.configuration_error(:invalid_payment_params)
 
   def build(%Client{}, _customer_id, _params, _opts),
-    do: configuration_error(:invalid_customer_id)
+    do: Options.configuration_error(:invalid_customer_id)
 
   defp body(%Client{} = client, params, opts),
     do: Options.body_with_profile(client, params, opts, @structured_body_keys, @customer_id_keys)
-
-  defp configuration_error(reason), do: Options.configuration_error(reason)
 end

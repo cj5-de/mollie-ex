@@ -34,10 +34,8 @@ defmodule MollieEx.Resources.PaymentLinks.Get do
   end
 
   def build(%Client{}, _payment_link_id, opts) when not is_list(opts),
-    do: configuration_error(:invalid_options)
+    do: Options.configuration_error(:invalid_options)
 
   def build(%Client{}, _payment_link_id, _opts),
-    do: configuration_error(:invalid_payment_link_id)
-
-  defp configuration_error(reason), do: Options.configuration_error(reason)
+    do: Options.configuration_error(:invalid_payment_link_id)
 end

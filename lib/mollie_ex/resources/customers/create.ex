@@ -34,12 +34,10 @@ defmodule MollieEx.Resources.Customers.Create do
   end
 
   def build(%Client{}, _params, opts) when not is_list(opts),
-    do: configuration_error(:invalid_options)
+    do: Options.configuration_error(:invalid_options)
 
-  def build(%Client{}, _params, _opts), do: configuration_error(:invalid_customer_params)
+  def build(%Client{}, _params, _opts), do: Options.configuration_error(:invalid_customer_params)
 
   defp body(%Client{} = client, params, opts),
     do: Options.body_with_testmode(client, params, opts, [])
-
-  defp configuration_error(reason), do: Options.configuration_error(reason)
 end

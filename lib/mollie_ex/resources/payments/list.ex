@@ -46,15 +46,13 @@ defmodule MollieEx.Resources.Payments.List do
     end
   end
 
-  def build(%Client{}, _opts), do: configuration_error(:invalid_options)
+  def build(%Client{}, _opts), do: Options.configuration_error(:invalid_options)
 
   defp limit(opts) do
     case Keyword.get(opts, :limit) do
       nil -> {:ok, nil}
       limit when is_integer(limit) and limit > 0 -> {:ok, limit}
-      _limit -> configuration_error({:invalid_option, :limit})
+      _limit -> Options.configuration_error({:invalid_option, :limit})
     end
   end
-
-  defp configuration_error(reason), do: Options.configuration_error(reason)
 end

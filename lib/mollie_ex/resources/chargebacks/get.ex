@@ -41,13 +41,11 @@ defmodule MollieEx.Resources.Chargebacks.Get do
   end
 
   def build(%Client{}, _payment_id, _chargeback_id, opts) when not is_list(opts),
-    do: configuration_error(:invalid_options)
+    do: Options.configuration_error(:invalid_options)
 
   def build(%Client{}, payment_id, _chargeback_id, _opts) when not is_binary(payment_id),
-    do: configuration_error(:invalid_payment_id)
+    do: Options.configuration_error(:invalid_payment_id)
 
   def build(%Client{}, _payment_id, _chargeback_id, _opts),
-    do: configuration_error(:invalid_chargeback_id)
-
-  defp configuration_error(reason), do: Options.configuration_error(reason)
+    do: Options.configuration_error(:invalid_chargeback_id)
 end

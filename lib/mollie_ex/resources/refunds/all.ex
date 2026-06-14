@@ -49,7 +49,5 @@ defmodule MollieEx.Resources.Refunds.All do
     end
   end
 
-  def build(%Client{}, _opts), do: configuration_error(:invalid_options)
-
-  defp configuration_error(reason), do: Options.configuration_error(reason)
+  def build(%Client{}, _opts), do: Options.configuration_error(:invalid_options)
 end
