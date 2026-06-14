@@ -23,7 +23,12 @@ defmodule MollieEx.Resources.PaymentLinks.Create do
     with :ok <- Options.ensure_keyword(opts),
          :ok <- Options.reject_unknown(opts, @allowed_options),
          :ok <- Options.reject_api_key_scoped_fields(client, params, opts),
-         :ok <- Options.require_param(params, [:description, "description"], :missing_description),
+         :ok <-
+           Options.require_param(
+             params,
+             [:description, "description"],
+             :missing_description
+           ),
          {:ok, body, testmode} <- body(client, params, opts) do
       request = %Request{
         method: :post,
