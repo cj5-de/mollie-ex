@@ -1,0 +1,52 @@
+{
+  "count": 1,
+  "_embedded": {
+    "chargebacks": [
+      {
+        "resource": "chargeback",
+        "id": "chb_all_123",
+        "amount": {
+          "currency": "EUR",
+          "value": "10.00"
+        },
+        "settlementAmount": {
+          "currency": "EUR",
+          "value": "-10.00"
+        },
+        "reason": {
+          "code": "AC01",
+          "description": "Account identifier incorrect"
+        },
+        "paymentId": "tr_123",
+        "settlementId": "stl_123",
+        "createdAt": "2026-06-12T11:20:00+00:00",
+        "reversedAt": null,
+        "_links": {
+          "self": {
+            "href": "https://api.mollie.com/v2/chargebacks/chb_all_123",
+            "type": "application/hal+json"
+          },
+          "payment": {
+            "href": "https://api.mollie.com/v2/payments/tr_123",
+            "type": "application/hal+json"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/chargebacks?limit=1",
+      "type": "application/hal+json"
+    },
+    "previous": null,
+    "next": {
+      "href": "https://api.mollie.com/v2/chargebacks?from=chb_next&limit=1",
+      "type": "application/hal+json"
+    },
+    "documentation": {
+      "href": "https://docs.mollie.com/reference/list-all-chargebacks",
+      "type": "text/html"
+    }
+  }
+}

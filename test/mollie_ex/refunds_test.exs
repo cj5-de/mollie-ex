@@ -14,6 +14,7 @@ defmodule MollieEx.RefundsTest do
 
   @api_key "test_refunds_secret"
   @refund_fixture Path.expand("../fixtures/mollie/refunds/create_success.json", __DIR__)
+  @refund_all_fixture Path.expand("../fixtures/mollie/refunds/all_success.json", __DIR__)
   @refund_list_fixture Path.expand("../fixtures/mollie/refunds/list_success.json", __DIR__)
 
   test "creates a refund with camelCased body and caller idempotency key" do
@@ -114,6 +115,77 @@ defmodule MollieEx.RefundsTest do
              Refunds.get(client, "tr_123", "re_123", embed: "payment", testmode: false)
   end
 
+  test "lists all refunds with top-level pagination options" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/v2/refunds"
+
+      assert URI.decode_query(conn.query_string) == %{
+               "embed" => "payment",
+               "from" => "re_from",
+               "limit" => "1",
+               "sort" => "asc"
+             }
+
+      assert_empty_body(conn)
+
+      refund_all_fixture_response(conn, 200)
+    end)
+
+    assert {:ok, %MollieList{} = refund_list} =
+             Refunds.all(client(), from: "re_from", limit: 1, sort: :asc, embed: "payment")
+
+    assert refund_list.count == 1
+    assert [%Refund{id: "re_all_123", status: "queued"}] = refund_list.data
+
+    assert %Link{href: "https://api.mollie.com/v2/refunds?from=re_next&limit=1"} =
+             refund_list.links["next"]
+  end
+
+  test "adds profileId and testmode for OAuth top-level refund list requests" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/v2/refunds"
+
+      assert URI.decode_query(conn.query_string) == %{
+               "profileId" => "pfl_override",
+               "testmode" => "false"
+             }
+
+      assert_empty_body(conn)
+
+      refund_all_fixture_response(conn, 200)
+    end)
+
+    client =
+      TestSupport.client(__MODULE__,
+        oauth_token: "access_test_secret",
+        profile_id: "pfl_default",
+        testmode: true
+      )
+
+    assert {:ok, %MollieList{}} =
+             Refunds.all(client, profile_id: "pfl_override", testmode: false)
+  end
+
+  test "requires profileId for non-API-key top-level refund list requests" do
+    test_pid = self()
+
+    Req.Test.stub(__MODULE__, fn conn ->
+      send(test_pid, :request_sent)
+      refund_all_fixture_response(conn, 200)
+    end)
+
+    for client <- [
+          TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
+          TestSupport.client(__MODULE__, organization_token: "org_test_secret")
+        ] do
+      assert {:error, %Error{reason: :missing_profile_id}} = Refunds.all(client)
+    end
+
+    refute_receive :request_sent, 10
+  end
+
   test "lists refunds with pagination and embed options" do
     Req.Test.expect(__MODULE__, fn conn ->
       assert conn.method == "GET"
@@ -179,6 +251,12 @@ defmodule MollieEx.RefundsTest do
 
     assert {:error, %Error{reason: :unsupported_testmode}} =
              Refunds.get(client(), "tr_123", "re_123", testmode: true)
+
+    assert {:error, %Error{reason: :unsupported_profile_id}} =
+             Refunds.all(client(), profile_id: "pfl_123")
+
+    assert {:error, %Error{reason: :unsupported_testmode}} =
+             Refunds.all(client(), testmode: true)
 
     assert {:error, %Error{reason: :unsupported_testmode}} =
              Refunds.list(client(), "tr_123", testmode: true)
@@ -270,8 +348,26 @@ defmodule MollieEx.RefundsTest do
              )
   end
 
+  test "retries safe top-level refund list requests without idempotency key" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == nil
+
+      conn
+      |> Plug.Conn.put_status(503)
+      |> Req.Test.json(%{"status" => 503})
+    end)
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert header(conn, "idempotency-key") == nil
+      refund_all_fixture_response(conn, 200)
+    end)
+
+    assert {:ok, %MollieList{}} = Refunds.all(client(max_retries: 1))
+  end
+
   test "returns API errors for refund calls" do
     cases = [
+      {:all, 400, :api_error},
       {:create, 409, :api_error},
       {:get, 404, :not_found},
       {:list, 400, :api_error},
@@ -298,6 +394,7 @@ defmodule MollieEx.RefundsTest do
 
   test "returns timeout errors for refund calls" do
     for {operation, expected_operation} <- [
+          {:all, :refunds_all},
           {:create, :refunds_create},
           {:get, :refunds_get},
           {:list, :refunds_list},
@@ -351,6 +448,18 @@ defmodule MollieEx.RefundsTest do
     assert error.operation == :refunds_list
   end
 
+  test "returns decode errors for invalid top-level refund list response shapes" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      Req.Test.json(conn, %{"count" => 1, "_embedded" => %{"refunds" => %{}}, "_links" => %{}})
+    end)
+
+    assert {:error, %Error{} = error} = Refunds.all(client())
+    assert error.type == :decode
+    assert error.status == 200
+    assert error.reason == :invalid_list_response
+    assert error.operation == :refunds_all
+  end
+
   test "returns decode errors for invalid embedded refund list items" do
     invalid_refund = %{"status" => "queued"}
 
@@ -402,6 +511,9 @@ defmodule MollieEx.RefundsTest do
     assert {:error, %Error{reason: :invalid_payment_id}} =
              Refunds.list(client(), "")
 
+    assert {:error, %Error{reason: :invalid_options}} =
+             Refunds.all(client(), "bad")
+
     assert {:error, %Error{reason: :invalid_refund_id}} =
              Refunds.cancel(client(), "tr_123", "")
 
@@ -412,6 +524,9 @@ defmodule MollieEx.RefundsTest do
              Refunds.get(client(), "tr_123", "re_123", unknown: true)
 
     assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
+             Refunds.all(client(), unknown: true)
+
+    assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
              Refunds.list(client(), "tr_123", unknown: true)
 
     assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
@@ -419,6 +534,15 @@ defmodule MollieEx.RefundsTest do
 
     assert {:error, %Error{reason: {:invalid_option, :from}}} =
              Refunds.list(client(), "tr_123", from: "")
+
+    assert {:error, %Error{reason: :invalid_profile_id}} =
+             Refunds.all(
+               TestSupport.client(__MODULE__, oauth_token: "access_test_secret"),
+               profile_id: ""
+             )
+
+    assert {:error, %Error{reason: {:invalid_option, :sort}}} =
+             Refunds.all(client(), sort: "sideways")
 
     assert {:error, %Error{reason: {:invalid_option, :limit}}} =
              Refunds.list(client(), "tr_123", limit: 251)
@@ -445,6 +569,22 @@ defmodule MollieEx.RefundsTest do
   test "emits safe request telemetry for successful refund calls" do
     prefix = [:mollie_refunds_test_success]
     attach_telemetry(prefix, [[:request, :start], [:request, :stop]])
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      refund_all_fixture_response(conn, 200)
+    end)
+
+    assert {:ok, %MollieList{}} =
+             Refunds.all(client(telemetry_prefix: prefix))
+
+    assert_success_telemetry(
+      prefix,
+      :refunds_all,
+      "GET",
+      "/refunds",
+      200,
+      [@api_key, "refund-123", "cancel-refund-123", "Refund order #123", "authorization"]
+    )
 
     Req.Test.expect(__MODULE__, fn conn ->
       refund_fixture_response(conn, 201)
@@ -580,6 +720,8 @@ defmodule MollieEx.RefundsTest do
     refute telemetry_text =~ "authorization"
   end
 
+  defp call_operation(:all, client), do: Refunds.all(client)
+
   defp call_operation(:create, client) do
     Refunds.create(client, "tr_123", %{description: "Refund order #123"})
   end
@@ -596,6 +738,10 @@ defmodule MollieEx.RefundsTest do
 
   defp refund_fixture_response(conn, status),
     do: fixture_response(conn, @refund_fixture, status)
+
+  defp refund_all_fixture_response(conn, status) do
+    fixture_response(conn, @refund_all_fixture, status)
+  end
 
   defp refund_list_fixture_response(conn, status) do
     fixture_response(conn, @refund_list_fixture, status)

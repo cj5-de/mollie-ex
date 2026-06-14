@@ -1,6 +1,6 @@
 defmodule MollieEx.Refunds do
   @moduledoc """
-  Create, retrieve, list, and cancel Mollie payment refunds.
+  Create, retrieve, list, and cancel Mollie refunds.
 
   All functions return result tuples. They do not raise for ordinary API,
   transport, or validation failures.
@@ -24,10 +24,20 @@ defmodule MollieEx.Refunds do
   alias MollieEx.Error
   alias MollieEx.List, as: MollieList
   alias MollieEx.Refund
-  alias MollieEx.Resources.Refunds.{Cancel, Create, Get}
+  alias MollieEx.Resources.Refunds.{All, Cancel, Create, Get}
   alias MollieEx.Resources.Refunds.List, as: ListRequest
   alias MollieEx.Resources.RequestRunner
 
+  @type all_option ::
+          {:from, String.t()}
+          | {:limit, pos_integer()}
+          | {:sort, :asc | :desc | String.t()}
+          | {:embed, String.t()}
+          | {:profile_id, String.t()}
+          | {:testmode, boolean()}
+          | {:pool_timeout, pos_integer()}
+          | {:receive_timeout, pos_integer()}
+          | {:request_timeout, pos_integer()}
   @type create_params :: map()
   @type create_option ::
           {:idempotency_key, String.t()}
@@ -55,6 +65,26 @@ defmodule MollieEx.Refunds do
           | {:pool_timeout, pos_integer()}
           | {:receive_timeout, pos_integer()}
           | {:request_timeout, pos_integer()}
+
+  @doc """
+  Lists all Mollie refunds.
+
+  This is the top-level refund list endpoint. Use `list/3` to list refunds for
+  a specific payment.
+  """
+  @doc since: "0.1.0"
+  @spec all(Client.t(), [all_option()]) ::
+          {:ok, MollieList.t(Refund.t())} | {:error, Error.t()}
+  def all(client, opts \\ [])
+
+  def all(%Client{} = client, opts) when is_list(opts) do
+    with {:ok, request, transport_opts} <- All.build(client, opts) do
+      request_refund_list(client, request, transport_opts, :refunds_all)
+    end
+  end
+
+  def all(%Client{}, _opts), do: configuration_error(:invalid_options)
+  def all(_client, _opts), do: configuration_error(:invalid_client)
 
   @doc """
   Creates a refund for a Mollie payment.
@@ -119,7 +149,7 @@ defmodule MollieEx.Refunds do
 
   def list(%Client{} = client, payment_id, opts) when is_binary(payment_id) and is_list(opts) do
     with {:ok, request, transport_opts} <- ListRequest.build(client, payment_id, opts) do
-      request_refund_list(client, request, transport_opts)
+      request_refund_list(client, request, transport_opts, :refunds_list)
     end
   end
 
@@ -166,14 +196,14 @@ defmodule MollieEx.Refunds do
     RequestRunner.decode(client, request, transport_opts, &Refund.from_response(&1, operation))
   end
 
-  defp request_refund_list(%Client{} = client, request, transport_opts) do
+  defp request_refund_list(%Client{} = client, request, transport_opts, operation) do
     RequestRunner.decode_list(
       client,
       request,
       transport_opts,
       "refunds",
-      :refunds_list,
-      &Refund.from_response(&1, :refunds_list)
+      operation,
+      &Refund.from_response(&1, operation)
     )
   end
 
