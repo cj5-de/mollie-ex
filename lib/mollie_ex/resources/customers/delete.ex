@@ -5,6 +5,7 @@ defmodule MollieEx.Resources.Customers.Delete do
   alias MollieEx.Error
   alias MollieEx.HTTP.Request
   alias MollieEx.Resources.Options
+  alias MollieEx.Resources.RequestBuilder
 
   @allowed_options [
     :idempotency_key,
@@ -22,18 +23,15 @@ defmodule MollieEx.Resources.Customers.Delete do
          :ok <- Options.reject_unknown(opts, @allowed_options),
          {:ok, customer_id} <- Options.customer_id(customer_id),
          {:ok, testmode} <- Options.effective_testmode(client, opts) do
-      request = %Request{
+      RequestBuilder.build(opts,
         method: :delete,
         path: "/customers/" <> Options.encode_path_segment(customer_id),
         path_template: "/customers/{customerId}",
         body: Options.body_testmode(testmode),
-        idempotency_key: Keyword.get(opts, :idempotency_key),
         idempotency_policy: :optional,
         operation: :customers_delete,
         testmode: testmode
-      }
-
-      {:ok, request, Options.timeout_options(opts)}
+      )
     end
   end
 

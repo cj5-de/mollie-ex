@@ -6,6 +6,7 @@ defmodule MollieEx.Resources.Payments.Create do
   alias MollieEx.HTTP.Request
   alias MollieEx.Resources.Casing
   alias MollieEx.Resources.Options
+  alias MollieEx.Resources.RequestBuilder
 
   @allowed_options [
     :idempotency_key,
@@ -26,19 +27,16 @@ defmodule MollieEx.Resources.Payments.Create do
          :ok <- Options.reject_api_key_scoped_fields(client, params, opts),
          {:ok, include} <- Options.string_option(opts, :include),
          {:ok, body, testmode} <- body(client, params, opts) do
-      request = %Request{
+      RequestBuilder.build(opts,
         method: :post,
         path: "/payments",
         path_template: "/payments",
         query: Options.query(include: include),
         body: body,
-        idempotency_key: Keyword.get(opts, :idempotency_key),
         idempotency_policy: :optional,
         operation: :payments_create,
         testmode: testmode
-      }
-
-      {:ok, request, Options.timeout_options(opts)}
+      )
     end
   end
 

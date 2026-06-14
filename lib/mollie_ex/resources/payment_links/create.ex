@@ -6,6 +6,7 @@ defmodule MollieEx.Resources.PaymentLinks.Create do
   alias MollieEx.HTTP.Request
   alias MollieEx.Resources.Casing
   alias MollieEx.Resources.Options
+  alias MollieEx.Resources.RequestBuilder
 
   @allowed_options [
     :idempotency_key,
@@ -30,18 +31,15 @@ defmodule MollieEx.Resources.PaymentLinks.Create do
              :missing_description
            ),
          {:ok, body, testmode} <- body(client, params, opts) do
-      request = %Request{
+      RequestBuilder.build(opts,
         method: :post,
         path: "/payment-links",
         path_template: "/payment-links",
         body: body,
-        idempotency_key: Keyword.get(opts, :idempotency_key),
         idempotency_policy: :optional,
         operation: :payment_links_create,
         testmode: testmode
-      }
-
-      {:ok, request, Options.timeout_options(opts)}
+      )
     end
   end
 

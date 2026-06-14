@@ -5,6 +5,7 @@ defmodule MollieEx.Resources.Refunds.Cancel do
   alias MollieEx.Error
   alias MollieEx.HTTP.Request
   alias MollieEx.Resources.Options
+  alias MollieEx.Resources.RequestBuilder
 
   @allowed_options [
     :idempotency_key,
@@ -23,7 +24,7 @@ defmodule MollieEx.Resources.Refunds.Cancel do
          {:ok, payment_id} <- Options.payment_id(payment_id),
          {:ok, refund_id} <- Options.refund_id(refund_id),
          {:ok, testmode} <- Options.effective_testmode(client, opts) do
-      request = %Request{
+      RequestBuilder.build(opts,
         method: :delete,
         path:
           "/payments/" <>
@@ -32,13 +33,10 @@ defmodule MollieEx.Resources.Refunds.Cancel do
             Options.encode_path_segment(refund_id),
         path_template: "/payments/{paymentId}/refunds/{refundId}",
         query: Options.query(testmode: testmode),
-        idempotency_key: Keyword.get(opts, :idempotency_key),
         idempotency_policy: :optional,
         operation: :refunds_cancel,
         testmode: testmode
-      }
-
-      {:ok, request, Options.timeout_options(opts)}
+      )
     end
   end
 

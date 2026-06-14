@@ -5,6 +5,7 @@ defmodule MollieEx.Resources.Customers.ListPayments do
   alias MollieEx.Error
   alias MollieEx.HTTP.Request
   alias MollieEx.Resources.Options
+  alias MollieEx.Resources.RequestBuilder
 
   @allowed_options [
     :from,
@@ -30,7 +31,7 @@ defmodule MollieEx.Resources.Customers.ListPayments do
          {:ok, sort} <- Options.sort(opts),
          {:ok, profile_id} <- Options.effective_profile_id(client, opts),
          {:ok, testmode} <- Options.effective_testmode(client, opts) do
-      request = %Request{
+      RequestBuilder.build(opts,
         method: :get,
         path: "/customers/" <> Options.encode_path_segment(customer_id) <> "/payments",
         path_template: "/customers/{customerId}/payments",
@@ -45,9 +46,7 @@ defmodule MollieEx.Resources.Customers.ListPayments do
         idempotency_policy: :unsupported,
         operation: :customers_list_payments,
         testmode: testmode
-      }
-
-      {:ok, request, Options.timeout_options(opts)}
+      )
     end
   end
 

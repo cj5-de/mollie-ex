@@ -5,6 +5,7 @@ defmodule MollieEx.Resources.Chargebacks.Get do
   alias MollieEx.Error
   alias MollieEx.HTTP.Request
   alias MollieEx.Resources.Options
+  alias MollieEx.Resources.RequestBuilder
 
   @allowed_options [
     :embed,
@@ -24,7 +25,7 @@ defmodule MollieEx.Resources.Chargebacks.Get do
          {:ok, chargeback_id} <- Options.chargeback_id(chargeback_id),
          {:ok, embed} <- Options.string_option(opts, :embed),
          {:ok, testmode} <- Options.effective_testmode(client, opts) do
-      request = %Request{
+      RequestBuilder.build(opts,
         method: :get,
         path:
           "/payments/" <>
@@ -36,9 +37,7 @@ defmodule MollieEx.Resources.Chargebacks.Get do
         idempotency_policy: :unsupported,
         operation: :chargebacks_get,
         testmode: testmode
-      }
-
-      {:ok, request, Options.timeout_options(opts)}
+      )
     end
   end
 

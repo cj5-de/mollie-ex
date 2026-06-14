@@ -6,6 +6,7 @@ defmodule MollieEx.Resources.Customers.CreatePayment do
   alias MollieEx.HTTP.Request
   alias MollieEx.Resources.Casing
   alias MollieEx.Resources.Options
+  alias MollieEx.Resources.RequestBuilder
 
   @allowed_options [
     :idempotency_key,
@@ -29,19 +30,16 @@ defmodule MollieEx.Resources.Customers.CreatePayment do
          {:ok, customer_id} <- Options.customer_id(customer_id),
          {:ok, include} <- Options.string_option(opts, :include),
          {:ok, body, testmode} <- body(client, params, opts) do
-      request = %Request{
+      RequestBuilder.build(opts,
         method: :post,
         path: "/customers/" <> Options.encode_path_segment(customer_id) <> "/payments",
         path_template: "/customers/{customerId}/payments",
         query: Options.query(include: include),
         body: body,
-        idempotency_key: Keyword.get(opts, :idempotency_key),
         idempotency_policy: :optional,
         operation: :customers_create_payment,
         testmode: testmode
-      }
-
-      {:ok, request, Options.timeout_options(opts)}
+      )
     end
   end
 

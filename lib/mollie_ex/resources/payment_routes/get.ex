@@ -5,6 +5,7 @@ defmodule MollieEx.Resources.PaymentRoutes.Get do
   alias MollieEx.Error
   alias MollieEx.HTTP.Request
   alias MollieEx.Resources.Options
+  alias MollieEx.Resources.RequestBuilder
 
   @allowed_options [
     :pool_timeout,
@@ -20,7 +21,7 @@ defmodule MollieEx.Resources.PaymentRoutes.Get do
          :ok <- Options.reject_unknown(opts, @allowed_options),
          {:ok, payment_id} <- Options.payment_id(payment_id),
          {:ok, route_id} <- Options.route_id(route_id) do
-      request = %Request{
+      RequestBuilder.build(opts,
         method: :get,
         path:
           "/payments/" <>
@@ -30,9 +31,7 @@ defmodule MollieEx.Resources.PaymentRoutes.Get do
         path_template: "/payments/{paymentId}/routes/{routeId}",
         idempotency_policy: :unsupported,
         operation: :payment_routes_get
-      }
-
-      {:ok, request, Options.timeout_options(opts)}
+      )
     end
   end
 

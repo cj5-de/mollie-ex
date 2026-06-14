@@ -6,6 +6,7 @@ defmodule MollieEx.Resources.Customers.Update do
   alias MollieEx.HTTP.Request
   alias MollieEx.Resources.Casing
   alias MollieEx.Resources.Options
+  alias MollieEx.Resources.RequestBuilder
 
   @allowed_options [
     :idempotency_key,
@@ -24,18 +25,15 @@ defmodule MollieEx.Resources.Customers.Update do
          {:ok, customer_id} <- Options.customer_id(customer_id),
          :ok <- Options.reject_api_key_testmode(client, params, opts),
          {:ok, body, testmode} <- body(client, params, opts) do
-      request = %Request{
+      RequestBuilder.build(opts,
         method: :patch,
         path: "/customers/" <> Options.encode_path_segment(customer_id),
         path_template: "/customers/{customerId}",
         body: body,
-        idempotency_key: Keyword.get(opts, :idempotency_key),
         idempotency_policy: :optional,
         operation: :customers_update,
         testmode: testmode
-      }
-
-      {:ok, request, Options.timeout_options(opts)}
+      )
     end
   end
 

@@ -5,6 +5,7 @@ defmodule MollieEx.Resources.Refunds.List do
   alias MollieEx.Error
   alias MollieEx.HTTP.Request
   alias MollieEx.Resources.Options
+  alias MollieEx.Resources.RequestBuilder
 
   @allowed_options [
     :from,
@@ -26,7 +27,7 @@ defmodule MollieEx.Resources.Refunds.List do
          {:ok, limit} <- Options.limit(opts),
          {:ok, embed} <- Options.string_option(opts, :embed),
          {:ok, testmode} <- Options.effective_testmode(client, opts) do
-      request = %Request{
+      RequestBuilder.build(opts,
         method: :get,
         path: "/payments/" <> Options.encode_path_segment(payment_id) <> "/refunds",
         path_template: "/payments/{paymentId}/refunds",
@@ -34,9 +35,7 @@ defmodule MollieEx.Resources.Refunds.List do
         idempotency_policy: :unsupported,
         operation: :refunds_list,
         testmode: testmode
-      }
-
-      {:ok, request, Options.timeout_options(opts)}
+      )
     end
   end
 

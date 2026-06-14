@@ -5,6 +5,7 @@ defmodule MollieEx.Resources.Payments.Get do
   alias MollieEx.Error
   alias MollieEx.HTTP.Request
   alias MollieEx.Resources.Options
+  alias MollieEx.Resources.RequestBuilder
 
   @allowed_options [
     :include,
@@ -24,7 +25,7 @@ defmodule MollieEx.Resources.Payments.Get do
          {:ok, include} <- Options.string_option(opts, :include),
          {:ok, embed} <- Options.string_option(opts, :embed),
          {:ok, testmode} <- Options.effective_testmode(client, opts) do
-      request = %Request{
+      RequestBuilder.build(opts,
         method: :get,
         path: "/payments/" <> Options.encode_path_segment(payment_id),
         path_template: "/payments/{paymentId}",
@@ -32,9 +33,7 @@ defmodule MollieEx.Resources.Payments.Get do
         idempotency_policy: :unsupported,
         operation: :payments_get,
         testmode: testmode
-      }
-
-      {:ok, request, Options.timeout_options(opts)}
+      )
     end
   end
 
