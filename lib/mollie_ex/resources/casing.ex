@@ -11,6 +11,14 @@ defmodule MollieEx.Resources.Casing do
 
   def to_mollie(value), do: value
 
+  @spec to_mollie_body(map(), [String.t()]) :: map()
+  def to_mollie_body(params, structured_keys) when is_map(params) and is_list(structured_keys) do
+    Map.new(params, fn {key, value} ->
+      mollie_key = to_mollie_key(key)
+      {mollie_key, to_mollie_body_value(mollie_key, value, structured_keys)}
+    end)
+  end
+
   @doc false
   @spec to_mollie_key(term()) :: term()
   def to_mollie_key(key) when is_atom(key) do
@@ -28,6 +36,10 @@ defmodule MollieEx.Resources.Casing do
   end
 
   def to_mollie_key(key), do: key
+
+  defp to_mollie_body_value(key, value, structured_keys) do
+    if key in structured_keys, do: to_mollie(value), else: value
+  end
 
   defp camelize(key) do
     key
