@@ -18,6 +18,8 @@ defmodule MollieEx do
   `MollieEx.Methods`, `MollieEx.Mandates`, `MollieEx.Subscriptions`, and
   `MollieEx.Profiles`.
   OAuth permissions are available through `MollieEx.Permissions`.
+  Organizations and partner status are available through
+  `MollieEx.Organizations`.
 
   Full usage guides are available in the HexDocs sidebar:
 

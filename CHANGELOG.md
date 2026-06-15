@@ -5,6 +5,8 @@
 ### Added
 
 - Add `MollieEx.Permissions.list/2` and `MollieEx.Permissions.get/3`.
+- Add `MollieEx.Organizations.get/3`, `MollieEx.Organizations.current/2`,
+  and `MollieEx.Organizations.partner_status/2`.
 
 ## 0.4.0 - 2026-06-14
 

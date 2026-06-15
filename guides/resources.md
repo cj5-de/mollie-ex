@@ -390,6 +390,16 @@ for permission <- permissions.data do
 end
 ```
 
+## Organizations
+
+Retrieve organizations and partner status with OAuth-style bearer credentials:
+
+```elixir
+{:ok, organization} = MollieEx.Organizations.current(organization_client)
+{:ok, organization} = MollieEx.Organizations.get(organization_client, "org_12345678")
+{:ok, partner_status} = MollieEx.Organizations.partner_status(organization_client)
+```
+
 ## Idempotency
 
 MollieEx accepts idempotency keys for write operations, but does not generate
