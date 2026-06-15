@@ -107,7 +107,8 @@ defmodule MollieEx.MixProject do
           MollieEx.Methods,
           MollieEx.Mandates,
           MollieEx.Subscriptions,
-          MollieEx.Profiles
+          MollieEx.Profiles,
+          MollieEx.Permissions
         ],
         Structs: [
           MollieEx.Payment,
@@ -121,6 +122,7 @@ defmodule MollieEx.MixProject do
           MollieEx.Mandate,
           MollieEx.Subscription,
           MollieEx.Profile,
+          MollieEx.Permission,
           MollieEx.List
         ],
         Types: [

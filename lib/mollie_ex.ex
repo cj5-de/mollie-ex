@@ -17,6 +17,7 @@ defmodule MollieEx do
   Payment methods, mandates, subscriptions, and profiles are available through
   `MollieEx.Methods`, `MollieEx.Mandates`, `MollieEx.Subscriptions`, and
   `MollieEx.Profiles`.
+  OAuth permissions are available through `MollieEx.Permissions`.
 
   Full usage guides are available in the HexDocs sidebar:
 
