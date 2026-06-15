@@ -400,6 +400,20 @@ Retrieve organizations and partner status with OAuth-style bearer credentials:
 {:ok, partner_status} = MollieEx.Organizations.partner_status(organization_client)
 ```
 
+## Onboarding
+
+Retrieve onboarding status with OAuth-style bearer credentials:
+
+```elixir
+{:ok, status} = MollieEx.Onboarding.get(organization_client)
+
+cond do
+  MollieEx.OnboardingStatus.needs_data?(status) -> :collect_merchant_data
+  MollieEx.OnboardingStatus.in_review?(status) -> :wait_for_review
+  MollieEx.OnboardingStatus.completed?(status) -> :ready
+end
+```
+
 ## Idempotency
 
 MollieEx accepts idempotency keys for write operations, but does not generate
