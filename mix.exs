@@ -111,7 +111,8 @@ defmodule MollieEx.MixProject do
           MollieEx.Permissions,
           MollieEx.Organizations,
           MollieEx.Onboarding,
-          MollieEx.Capabilities
+          MollieEx.Capabilities,
+          MollieEx.Clients
         ],
         Structs: [
           MollieEx.Payment,
@@ -130,6 +131,7 @@ defmodule MollieEx.MixProject do
           MollieEx.Partner,
           MollieEx.OnboardingStatus,
           MollieEx.Capability,
+          MollieEx.ClientResource,
           MollieEx.List
         ],
         Types: [

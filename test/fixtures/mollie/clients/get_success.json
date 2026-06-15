@@ -1,0 +1,46 @@
+{
+  "resource": "client",
+  "id": "org_12345678",
+  "organizationCreatedAt": "2023-04-06T13:10:19+00:00",
+  "commission": {
+    "count": 3
+  },
+  "_embedded": {
+    "organization": {
+      "resource": "organization",
+      "id": "org_12345678",
+      "name": "Example Client",
+      "email": "info@example.test",
+      "locale": "en_US"
+    },
+    "onboarding": {
+      "resource": "onboarding",
+      "name": "Example Client",
+      "status": "completed",
+      "canReceivePayments": true,
+      "canReceiveSettlements": true,
+      "signedUpAt": "2023-04-06T13:10:19+00:00"
+    }
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/clients/org_12345678",
+      "type": "application/hal+json"
+    },
+    "onboarding": {
+      "href": "https://api.mollie.com/v2/onboarding/org_12345678",
+      "type": "application/hal+json"
+    },
+    "organization": {
+      "href": "https://api.mollie.com/v2/organizations/org_12345678",
+      "type": "application/hal+json"
+    },
+    "documentation": {
+      "href": "https://docs.mollie.com/reference/get-client",
+      "type": "text/html"
+    }
+  },
+  "unexpectedFutureField": {
+    "visible": true
+  }
+}
