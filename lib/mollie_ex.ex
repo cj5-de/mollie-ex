@@ -20,6 +20,7 @@ defmodule MollieEx do
   OAuth permissions are available through `MollieEx.Permissions`.
   Organizations and partner status are available through
   `MollieEx.Organizations`.
+  Onboarding status is available through `MollieEx.Onboarding`.
 
   Full usage guides are available in the HexDocs sidebar:
 
