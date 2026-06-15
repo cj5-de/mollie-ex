@@ -21,6 +21,7 @@ defmodule MollieEx do
   Organizations and partner status are available through
   `MollieEx.Organizations`.
   Onboarding status is available through `MollieEx.Onboarding`.
+  Organization capabilities are available through `MollieEx.Capabilities`.
 
   Full usage guides are available in the HexDocs sidebar:
 
