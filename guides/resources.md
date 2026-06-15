@@ -430,6 +430,26 @@ for capability <- capabilities.data do
 end
 ```
 
+## Clients
+
+Retrieve partner clients with OAuth-style bearer credentials:
+
+```elixir
+{:ok, clients} =
+  MollieEx.Clients.list(
+    organization_client,
+    embed: "organization,onboarding,capabilities",
+    limit: 10
+  )
+
+{:ok, client_resource} =
+  MollieEx.Clients.get(
+    organization_client,
+    "org_12345678",
+    embed: "organization,onboarding"
+  )
+```
+
 ## Idempotency
 
 MollieEx accepts idempotency keys for write operations, but does not generate

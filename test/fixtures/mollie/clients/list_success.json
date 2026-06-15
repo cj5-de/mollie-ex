@@ -1,0 +1,67 @@
+{
+  "count": 2,
+  "_embedded": {
+    "clients": [
+      {
+        "resource": "client",
+        "id": "org_12345678",
+        "organizationCreatedAt": "2023-04-06T13:10:19+00:00",
+        "commission": {
+          "count": 3
+        },
+        "_embedded": {
+          "organization": {
+            "resource": "organization",
+            "id": "org_12345678",
+            "name": "Example Client",
+            "email": "info@example.test"
+          },
+          "capabilities": [
+            {
+              "resource": "capability",
+              "name": "payments",
+              "status": "enabled"
+            }
+          ]
+        },
+        "_links": {
+          "self": {
+            "href": "https://api.mollie.com/v2/clients/org_12345678",
+            "type": "application/hal+json"
+          },
+          "organization": {
+            "href": "https://api.mollie.com/v2/organizations/org_12345678",
+            "type": "application/hal+json"
+          }
+        },
+        "unexpectedFutureField": true
+      },
+      {
+        "resource": "client",
+        "id": "org_87654321",
+        "organizationCreatedAt": "2023-06-01T09:00:00+00:00",
+        "_links": {
+          "self": {
+            "href": "https://api.mollie.com/v2/clients/org_87654321",
+            "type": "application/hal+json"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/clients",
+      "type": "application/hal+json"
+    },
+    "previous": null,
+    "next": {
+      "href": "https://api.mollie.com/v2/clients?from=org_87654321&limit=2",
+      "type": "application/hal+json"
+    },
+    "documentation": {
+      "href": "https://docs.mollie.com/reference/list-clients",
+      "type": "text/html"
+    }
+  }
+}

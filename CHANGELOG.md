@@ -9,6 +9,7 @@
   and `MollieEx.Organizations.partner_status/2`.
 - Add `MollieEx.Onboarding.get/2`.
 - Add `MollieEx.Capabilities.list/2`.
+- Add `MollieEx.Clients.list/2` and `MollieEx.Clients.get/3`.
 
 ## 0.4.0 - 2026-06-14
 
