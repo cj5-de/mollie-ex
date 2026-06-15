@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Add `MollieEx.Permissions.list/2` and `MollieEx.Permissions.get/3`.
+
 ## 0.4.0 - 2026-06-14
 
 ### Added

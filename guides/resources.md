@@ -377,6 +377,19 @@ Manage profiles with organization-level or OAuth-style bearer credentials:
 {:ok, current_profile} = MollieEx.Profiles.current(api_key_client)
 ```
 
+## Permissions
+
+Retrieve permissions available to OAuth-style bearer credentials:
+
+```elixir
+{:ok, permissions} = MollieEx.Permissions.list(organization_client)
+{:ok, permission} = MollieEx.Permissions.get(organization_client, "payments.read")
+
+for permission <- permissions.data do
+  IO.puts("#{permission.id}: #{permission.granted}")
+end
+```
+
 ## Idempotency
 
 MollieEx accepts idempotency keys for write operations, but does not generate
