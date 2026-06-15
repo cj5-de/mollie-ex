@@ -414,6 +414,22 @@ cond do
 end
 ```
 
+## Capabilities
+
+Retrieve organization-level capabilities with OAuth-style bearer credentials:
+
+```elixir
+{:ok, capabilities} = MollieEx.Capabilities.list(organization_client)
+
+for capability <- capabilities.data do
+  cond do
+    MollieEx.Capability.enabled?(capability) -> {:ready, capability.name}
+    MollieEx.Capability.pending?(capability) -> {:pending, capability.requirements}
+    MollieEx.Capability.disabled?(capability) -> {:blocked, capability.status_reason}
+  end
+end
+```
+
 ## Idempotency
 
 MollieEx accepts idempotency keys for write operations, but does not generate

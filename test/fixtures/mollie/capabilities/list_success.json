@@ -1,0 +1,77 @@
+{
+  "count": 2,
+  "_embedded": {
+    "capabilities": [
+      {
+        "resource": "capability",
+        "name": "payments",
+        "requirements": [
+          {
+            "id": "legal-representatives",
+            "dueDate": null,
+            "status": "requested",
+            "_links": {
+              "dashboard": {
+                "href": "https://my.mollie.com/dashboard/onboarding/legal-representatives",
+                "type": "text/html"
+              }
+            }
+          },
+          {
+            "id": "bank-account",
+            "dueDate": null,
+            "status": "requested"
+          }
+        ],
+        "status": "pending",
+        "statusReason": "onboarding-information-needed",
+        "organizationId": "org_12345678",
+        "_links": {
+          "self": {
+            "href": "https://api.mollie.com/v2/capabilities/payments",
+            "type": "application/hal+json"
+          },
+          "dashboard": {
+            "href": "https://my.mollie.com/dashboard/capabilities/payments",
+            "type": "text/html"
+          }
+        },
+        "unexpectedFutureField": true
+      },
+      {
+        "resource": "capability",
+        "name": "capital",
+        "requirements": [
+          {
+            "id": "legal-representatives",
+            "dueDate": "2024-05-14T01:29:09.0Z",
+            "status": "past-due"
+          }
+        ],
+        "status": "disabled",
+        "statusReason": "requirement-past-due",
+        "organizationId": "org_12345678",
+        "_links": {
+          "self": {
+            "href": "https://api.mollie.com/v2/capabilities/capital",
+            "type": "application/hal+json"
+          },
+          "dashboard": {
+            "href": "https://my.mollie.com/dashboard/capabilities/capital",
+            "type": "text/html"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/capabilities",
+      "type": "application/hal+json"
+    },
+    "documentation": {
+      "href": "https://docs.mollie.com/reference/list-capabilities",
+      "type": "text/html"
+    }
+  }
+}
