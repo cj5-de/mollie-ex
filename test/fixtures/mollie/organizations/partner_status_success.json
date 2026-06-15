@@ -1,0 +1,32 @@
+{
+  "resource": "partner",
+  "partnerType": "oauth",
+  "isCommissionPartner": true,
+  "userAgentTokens": [
+    {
+      "token": "ua_123",
+      "startsAt": "2026-01-01T00:00:00.0Z",
+      "endsAt": null
+    }
+  ],
+  "partnerContractSignedAt": "2026-01-01T00:00:00.0Z",
+  "partnerContractUpdateAvailable": false,
+  "partnerContractExpiresAt": "2027-01-01T00:00:00.0Z",
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/organizations/me/partner",
+      "type": "application/hal+json"
+    },
+    "signuplink": {
+      "href": "https://my.mollie.com/signup/example",
+      "type": "text/html"
+    },
+    "documentation": {
+      "href": "https://docs.mollie.com/reference/v2/organizations-api/get-partner-status",
+      "type": "text/html"
+    }
+  },
+  "unexpectedFutureField": {
+    "visible": true
+  }
+}

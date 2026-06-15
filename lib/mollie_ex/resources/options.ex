@@ -277,6 +277,10 @@ defmodule MollieEx.Resources.Options do
   def permission_id(permission_id),
     do: resource_id(permission_id, :invalid_permission_id)
 
+  @spec organization_id(String.t()) :: {:ok, String.t()} | {:error, Error.t()}
+  def organization_id(organization_id),
+    do: resource_id(organization_id, :invalid_organization_id)
+
   @spec effective_profile_id(Client.t(), keyword()) ::
           {:ok, String.t() | nil} | {:error, Error.t()}
   def effective_profile_id(%Client{auth: {:api_key, _credential}}, _opts), do: {:ok, nil}
