@@ -450,6 +450,35 @@ Retrieve partner clients with OAuth-style bearer credentials:
   )
 ```
 
+## Client Links
+
+Create a client link for partner onboarding with an advanced access token,
+represented by an `organization_client`:
+
+```elixir
+{:ok, client_link} =
+  MollieEx.ClientLinks.create(
+    organization_client,
+    %{
+      owner: %{
+        email: "merchant@example.com",
+        given_name: "Ada",
+        family_name: "Lovelace"
+      },
+      name: "Example Client",
+      address: %{country: "NL"}
+    },
+    idempotency_key: "c4b4388a-5e2d-4e2e-b27f-6f50c2a95bb2"
+  )
+
+{:ok, redirect_url} =
+  MollieEx.ClientLink.redirect_url(client_link,
+    client_id: "app_abc123qwerty",
+    state: "csrf-state",
+    scopes: ["onboarding.read", "onboarding.write"]
+  )
+```
+
 ## Idempotency
 
 MollieEx accepts idempotency keys for write operations, but does not generate
