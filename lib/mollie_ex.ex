@@ -23,6 +23,7 @@ defmodule MollieEx do
   Onboarding status is available through `MollieEx.Onboarding`.
   Organization capabilities are available through `MollieEx.Capabilities`.
   Partner clients are available through `MollieEx.Clients`.
+  Client links are available through `MollieEx.ClientLinks`.
 
   Full usage guides are available in the HexDocs sidebar:
 

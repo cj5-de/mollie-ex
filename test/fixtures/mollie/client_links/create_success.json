@@ -1,0 +1,19 @@
+{
+  "resource": "client-link",
+  "id": "cl_vZCnNQsV2UtfXxYifWKWH",
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/client-links/cl_vZCnNQsV2UtfXxYifWKWH",
+      "type": "application/hal+json"
+    },
+    "clientLink": {
+      "href": "https://my.mollie.com/dashboard/client-link/cl_vZCnNQsV2UtfXxYifWKWH",
+      "type": "text/html"
+    },
+    "documentation": {
+      "href": "https://docs.mollie.com/reference/create-client-link",
+      "type": "text/html"
+    }
+  },
+  "unexpectedFutureField": true
+}
