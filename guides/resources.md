@@ -479,6 +479,20 @@ represented by an `organization_client`:
   )
 ```
 
+## Balances
+
+Retrieve balances with OAuth-style bearer credentials:
+
+```elixir
+{:ok, balances} = MollieEx.Balances.list(organization_client, currency: "EUR")
+{:ok, balance} = MollieEx.Balances.get(organization_client, "bal_12345678")
+{:ok, primary_balance} = MollieEx.Balances.primary(organization_client)
+
+for balance <- balances.data do
+  IO.puts("#{balance.id}: #{balance.available_amount.value} #{balance.currency}")
+end
+```
+
 ## Idempotency
 
 MollieEx accepts idempotency keys for write operations, but does not generate

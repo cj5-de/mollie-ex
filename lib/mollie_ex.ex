@@ -24,6 +24,7 @@ defmodule MollieEx do
   Organization capabilities are available through `MollieEx.Capabilities`.
   Partner clients are available through `MollieEx.Clients`.
   Client links are available through `MollieEx.ClientLinks`.
+  Balances are available through `MollieEx.Balances`.
 
   Full usage guides are available in the HexDocs sidebar:
 

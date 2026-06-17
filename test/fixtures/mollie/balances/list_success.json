@@ -1,0 +1,79 @@
+{
+  "count": 2,
+  "_embedded": {
+    "balances": [
+      {
+        "resource": "balance",
+        "id": "bal_gVMhHKqSSRYJyPsuoPNFH",
+        "mode": "live",
+        "createdAt": "2024-01-10T12:06:28+00:00",
+        "currency": "EUR",
+        "description": "Primary EUR balance",
+        "status": "active",
+        "transferFrequency": "daily",
+        "transferThreshold": {
+          "value": "40.00",
+          "currency": "EUR"
+        },
+        "transferReference": "Mollie payout",
+        "transferDestination": {
+          "type": "bank-account",
+          "beneficiaryName": "Jane Merchant",
+          "bankAccount": "NL53INGB0654422370"
+        },
+        "availableAmount": {
+          "value": "100.00",
+          "currency": "EUR"
+        },
+        "pendingAmount": {
+          "value": "15.00",
+          "currency": "EUR"
+        },
+        "_links": {
+          "self": {
+            "href": "https://api.mollie.com/v2/balances/bal_gVMhHKqSSRYJyPsuoPNFH",
+            "type": "application/hal+json"
+          }
+        },
+        "unexpectedFutureField": true
+      },
+      {
+        "resource": "balance",
+        "id": "bal_gVMhHKqSSRYJyPsuoPABC",
+        "mode": "test",
+        "createdAt": "2024-01-10T10:23:41+00:00",
+        "currency": "GBP",
+        "description": "Secondary GBP balance",
+        "status": "inactive",
+        "availableAmount": {
+          "value": "20.00",
+          "currency": "GBP"
+        },
+        "pendingAmount": {
+          "value": "0.00",
+          "currency": "GBP"
+        },
+        "_links": {
+          "self": {
+            "href": "https://api.mollie.com/v2/balances/bal_gVMhHKqSSRYJyPsuoPABC",
+            "type": "application/hal+json"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/balances?currency=EUR&from=bal_start&limit=2",
+      "type": "application/hal+json"
+    },
+    "next": {
+      "href": "https://api.mollie.com/v2/balances?from=bal_gVMhHKqSSRYJyPsuoPABC&limit=2",
+      "type": "application/hal+json"
+    },
+    "documentation": {
+      "href": "https://docs.mollie.com/reference/v2/balances-api/list-balances",
+      "type": "text/html"
+    }
+  }
+}
