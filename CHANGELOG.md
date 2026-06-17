@@ -11,6 +11,8 @@
 - Add `MollieEx.Capabilities.list/2`.
 - Add `MollieEx.Clients.list/2` and `MollieEx.Clients.get/3`.
 - Add `MollieEx.ClientLinks.create/3`.
+- Add `MollieEx.Balances.list/2`, `MollieEx.Balances.get/3`, and
+  `MollieEx.Balances.primary/2`.
 
 ## 0.4.0 - 2026-06-14
 

@@ -284,6 +284,9 @@ defmodule MollieEx.Resources.Options do
   @spec client_id(String.t()) :: {:ok, String.t()} | {:error, Error.t()}
   def client_id(client_id), do: resource_id(client_id, :invalid_client_id)
 
+  @spec balance_id(String.t()) :: {:ok, String.t()} | {:error, Error.t()}
+  def balance_id(balance_id), do: resource_id(balance_id, :invalid_balance_id)
+
   @spec effective_profile_id(Client.t(), keyword()) ::
           {:ok, String.t() | nil} | {:error, Error.t()}
   def effective_profile_id(%Client{auth: {:api_key, _credential}}, _opts), do: {:ok, nil}

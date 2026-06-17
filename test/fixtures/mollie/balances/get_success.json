@@ -1,0 +1,41 @@
+{
+  "resource": "balance",
+  "id": "bal_gVMhHKqSSRYJyPsuoPNFH",
+  "mode": "live",
+  "createdAt": "2024-01-10T12:06:28+00:00",
+  "currency": "EUR",
+  "description": "Primary EUR balance",
+  "status": "active",
+  "transferFrequency": "daily",
+  "transferThreshold": {
+    "value": "40.00",
+    "currency": "EUR"
+  },
+  "transferReference": "Mollie payout",
+  "transferDestination": {
+    "type": "bank-account",
+    "beneficiaryName": "Jane Merchant",
+    "bankAccount": "NL53INGB0654422370"
+  },
+  "availableAmount": {
+    "value": "100.00",
+    "currency": "EUR"
+  },
+  "pendingAmount": {
+    "value": "15.00",
+    "currency": "EUR"
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/balances/bal_gVMhHKqSSRYJyPsuoPNFH",
+      "type": "application/hal+json"
+    },
+    "documentation": {
+      "href": "https://docs.mollie.com/reference/v2/balances-api/get-balance",
+      "type": "text/html"
+    }
+  },
+  "unexpectedFutureField": {
+    "visible": true
+  }
+}
