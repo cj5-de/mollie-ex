@@ -116,7 +116,8 @@ defmodule MollieEx.MixProject do
           MollieEx.ClientLinks,
           MollieEx.Balances,
           MollieEx.BalanceTransfers,
-          MollieEx.Settlements
+          MollieEx.Settlements,
+          MollieEx.Invoices
         ],
         Structs: [
           MollieEx.Payment,
@@ -142,6 +143,7 @@ defmodule MollieEx.MixProject do
           MollieEx.BalanceTransaction,
           MollieEx.BalanceTransfer,
           MollieEx.Settlement,
+          MollieEx.Invoice,
           MollieEx.List
         ],
         Types: [

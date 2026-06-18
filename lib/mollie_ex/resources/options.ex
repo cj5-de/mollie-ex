@@ -294,6 +294,9 @@ defmodule MollieEx.Resources.Options do
   @spec settlement_id(String.t()) :: {:ok, String.t()} | {:error, Error.t()}
   def settlement_id(settlement_id), do: resource_id(settlement_id, :invalid_settlement_id)
 
+  @spec invoice_id(String.t()) :: {:ok, String.t()} | {:error, Error.t()}
+  def invoice_id(invoice_id), do: resource_id(invoice_id, :invalid_invoice_id)
+
   @spec effective_profile_id(Client.t(), keyword()) ::
           {:ok, String.t() | nil} | {:error, Error.t()}
   def effective_profile_id(%Client{auth: {:api_key, _credential}}, _opts), do: {:ok, nil}
