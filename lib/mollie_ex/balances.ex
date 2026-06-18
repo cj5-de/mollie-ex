@@ -8,10 +8,11 @@ defmodule MollieEx.Balances do
   @moduledoc since: "0.5.0"
 
   alias MollieEx.Balance
+  alias MollieEx.BalanceTransaction
   alias MollieEx.Client
   alias MollieEx.Error
   alias MollieEx.List, as: MollieList
-  alias MollieEx.Resources.Balances.{Get, List, Primary}
+  alias MollieEx.Resources.Balances.{Get, List, ListTransactions, Primary}
   alias MollieEx.Resources.RequestRunner
 
   @type list_option ::
@@ -28,6 +29,13 @@ defmodule MollieEx.Balances do
           | {:receive_timeout, pos_integer()}
           | {:request_timeout, pos_integer()}
   @type primary_option :: get_option()
+  @type transaction_list_option ::
+          {:from, String.t()}
+          | {:limit, pos_integer()}
+          | {:testmode, boolean()}
+          | {:pool_timeout, pos_integer()}
+          | {:receive_timeout, pos_integer()}
+          | {:request_timeout, pos_integer()}
 
   @doc """
   Lists balances for the current organization.
@@ -94,6 +102,36 @@ defmodule MollieEx.Balances do
 
   def primary(%Client{}, _opts), do: configuration_error(:invalid_options)
   def primary(_client, _opts), do: configuration_error(:invalid_client)
+
+  @doc """
+  Lists transactions for a balance.
+
+  Pass `"primary"` as the balance ID to list transactions for the primary
+  balance.
+  """
+  @doc since: "0.5.0"
+  @spec list_transactions(Client.t(), String.t(), [transaction_list_option()]) ::
+          {:ok, MollieList.t(BalanceTransaction.t())} | {:error, Error.t()}
+  def list_transactions(client, balance_id, opts \\ [])
+
+  def list_transactions(%Client{} = client, balance_id, opts)
+      when is_binary(balance_id) and is_list(opts) do
+    RequestRunner.run_resource_list(
+      ListTransactions.build(client, balance_id, opts),
+      client,
+      "balance_transactions",
+      BalanceTransaction,
+      :balances_list_transactions
+    )
+  end
+
+  def list_transactions(%Client{}, _balance_id, opts) when not is_list(opts),
+    do: configuration_error(:invalid_options)
+
+  def list_transactions(%Client{}, _balance_id, _opts),
+    do: configuration_error(:invalid_balance_id)
+
+  def list_transactions(_client, _balance_id, _opts), do: configuration_error(:invalid_client)
 
   defp configuration_error(reason) do
     {:error, Error.exception(type: :configuration, reason: reason)}
