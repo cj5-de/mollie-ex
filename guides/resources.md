@@ -549,6 +549,15 @@ Retrieve settlements with OAuth-style bearer credentials:
 {:ok, open_settlement} = MollieEx.Settlements.open(organization_client)
 {:ok, next_settlement} = MollieEx.Settlements.next(organization_client)
 
+{:ok, payments} =
+  MollieEx.Settlements.list_payments(organization_client, settlement.id,
+    profile_id: "pfl_123"
+  )
+
+{:ok, captures} = MollieEx.Settlements.list_captures(organization_client, settlement.id)
+{:ok, refunds} = MollieEx.Settlements.list_refunds(organization_client, settlement.id)
+{:ok, chargebacks} = MollieEx.Settlements.list_chargebacks(organization_client, settlement.id)
+
 for settlement <- settlements.data do
   IO.puts("#{settlement.reference}: #{settlement.amount.value} #{settlement.amount.currency}")
 end

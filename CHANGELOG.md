@@ -20,6 +20,10 @@
   `MollieEx.BalanceTransfers.get/3`.
 - Add `MollieEx.Settlements.list/2`, `MollieEx.Settlements.get/3`,
   `MollieEx.Settlements.open/2`, and `MollieEx.Settlements.next/2`.
+- Add `MollieEx.Settlements.list_payments/3`,
+  `MollieEx.Settlements.list_captures/3`,
+  `MollieEx.Settlements.list_refunds/3`, and
+  `MollieEx.Settlements.list_chargebacks/3`.
 
 ## 0.4.0 - 2026-06-14
 
