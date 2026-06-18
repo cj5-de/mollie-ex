@@ -14,6 +14,7 @@
 - Add `MollieEx.Balances.list/2`, `MollieEx.Balances.get/3`, and
   `MollieEx.Balances.primary/2`.
 - Add `MollieEx.Balances.list_transactions/3`.
+- Add `MollieEx.Balances.get_report/5`.
 
 ## 0.4.0 - 2026-06-14
 

@@ -489,6 +489,15 @@ Retrieve balances with OAuth-style bearer credentials:
 {:ok, primary_balance} = MollieEx.Balances.primary(organization_client)
 {:ok, transactions} = MollieEx.Balances.list_transactions(organization_client, "primary")
 
+{:ok, report} =
+  MollieEx.Balances.get_report(
+    organization_client,
+    "primary",
+    "2024-01-01",
+    "2024-02-01",
+    grouping: "transaction-categories"
+  )
+
 for balance <- balances.data do
   IO.puts("#{balance.id}: #{balance.available_amount.value} #{balance.currency}")
 end

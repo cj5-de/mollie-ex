@@ -2,6 +2,7 @@ defmodule MollieEx.BalancesTest do
   use ExUnit.Case, async: false
 
   alias MollieEx.Balance
+  alias MollieEx.BalanceReport
   alias MollieEx.Balances
   alias MollieEx.BalanceTransaction
   alias MollieEx.Error
@@ -182,6 +183,80 @@ defmodule MollieEx.BalancesTest do
              Balances.list_transactions(token_provider_client(), "primary", testmode: false)
   end
 
+  test "gets a balance report with date range, grouping, and testmode" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/v2/balances/bal_123%2F456/report"
+
+      assert URI.decode_query(conn.query_string) == %{
+               "from" => "2024-01-01",
+               "grouping" => "transaction-categories",
+               "testmode" => "true",
+               "until" => "2024-02-01"
+             }
+
+      assert header(conn, "authorization") == "Bearer #{@organization_token}"
+      assert header(conn, "idempotency-key") == nil
+      assert_empty_body(conn)
+
+      fixture_response(conn, "balances/get_report_success.json", 200)
+    end)
+
+    assert {:ok, %BalanceReport{} = report} =
+             Balances.get_report(
+               organization_client([]),
+               "bal_123/456",
+               "2024-01-01",
+               "2024-02-01",
+               grouping: "transaction-categories",
+               testmode: true
+             )
+
+    assert report.resource == "balance-report"
+    assert report.balance_id == "bal_gVMhHKqSSRYJyPsuoPNFH"
+    assert report.time_zone == "Europe/Amsterdam"
+    assert report.from == "2024-01-01"
+    assert report.until == "2024-02-01"
+    assert report.grouping == "transaction-categories"
+    assert report.totals["payments"]["pending"]["amount"]["value"] == "4.98"
+    [payment_subtotal] = report.totals["payments"]["pending"]["subtotals"]
+    assert payment_subtotal["count"] == 1
+    assert report.raw["unexpectedFutureField"] == %{"visible" => true}
+
+    assert %Link{
+             href:
+               "https://api.mollie.com/v2/balances/bal_gVMhHKqSSRYJyPsuoPNFH/report?from=2024-01-01&until=2024-02-01&grouping=transaction-categories"
+           } = report.links["self"]
+  end
+
+  test "gets a report for the primary balance alias" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/v2/balances/primary/report"
+
+      assert URI.decode_query(conn.query_string) == %{
+               "from" => "2024-01-01",
+               "testmode" => "false",
+               "until" => "2024-02-01"
+             }
+
+      assert header(conn, "authorization") == "Bearer dynamic_balances_secret"
+      assert header(conn, "idempotency-key") == nil
+      assert_empty_body(conn)
+
+      fixture_response(conn, "balances/get_report_success.json", 200)
+    end)
+
+    assert {:ok, %BalanceReport{grouping: "transaction-categories"}} =
+             Balances.get_report(
+               token_provider_client(),
+               "primary",
+               "2024-01-01",
+               "2024-02-01",
+               testmode: false
+             )
+  end
+
   test "rejects API-key clients and invalid input before sending" do
     test_pid = self()
 
@@ -202,11 +277,31 @@ defmodule MollieEx.BalancesTest do
     assert {:error, %Error{reason: :unsupported_auth_mode}} =
              Balances.list_transactions(api_key_client(), "bal_12345678")
 
+    assert {:error, %Error{reason: :unsupported_auth_mode}} =
+             Balances.get_report(
+               api_key_client(),
+               "bal_12345678",
+               "2024-01-01",
+               "2024-02-01"
+             )
+
     assert {:error, %Error{reason: :invalid_balance_id}} =
              Balances.get(oauth_client(), "")
 
     assert {:error, %Error{reason: :invalid_balance_id}} =
              Balances.list_transactions(oauth_client(), "")
+
+    assert {:error, %Error{reason: :invalid_balance_id}} =
+             Balances.get_report(oauth_client(), "", "2024-01-01", "2024-02-01")
+
+    assert {:error, %Error{reason: :invalid_report_from}} =
+             Balances.get_report(oauth_client(), "bal_12345678", "", "2024-02-01")
+
+    assert {:error, %Error{reason: :invalid_report_from}} =
+             Balances.get_report(oauth_client(), "bal_12345678", "2024-02-31", "2024-03-01")
+
+    assert {:error, %Error{reason: :invalid_report_until}} =
+             Balances.get_report(oauth_client(), "bal_12345678", "2024-01-01", "")
 
     assert {:error, %Error{reason: {:invalid_option, :currency}}} =
              Balances.list(oauth_client(), currency: "")
@@ -220,8 +315,18 @@ defmodule MollieEx.BalancesTest do
     assert {:error, %Error{reason: {:invalid_option, :limit}}} =
              Balances.list_transactions(oauth_client(), "bal_12345678", limit: 0)
 
+    assert {:error, %Error{reason: {:invalid_option, :grouping}}} =
+             Balances.get_report(oauth_client(), "bal_12345678", "2024-01-01", "2024-02-01",
+               grouping: "unsupported"
+             )
+
     assert {:error, %Error{reason: :invalid_testmode}} =
              Balances.get(oauth_client(), "bal_12345678", testmode: "yes")
+
+    assert {:error, %Error{reason: :invalid_testmode}} =
+             Balances.get_report(oauth_client(), "bal_12345678", "2024-01-01", "2024-02-01",
+               testmode: "yes"
+             )
 
     assert {:error, %Error{reason: {:invalid_option, :from}}} =
              Balances.list_transactions(oauth_client(), "bal_12345678", from: "")
@@ -237,11 +342,21 @@ defmodule MollieEx.BalancesTest do
                idempotency_key: "read-123"
              )
 
+    assert {:error, %Error{reason: {:unsupported_option, :idempotency_key}}} =
+             Balances.get_report(oauth_client(), "bal_12345678", "2024-01-01", "2024-02-01",
+               idempotency_key: "read-123"
+             )
+
     assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
              Balances.get(oauth_client(), "bal_12345678", unknown: true)
 
     assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
              Balances.list_transactions(oauth_client(), "bal_12345678", unknown: true)
+
+    assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
+             Balances.get_report(oauth_client(), "bal_12345678", "2024-01-01", "2024-02-01",
+               unknown: true
+             )
 
     assert {:error, %Error{reason: :invalid_options}} =
              Balances.primary(oauth_client(), :not_options)
@@ -249,10 +364,22 @@ defmodule MollieEx.BalancesTest do
     assert {:error, %Error{reason: :invalid_options}} =
              Balances.list_transactions(oauth_client(), "bal_12345678", :not_options)
 
+    assert {:error, %Error{reason: :invalid_options}} =
+             Balances.get_report(
+               oauth_client(),
+               "bal_12345678",
+               "2024-01-01",
+               "2024-02-01",
+               :not_options
+             )
+
     assert {:error, %Error{reason: :invalid_client}} = Balances.list(:not_a_client)
 
     assert {:error, %Error{reason: :invalid_client}} =
              Balances.list_transactions(:not_a_client, "bal_12345678")
+
+    assert {:error, %Error{reason: :invalid_client}} =
+             Balances.get_report(:not_a_client, "bal_12345678", "2024-01-01", "2024-02-01")
 
     refute_receive :request_sent, 10
   end
@@ -296,6 +423,30 @@ defmodule MollieEx.BalancesTest do
     assert error.operation == :balances_list_transactions
   end
 
+  test "returns API errors for balance reports" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      conn
+      |> Plug.Conn.put_status(422)
+      |> Req.Test.json(%{
+        "status" => 422,
+        "title" => "Unprocessable Entity",
+        "detail" => "The report range is invalid."
+      })
+    end)
+
+    assert {:error, %Error{} = error} =
+             Balances.get_report(
+               organization_client(max_retries: 0),
+               "bal_12345678",
+               "2024-01-01",
+               "2024-02-01"
+             )
+
+    assert error.type == :validation
+    assert error.status == 422
+    assert error.operation == :balances_get_report
+  end
+
   test "returns timeout errors for balances" do
     Req.Test.expect(__MODULE__, fn conn ->
       Req.Test.transport_error(conn, :timeout)
@@ -318,6 +469,23 @@ defmodule MollieEx.BalancesTest do
 
     assert error.type == :timeout
     assert error.operation == :balances_list_transactions
+  end
+
+  test "returns timeout errors for balance reports" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      Req.Test.transport_error(conn, :timeout)
+    end)
+
+    assert {:error, %Error{} = error} =
+             Balances.get_report(
+               organization_client(max_retries: 0),
+               "bal_12345678",
+               "2024-01-01",
+               "2024-02-01"
+             )
+
+    assert error.type == :timeout
+    assert error.operation == :balances_get_report
   end
 
   test "retries read requests without idempotency keys" do
@@ -366,6 +534,34 @@ defmodule MollieEx.BalancesTest do
              Balances.list_transactions(organization_client(max_retries: 1), "bal_12345678")
   end
 
+  test "retries balance report reads without idempotency keys" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/v2/balances/bal_12345678/report"
+      assert header(conn, "idempotency-key") == nil
+
+      conn
+      |> Plug.Conn.put_status(503)
+      |> Req.Test.json(%{"status" => 503})
+    end)
+
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/v2/balances/bal_12345678/report"
+      assert header(conn, "idempotency-key") == nil
+
+      fixture_response(conn, "balances/get_report_success.json", 200)
+    end)
+
+    assert {:ok, %BalanceReport{}} =
+             Balances.get_report(
+               organization_client(max_retries: 1),
+               "bal_12345678",
+               "2024-01-01",
+               "2024-02-01"
+             )
+  end
+
   test "returns decode errors for malformed JSON responses" do
     Req.Test.expect(__MODULE__, fn conn ->
       conn
@@ -396,6 +592,26 @@ defmodule MollieEx.BalancesTest do
     assert error.operation == :balances_list_transactions
   end
 
+  test "returns decode errors for malformed JSON balance report responses" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      conn
+      |> Plug.Conn.put_resp_header("content-type", "application/json")
+      |> Plug.Conn.send_resp(200, "{")
+    end)
+
+    assert {:error, %Error{} = error} =
+             Balances.get_report(
+               organization_client([]),
+               "bal_12345678",
+               "2024-01-01",
+               "2024-02-01"
+             )
+
+    assert error.type == :decode
+    assert error.status == 200
+    assert error.operation == :balances_get_report
+  end
+
   test "returns decode errors for invalid balance response shapes" do
     Req.Test.expect(__MODULE__, fn conn ->
       Req.Test.json(conn, %{"resource" => "balance"})
@@ -422,6 +638,26 @@ defmodule MollieEx.BalancesTest do
 
     assert {:error, %Error{type: :decode, reason: :invalid_balance_response}} =
              Balances.list(oauth_client())
+  end
+
+  test "returns decode errors for invalid balance report response shapes" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      Req.Test.json(conn, %{"resource" => "balance-report"})
+    end)
+
+    assert {:error, %Error{} = error} =
+             Balances.get_report(
+               organization_client([]),
+               "bal_12345678",
+               "2024-01-01",
+               "2024-02-01"
+             )
+
+    assert error.type == :decode
+    assert error.status == 200
+    assert error.reason == :invalid_balance_report_response
+    assert error.operation == :balances_get_report
+    assert error.raw == %{"resource" => "balance-report"}
   end
 
   test "returns decode errors for invalid balance transaction list shapes" do
