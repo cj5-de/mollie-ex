@@ -18,6 +18,8 @@
 - Add `MollieEx.BalanceTransfers.create/3`,
   `MollieEx.BalanceTransfers.list/2`, and
   `MollieEx.BalanceTransfers.get/3`.
+- Add `MollieEx.Settlements.list/2`, `MollieEx.Settlements.get/3`,
+  `MollieEx.Settlements.open/2`, and `MollieEx.Settlements.next/2`.
 
 ## 0.4.0 - 2026-06-14
 

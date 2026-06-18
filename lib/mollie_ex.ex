@@ -27,6 +27,7 @@ defmodule MollieEx do
   Balances, balance transactions, and balance reports are available through
   `MollieEx.Balances`.
   Connect balance transfers are available through `MollieEx.BalanceTransfers`.
+  Settlements are available through `MollieEx.Settlements`.
 
   Full usage guides are available in the HexDocs sidebar:
 
