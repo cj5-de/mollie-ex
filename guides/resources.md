@@ -503,6 +503,36 @@ for balance <- balances.data do
 end
 ```
 
+## Balance transfers
+
+Create and retrieve Connect balance transfers with OAuth-style bearer credentials:
+
+```elixir
+{:ok, transfer} =
+  MollieEx.BalanceTransfers.create(
+    organization_client,
+    %{
+      amount: %{currency: "EUR", value: "100.00"},
+      source: %{
+        type: "organization",
+        id: "org_12345678",
+        description: "Transfer from Organization A"
+      },
+      destination: %{
+        type: "organization",
+        id: "org_87654321",
+        description: "Transfer to Organization B"
+      },
+      description: "Transfer from balance A to balance B",
+      category: "manual_correction"
+    },
+    idempotency_key: "5fb5fd4f-3eca-43ef-b299-5538a2990f38"
+  )
+
+{:ok, transfers} = MollieEx.BalanceTransfers.list(organization_client, limit: 10)
+{:ok, transfer} = MollieEx.BalanceTransfers.get(organization_client, transfer.id)
+```
+
 ## Idempotency
 
 MollieEx accepts idempotency keys for write operations, but does not generate

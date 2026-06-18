@@ -1,0 +1,44 @@
+{
+  "resource": "connect-balance-transfer",
+  "id": "cbt_4KgGJJSZpH",
+  "amount": {
+    "currency": "EUR",
+    "value": "100.00"
+  },
+  "source": {
+    "type": "organization",
+    "id": "org_12345678",
+    "description": "Transfer from Organization A"
+  },
+  "destination": {
+    "type": "organization",
+    "id": "org_87654321",
+    "description": "Transfer to Organization B"
+  },
+  "description": "Transfer from balance A to balance B",
+  "status": "created",
+  "statusReason": {
+    "code": "request_created",
+    "message": "The transfer request has been created."
+  },
+  "category": "manual_correction",
+  "metadata": {
+    "reference": "transfer-123"
+  },
+  "executedAt": null,
+  "mode": "test",
+  "createdAt": "2023-12-25T10:30:54+00:00",
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/connect/balance-transfers/cbt_4KgGJJSZpH",
+      "type": "application/hal+json"
+    },
+    "documentation": {
+      "href": "https://docs.mollie.com/reference/v2/connect-api/get-connect-balance-transfer",
+      "type": "text/html"
+    }
+  },
+  "unexpectedFutureField": {
+    "visible": true
+  }
+}

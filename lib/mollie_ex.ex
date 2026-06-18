@@ -26,6 +26,7 @@ defmodule MollieEx do
   Client links are available through `MollieEx.ClientLinks`.
   Balances, balance transactions, and balance reports are available through
   `MollieEx.Balances`.
+  Connect balance transfers are available through `MollieEx.BalanceTransfers`.
 
   Full usage guides are available in the HexDocs sidebar:
 
