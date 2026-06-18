@@ -533,6 +533,27 @@ Create and retrieve Connect balance transfers with OAuth-style bearer credential
 {:ok, transfer} = MollieEx.BalanceTransfers.get(organization_client, transfer.id)
 ```
 
+## Settlements
+
+Retrieve settlements with OAuth-style bearer credentials:
+
+```elixir
+{:ok, settlements} =
+  MollieEx.Settlements.list(organization_client,
+    balance_id: "bal_3kUf4yU2nT",
+    year: "2024",
+    month: "04"
+  )
+
+{:ok, settlement} = MollieEx.Settlements.get(organization_client, "stl_jDk30akdN")
+{:ok, open_settlement} = MollieEx.Settlements.open(organization_client)
+{:ok, next_settlement} = MollieEx.Settlements.next(organization_client)
+
+for settlement <- settlements.data do
+  IO.puts("#{settlement.reference}: #{settlement.amount.value} #{settlement.amount.currency}")
+end
+```
+
 ## Idempotency
 
 MollieEx accepts idempotency keys for write operations, but does not generate

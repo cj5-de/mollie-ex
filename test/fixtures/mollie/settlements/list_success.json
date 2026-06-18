@@ -1,0 +1,64 @@
+{
+  "count": 2,
+  "_embedded": {
+    "settlements": [
+      {
+        "resource": "settlement",
+        "id": "stl_jDk30akdN",
+        "createdAt": "2024-04-05T08:30:00.0Z",
+        "reference": "1234567.2404.03",
+        "status": "paidout",
+        "amount": {
+          "currency": "EUR",
+          "value": "39.75"
+        },
+        "balanceId": "bal_3kUf4yU2nT",
+        "invoiceId": "inv_FrvewDA3Pr",
+        "periods": {},
+        "settledAt": "2024-04-06T09:41:44.0Z",
+        "unexpectedFutureField": true,
+        "_links": {
+          "self": {
+            "href": "https://api.mollie.com/v2/settlements/stl_jDk30akdN",
+            "type": "application/hal+json"
+          }
+        }
+      },
+      {
+        "resource": "settlement",
+        "id": "stl_5B8cwPMGnU",
+        "createdAt": "2024-05-05T08:30:00.0Z",
+        "reference": "1234567.2405.01",
+        "status": "pending",
+        "amount": {
+          "currency": "EUR",
+          "value": "28.50"
+        },
+        "balanceId": "bal_3kUf4yU2nT",
+        "periods": {},
+        "settledAt": null,
+        "_links": {
+          "self": {
+            "href": "https://api.mollie.com/v2/settlements/stl_5B8cwPMGnU",
+            "type": "application/hal+json"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/settlements?from=stl_start&limit=2",
+      "type": "application/hal+json"
+    },
+    "previous": null,
+    "next": {
+      "href": "https://api.mollie.com/v2/settlements?from=stl_5B8cwPMGnU&limit=2",
+      "type": "application/hal+json"
+    },
+    "documentation": {
+      "href": "https://docs.mollie.com/reference/list-settlements",
+      "type": "text/html"
+    }
+  }
+}

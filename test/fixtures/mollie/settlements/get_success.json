@@ -1,0 +1,92 @@
+{
+  "resource": "settlement",
+  "id": "stl_jDk30akdN",
+  "createdAt": "2024-04-05T08:30:00.0Z",
+  "reference": "1234567.2404.03",
+  "status": "paidout",
+  "amount": {
+    "currency": "EUR",
+    "value": "39.75"
+  },
+  "balanceId": "bal_3kUf4yU2nT",
+  "invoiceId": "inv_FrvewDA3Pr",
+  "periods": {
+    "2024": {
+      "04": {
+        "revenue": [
+          {
+            "description": "iDEAL",
+            "method": "ideal",
+            "count": 6,
+            "amountNet": {
+              "currency": "EUR",
+              "value": "86.1000"
+            },
+            "amountVat": null,
+            "amountGross": {
+              "currency": "EUR",
+              "value": "86.1000"
+            }
+          }
+        ],
+        "costs": [
+          {
+            "description": "iDEAL",
+            "method": "ideal",
+            "count": 6,
+            "rate": {
+              "fixed": {
+                "currency": "EUR",
+                "value": "0.3500"
+              },
+              "percentage": null
+            },
+            "amountNet": {
+              "currency": "EUR",
+              "value": "2.1000"
+            },
+            "amountVat": {
+              "currency": "EUR",
+              "value": "0.4410"
+            },
+            "amountGross": {
+              "currency": "EUR",
+              "value": "2.5410"
+            }
+          }
+        ],
+        "invoiceId": "inv_FrvewDA3Pr"
+      }
+    }
+  },
+  "settledAt": "2024-04-06T09:41:44.0Z",
+  "unexpectedFutureField": {
+    "visible": true
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/settlements/stl_jDk30akdN",
+      "type": "application/hal+json"
+    },
+    "payments": {
+      "href": "https://api.mollie.com/v2/settlements/stl_jDk30akdN/payments",
+      "type": "application/hal+json"
+    },
+    "refunds": {
+      "href": "https://api.mollie.com/v2/settlements/stl_jDk30akdN/refunds",
+      "type": "application/hal+json"
+    },
+    "chargebacks": {
+      "href": "https://api.mollie.com/v2/settlements/stl_jDk30akdN/chargebacks",
+      "type": "application/hal+json"
+    },
+    "captures": {
+      "href": "https://api.mollie.com/v2/settlements/stl_jDk30akdN/captures",
+      "type": "application/hal+json"
+    },
+    "documentation": {
+      "href": "https://docs.mollie.com/reference/get-settlement",
+      "type": "text/html"
+    }
+  }
+}
