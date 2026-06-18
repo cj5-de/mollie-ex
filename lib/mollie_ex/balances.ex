@@ -8,11 +8,12 @@ defmodule MollieEx.Balances do
   @moduledoc since: "0.5.0"
 
   alias MollieEx.Balance
+  alias MollieEx.BalanceReport
   alias MollieEx.BalanceTransaction
   alias MollieEx.Client
   alias MollieEx.Error
   alias MollieEx.List, as: MollieList
-  alias MollieEx.Resources.Balances.{Get, List, ListTransactions, Primary}
+  alias MollieEx.Resources.Balances.{Get, GetReport, List, ListTransactions, Primary}
   alias MollieEx.Resources.RequestRunner
 
   @type list_option ::
@@ -32,6 +33,12 @@ defmodule MollieEx.Balances do
   @type transaction_list_option ::
           {:from, String.t()}
           | {:limit, pos_integer()}
+          | {:testmode, boolean()}
+          | {:pool_timeout, pos_integer()}
+          | {:receive_timeout, pos_integer()}
+          | {:request_timeout, pos_integer()}
+  @type report_option ::
+          {:grouping, String.t()}
           | {:testmode, boolean()}
           | {:pool_timeout, pos_integer()}
           | {:receive_timeout, pos_integer()}
@@ -132,6 +139,33 @@ defmodule MollieEx.Balances do
     do: configuration_error(:invalid_balance_id)
 
   def list_transactions(_client, _balance_id, _opts), do: configuration_error(:invalid_client)
+
+  @doc """
+  Retrieves a summarized report for a balance in a date range.
+
+  Pass `"primary"` as the balance ID to retrieve a report for the primary
+  balance. `from` is inclusive and `until` is exclusive; both must be
+  `YYYY-MM-DD` strings.
+  """
+  @doc since: "0.5.0"
+  @spec get_report(Client.t(), String.t(), String.t(), String.t(), [report_option()]) ::
+          {:ok, BalanceReport.t()} | {:error, Error.t()}
+  def get_report(client, balance_id, from, until, opts \\ [])
+
+  def get_report(%Client{} = client, balance_id, from, until, opts) when is_list(opts) do
+    RequestRunner.run_resource(
+      GetReport.build(client, balance_id, from, until, opts),
+      client,
+      BalanceReport,
+      :balances_get_report
+    )
+  end
+
+  def get_report(%Client{}, _balance_id, _from, _until, _opts),
+    do: configuration_error(:invalid_options)
+
+  def get_report(_client, _balance_id, _from, _until, _opts),
+    do: configuration_error(:invalid_client)
 
   defp configuration_error(reason) do
     {:error, Error.exception(type: :configuration, reason: reason)}
