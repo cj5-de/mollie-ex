@@ -1,0 +1,78 @@
+{
+  "count": 2,
+  "_embedded": {
+    "balance_transactions": [
+      {
+        "resource": "balance_transaction",
+        "id": "baltr_QM24QwzUWR4ev4Xfgyt29d",
+        "type": "refund",
+        "createdAt": "2024-03-01T12:15:30+00:00",
+        "resultAmount": {
+          "currency": "EUR",
+          "value": "-10.25"
+        },
+        "initialAmount": {
+          "currency": "EUR",
+          "value": "-10.00"
+        },
+        "deductions": {
+          "currency": "EUR",
+          "value": "-0.25"
+        },
+        "deductionDetails": {
+          "fees": {
+            "currency": "EUR",
+            "value": "-0.25"
+          }
+        },
+        "context": {
+          "refund": {
+            "paymentId": "tr_7UhSN1zuXS",
+            "paymentDescription": "Order #123",
+            "refundId": "re_4qqhO89gsT",
+            "refundDescription": "Refund order #123"
+          }
+        },
+        "unexpectedFutureField": true
+      },
+      {
+        "resource": "balance_transaction",
+        "id": "baltr_WhmDwNYR87FPDbiwBhUXCh",
+        "type": "payment",
+        "createdAt": "2024-03-02T09:30:00+00:00",
+        "resultAmount": {
+          "currency": "EUR",
+          "value": "9.71"
+        },
+        "initialAmount": {
+          "currency": "EUR",
+          "value": "10.00"
+        },
+        "deductions": {
+          "currency": "EUR",
+          "value": "-0.29"
+        },
+        "context": {
+          "payment": {
+            "paymentId": "tr_7UhSN1zuXS",
+            "paymentDescription": "Order #123"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/balances/bal_gVMhHKqSSRYJyPsuoPNFH/transactions?from=baltr_start&limit=2",
+      "type": "application/hal+json"
+    },
+    "next": {
+      "href": "https://api.mollie.com/v2/balances/bal_gVMhHKqSSRYJyPsuoPNFH/transactions?from=baltr_WhmDwNYR87FPDbiwBhUXCh&limit=2",
+      "type": "application/hal+json"
+    },
+    "documentation": {
+      "href": "https://docs.mollie.com/reference/v2/balances-api/list-balance-transactions",
+      "type": "text/html"
+    }
+  }
+}

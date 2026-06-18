@@ -136,6 +136,7 @@ defmodule MollieEx.MixProject do
           MollieEx.ClientResource,
           MollieEx.ClientLink,
           MollieEx.Balance,
+          MollieEx.BalanceTransaction,
           MollieEx.List
         ],
         Types: [
