@@ -25,6 +25,9 @@
   `MollieEx.Settlements.list_refunds/3`, and
   `MollieEx.Settlements.list_chargebacks/3`.
 - Add `MollieEx.Invoices.list/2` and `MollieEx.Invoices.get/3`.
+- Add `MollieEx.SalesInvoices.create/3`, `MollieEx.SalesInvoices.list/2`,
+  `MollieEx.SalesInvoices.get/3`, `MollieEx.SalesInvoices.update/4`, and
+  `MollieEx.SalesInvoices.delete/3`.
 
 ## 0.4.0 - 2026-06-14
 
