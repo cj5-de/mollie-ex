@@ -588,6 +588,67 @@ for invoice <- invoices.data do
 end
 ```
 
+## Sales invoices
+
+Create and manage sales invoices:
+
+```elixir
+sales_invoice_params = %{
+  status: "draft",
+  recipient_identifier: "customer-123",
+  recipient: %{
+    type: "consumer",
+    given_name: "Ada",
+    family_name: "Lovelace",
+    email: "ada@example.org"
+  },
+  lines: [
+    %{
+      description: "Consulting",
+      quantity: 1,
+      vat_rate: "21",
+      unit_price: %{currency: "EUR", value: "100.00"}
+    }
+  ]
+}
+
+{:ok, sales_invoice} =
+  MollieEx.SalesInvoices.create(
+    client,
+    sales_invoice_params,
+    idempotency_key: "f8400490-d269-43a9-94bf-fc84eaaf83e1"
+  )
+
+{:ok, sales_invoices} = MollieEx.SalesInvoices.list(client, limit: 10)
+{:ok, sales_invoice} = MollieEx.SalesInvoices.get(client, sales_invoice.id)
+
+{:ok, :no_content} =
+  MollieEx.SalesInvoices.delete(
+    client,
+    sales_invoice.id,
+    idempotency_key: "e10d3011-8f62-43cb-b585-cd89565582bb"
+  )
+
+{:ok, draft_sales_invoice} =
+  MollieEx.SalesInvoices.create(
+    client,
+    sales_invoice_params,
+    idempotency_key: "5dd1ec38-3d35-47ec-938a-174275208449"
+  )
+
+{:ok, issued_invoice} =
+  MollieEx.SalesInvoices.update(
+    client,
+    draft_sales_invoice.id,
+    %{status: "issued"},
+    idempotency_key: "6b3a2255-e286-47b3-8684-8547f5ca6e4d"
+  )
+
+for sales_invoice <- sales_invoices.data do
+  IO.puts("#{sales_invoice.id}: #{sales_invoice.status}")
+end
+```
+
 ## Idempotency
 
 MollieEx accepts idempotency keys for write operations, but does not generate

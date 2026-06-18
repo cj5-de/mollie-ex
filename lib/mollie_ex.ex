@@ -29,6 +29,7 @@ defmodule MollieEx do
   Connect balance transfers are available through `MollieEx.BalanceTransfers`.
   Settlements are available through `MollieEx.Settlements`.
   Invoices are available through `MollieEx.Invoices`.
+  Sales invoices are available through `MollieEx.SalesInvoices`.
 
   Full usage guides are available in the HexDocs sidebar:
 

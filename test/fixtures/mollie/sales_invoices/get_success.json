@@ -1,0 +1,106 @@
+{
+  "resource": "sales-invoice",
+  "id": "invoice_4Y0eZitmBnQ6IDoMqZQKh",
+  "mode": "test",
+  "profileId": "pfl_QkEhN94Ba",
+  "invoiceNumber": null,
+  "currency": "EUR",
+  "status": "draft",
+  "vatScheme": "standard",
+  "vatMode": "exclusive",
+  "memo": "Order #123",
+  "metadata": {
+    "order_id": "123"
+  },
+  "paymentTerm": "30 days",
+  "paymentDetails": [
+    {
+      "method": "banktransfer",
+      "amount": {
+        "value": "107.69",
+        "currency": "EUR"
+      }
+    }
+  ],
+  "emailDetails": {
+    "subject": "Invoice for order #123",
+    "body": "Please find your invoice attached."
+  },
+  "customerId": "cst_8wmqcHMN4U",
+  "mandateId": "mdt_h3gAaD5zP",
+  "recipientIdentifier": "recipient-123",
+  "recipient": {
+    "type": "consumer",
+    "givenName": "Given",
+    "familyName": "Family",
+    "email": "given.family@example.org",
+    "streetAndNumber": "Street 1",
+    "postalCode": "1000 AA",
+    "city": "Amsterdam",
+    "country": "NL",
+    "locale": "nl_NL"
+  },
+  "lines": [
+    {
+      "description": "LEGO 4440 Forest Police Station",
+      "quantity": 1,
+      "vatRate": "21",
+      "unitPrice": {
+        "value": "89.00",
+        "currency": "EUR"
+      },
+      "discount": null
+    }
+  ],
+  "webhookUrl": "https://example.org/webhooks/sales-invoice",
+  "discount": {
+    "type": "percentage",
+    "percentage": "10"
+  },
+  "isEInvoice": false,
+  "amountDue": {
+    "value": "107.69",
+    "currency": "EUR"
+  },
+  "subtotalAmount": {
+    "value": "89.00",
+    "currency": "EUR"
+  },
+  "totalAmount": {
+    "value": "107.69",
+    "currency": "EUR"
+  },
+  "totalVatAmount": {
+    "value": "18.69",
+    "currency": "EUR"
+  },
+  "discountedSubtotalAmount": {
+    "value": "89.00",
+    "currency": "EUR"
+  },
+  "createdAt": "2024-10-03T10:47:38.457381+00:00",
+  "issuedAt": null,
+  "paidAt": null,
+  "dueAt": null,
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/sales-invoices/invoice_4Y0eZitmBnQ6IDoMqZQKh",
+      "type": "application/hal+json"
+    },
+    "invoicePayment": {
+      "href": "https://payment-links.mollie.com/payment/invoice_4Y0eZitmBnQ6IDoMqZQKh",
+      "type": "application/hal+json"
+    },
+    "pdfLink": {
+      "href": "https://api.mollie.com/v2/sales-invoices/invoice_4Y0eZitmBnQ6IDoMqZQKh/pdf",
+      "type": "application/pdf"
+    },
+    "documentation": {
+      "href": "https://docs.mollie.com/reference/get-sales-invoice",
+      "type": "text/html"
+    }
+  },
+  "unexpectedFutureField": {
+    "visible": true
+  }
+}
