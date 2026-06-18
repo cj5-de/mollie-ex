@@ -563,6 +563,31 @@ for settlement <- settlements.data do
 end
 ```
 
+## Invoices
+
+Retrieve invoices with OAuth-style bearer credentials:
+
+```elixir
+{:ok, invoices} =
+  MollieEx.Invoices.list(organization_client,
+    year: "2024",
+    reference: "2024.10000",
+    limit: 10
+  )
+
+{:ok, invoice} = MollieEx.Invoices.get(organization_client, "inv_12345678")
+
+cond do
+  MollieEx.Invoice.paid?(invoice) -> :reconciled
+  MollieEx.Invoice.overdue?(invoice) -> {:follow_up, invoice.reference}
+  MollieEx.Invoice.open?(invoice) -> {:pending, invoice.due_at}
+end
+
+for invoice <- invoices.data do
+  IO.puts("#{invoice.reference}: #{invoice.gross_amount.value} #{invoice.gross_amount.currency}")
+end
+```
+
 ## Idempotency
 
 MollieEx accepts idempotency keys for write operations, but does not generate

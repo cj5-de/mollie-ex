@@ -1,0 +1,51 @@
+{
+  "resource": "invoice",
+  "id": "inv_FrvewDA3Pr",
+  "reference": "2024.10000",
+  "vatNumber": "NL123456789B01",
+  "status": "paid",
+  "netAmount": {
+    "currency": "EUR",
+    "value": "80.00"
+  },
+  "vatAmount": {
+    "currency": "EUR",
+    "value": "16.80"
+  },
+  "grossAmount": {
+    "currency": "EUR",
+    "value": "96.80"
+  },
+  "lines": [
+    {
+      "period": "2024-01",
+      "description": "Payments",
+      "count": 10,
+      "vatPercentage": 21,
+      "amount": {
+        "currency": "EUR",
+        "value": "80.00"
+      }
+    }
+  ],
+  "issuedAt": "2024-01-31",
+  "paidAt": "2024-02-14",
+  "dueAt": "2024-02-14",
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/invoices/inv_FrvewDA3Pr",
+      "type": "application/hal+json"
+    },
+    "pdf": {
+      "href": "https://api.mollie.com/v2/invoices/inv_FrvewDA3Pr/pdf",
+      "type": "application/pdf"
+    },
+    "documentation": {
+      "href": "https://docs.mollie.com/reference/get-invoice",
+      "type": "text/html"
+    }
+  },
+  "unexpectedFutureField": {
+    "visible": true
+  }
+}

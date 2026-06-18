@@ -1,0 +1,106 @@
+{
+  "count": 2,
+  "_embedded": {
+    "invoices": [
+      {
+        "resource": "invoice",
+        "id": "inv_FrvewDA3Pr",
+        "reference": "2024.10000",
+        "vatNumber": "NL123456789B01",
+        "status": "paid",
+        "netAmount": {
+          "currency": "EUR",
+          "value": "80.00"
+        },
+        "vatAmount": {
+          "currency": "EUR",
+          "value": "16.80"
+        },
+        "grossAmount": {
+          "currency": "EUR",
+          "value": "96.80"
+        },
+        "lines": [
+          {
+            "period": "2024-01",
+            "description": "Payments",
+            "count": 10,
+            "vatPercentage": 21,
+            "amount": {
+              "currency": "EUR",
+              "value": "80.00"
+            }
+          }
+        ],
+        "issuedAt": "2024-01-31",
+        "paidAt": "2024-02-14",
+        "dueAt": "2024-02-14",
+        "_links": {
+          "self": {
+            "href": "https://api.mollie.com/v2/invoices/inv_FrvewDA3Pr",
+            "type": "application/hal+json"
+          },
+          "pdf": {
+            "href": "https://api.mollie.com/v2/invoices/inv_FrvewDA3Pr/pdf",
+            "type": "application/pdf"
+          }
+        },
+        "unexpectedFutureField": true
+      },
+      {
+        "resource": "invoice",
+        "id": "inv_qVQkKkRq3p",
+        "reference": "2024.10001",
+        "vatNumber": null,
+        "status": "overdue",
+        "netAmount": {
+          "currency": "EUR",
+          "value": "100.00"
+        },
+        "vatAmount": {
+          "currency": "EUR",
+          "value": "0.00"
+        },
+        "grossAmount": {
+          "currency": "EUR",
+          "value": "100.00"
+        },
+        "lines": [
+          {
+            "period": "2024-02",
+            "description": "Subscriptions",
+            "count": 5,
+            "vatPercentage": 0,
+            "amount": {
+              "currency": "EUR",
+              "value": "100.00"
+            }
+          }
+        ],
+        "issuedAt": "2024-02-29",
+        "paidAt": null,
+        "dueAt": "2024-03-14",
+        "_links": {
+          "self": {
+            "href": "https://api.mollie.com/v2/invoices/inv_qVQkKkRq3p",
+            "type": "application/hal+json"
+          },
+          "pdf": {
+            "href": "https://api.mollie.com/v2/invoices/inv_qVQkKkRq3p/pdf",
+            "type": "application/pdf"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "https://api.mollie.com/v2/invoices?from=inv_start&limit=2",
+      "type": "application/hal+json"
+    },
+    "next": {
+      "href": "https://api.mollie.com/v2/invoices?from=inv_qVQkKkRq3p&limit=2",
+      "type": "application/hal+json"
+    }
+  }
+}
