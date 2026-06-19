@@ -153,6 +153,9 @@ defmodule MollieEx.SalesInvoices do
 
   @doc """
   Deletes a draft Mollie sales invoice by ID.
+
+  The beta sales invoice delete endpoint accepts `testmode: true` when deleting
+  a test-mode invoice.
   """
   @doc since: "0.5.0"
   @spec delete(Client.t(), String.t(), [delete_option()]) ::
