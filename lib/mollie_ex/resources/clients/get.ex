@@ -19,7 +19,7 @@ defmodule MollieEx.Resources.Clients.Get do
   def build(%Client{} = client, organization_id, opts)
       when is_binary(organization_id) and is_list(opts) do
     with :ok <- Options.validate_options(opts, @allowed_options),
-         :ok <- Options.reject_api_key_client(client),
+         :ok <- Options.require_advanced_access_token_client(client),
          {:ok, client_id} <- Options.client_id(organization_id),
          {:ok, embed} <- Options.string_query_option(opts, :embed) do
       RequestBuilder.build(opts,

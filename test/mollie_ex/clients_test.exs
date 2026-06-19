@@ -27,7 +27,7 @@ defmodule MollieEx.ClientsTest do
                "limit" => "2"
              }
 
-      assert header(conn, "authorization") == "Bearer #{@oauth_token}"
+      assert header(conn, "authorization") == "Bearer dynamic_clients_secret"
       assert header(conn, "idempotency-key") == nil
       assert_empty_body(conn)
 
@@ -35,7 +35,7 @@ defmodule MollieEx.ClientsTest do
     end)
 
     assert {:ok, %MollieList{} = client_list} =
-             Clients.list(oauth_client(),
+             Clients.list(token_provider_client(),
                embed: "organization,onboarding,capabilities",
                from: "org_00000001",
                limit: 2
@@ -88,7 +88,7 @@ defmodule MollieEx.ClientsTest do
     assert client_resource.raw["unexpectedFutureField"] == %{"visible" => true}
   end
 
-  test "rejects API-key clients and invalid input before sending" do
+  test "rejects unsupported auth modes and invalid input before sending" do
     test_pid = self()
 
     Req.Test.stub(__MODULE__, fn conn ->
@@ -103,33 +103,39 @@ defmodule MollieEx.ClientsTest do
              Clients.get(api_key_client(), "org_12345678")
 
     assert {:error, %Error{reason: :invalid_client_id}} =
-             Clients.get(oauth_client(), "")
+             Clients.get(organization_client(), "")
 
     assert {:error, %Error{reason: {:invalid_option, :from}}} =
-             Clients.list(oauth_client(), from: "")
+             Clients.list(organization_client(), from: "")
 
     assert {:error, %Error{reason: {:invalid_option, :limit}}} =
-             Clients.list(oauth_client(), limit: 251)
+             Clients.list(organization_client(), limit: 251)
 
     assert {:error, %Error{reason: {:invalid_option, :embed}}} =
-             Clients.get(oauth_client(), "org_12345678", embed: 123)
+             Clients.get(organization_client(), "org_12345678", embed: 123)
 
     assert {:error, %Error{reason: {:unsupported_option, :testmode}}} =
-             Clients.list(oauth_client(), testmode: false)
+             Clients.list(organization_client(), testmode: false)
 
     assert {:error, %Error{reason: {:unsupported_option, :profile_id}}} =
-             Clients.get(oauth_client(), "org_12345678", profile_id: "pfl_123")
+             Clients.get(organization_client(), "org_12345678", profile_id: "pfl_123")
 
     assert {:error, %Error{reason: {:unsupported_option, :idempotency_key}}} =
-             Clients.list(oauth_client(), idempotency_key: "read-123")
+             Clients.list(organization_client(), idempotency_key: "read-123")
 
     assert {:error, %Error{reason: {:unsupported_option, :unknown}}} =
-             Clients.get(oauth_client(), "org_12345678", unknown: true)
+             Clients.get(organization_client(), "org_12345678", unknown: true)
 
     assert {:error, %Error{reason: :invalid_options}} =
-             Clients.get(oauth_client(), "org_12345678", :not_options)
+             Clients.get(organization_client(), "org_12345678", :not_options)
 
     assert {:error, %Error{reason: :invalid_client}} = Clients.list(:not_a_client)
+
+    assert {:error, %Error{reason: :unsupported_auth_mode}} =
+             Clients.list(oauth_client())
+
+    assert {:error, %Error{reason: :unsupported_auth_mode}} =
+             Clients.get(oauth_client(), "org_12345678")
 
     refute_receive :request_sent, 10
   end
@@ -144,7 +150,7 @@ defmodule MollieEx.ClientsTest do
     end)
 
     assert {:error, %Error{type: :decode, reason: :invalid_client_response}} =
-             Clients.list(oauth_client())
+             Clients.list(organization_client())
   end
 
   defp api_key_client do
@@ -154,6 +160,12 @@ defmodule MollieEx.ClientsTest do
   defp oauth_client do
     TestSupport.client(__MODULE__, oauth_token: @oauth_token)
   end
+
+  defp token_provider_client do
+    TestSupport.client(__MODULE__, token_provider: {__MODULE__, :fetch_token, []})
+  end
+
+  def fetch_token, do: "dynamic_clients_secret"
 
   defp organization_client do
     TestSupport.client(__MODULE__, organization_token: @organization_token)

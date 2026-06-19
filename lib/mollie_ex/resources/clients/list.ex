@@ -20,7 +20,7 @@ defmodule MollieEx.Resources.Clients.List do
           {:ok, Request.t(), keyword()} | {:error, Error.t()}
   def build(%Client{} = client, opts) when is_list(opts) do
     with :ok <- Options.validate_options(opts, @allowed_options),
-         :ok <- Options.reject_api_key_client(client),
+         :ok <- Options.require_advanced_access_token_client(client),
          {:ok, embed} <- Options.string_query_option(opts, :embed),
          {:ok, from} <- Options.string_query_option(opts, :from),
          {:ok, limit} <- Options.limit(opts) do
