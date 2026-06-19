@@ -21,7 +21,7 @@ defmodule MollieEx.Resources.ClientLinks.Create do
   def build(%Client{} = client, params, opts)
       when is_map(params) and is_list(opts) do
     with :ok <- Options.validate_options(opts, @allowed_options),
-         :ok <- Options.require_organization_token_client(client),
+         :ok <- Options.require_advanced_access_token_client(client),
          :ok <- Options.require_param(params, [:owner, "owner"], :missing_owner),
          :ok <- Options.require_param(params, [:name, "name"], :missing_name),
          :ok <- Options.require_param(params, [:address, "address"], :missing_address) do

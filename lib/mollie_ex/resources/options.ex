@@ -366,11 +366,16 @@ defmodule MollieEx.Resources.Options do
   def require_api_key_client(%Client{auth: {:api_key, _credential}}), do: :ok
   def require_api_key_client(%Client{}), do: configuration_error(:unsupported_auth_mode)
 
-  @spec require_organization_token_client(Client.t()) :: :ok | {:error, Error.t()}
-  def require_organization_token_client(%Client{auth: {:organization_token, _credential}}),
+  @spec require_advanced_access_token_client(Client.t()) :: :ok | {:error, Error.t()}
+  def require_advanced_access_token_client(%Client{auth: {:organization_token, _credential}}),
     do: :ok
 
-  def require_organization_token_client(%Client{}),
+  def require_advanced_access_token_client(%Client{
+        auth: {:token_provider, _module, _function, _args}
+      }),
+      do: :ok
+
+  def require_advanced_access_token_client(%Client{}),
     do: configuration_error(:unsupported_auth_mode)
 
   @spec reject_api_key_client(Client.t()) :: :ok | {:error, Error.t()}
