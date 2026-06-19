@@ -15,6 +15,7 @@ defmodule MollieEx.Resources.BalanceTransfers.Create do
     :request_timeout
   ]
   @structured_body_keys ~w(amount source destination)
+  @hal_accept "application/hal+json"
 
   @spec build(Client.t(), map(), keyword()) ::
           {:ok, Request.t(), keyword()} | {:error, Error.t()}
@@ -31,6 +32,7 @@ defmodule MollieEx.Resources.BalanceTransfers.Create do
         method: :post,
         path: "/connect/balance-transfers",
         path_template: "/connect/balance-transfers",
+        accept: @hal_accept,
         body: body,
         idempotency_policy: :optional,
         operation: :balance_transfers_create,

@@ -7,7 +7,6 @@ defmodule MollieEx.HTTP.Transport do
 
   @json_content_type "application/json"
   @default_headers [
-    {"accept", @json_content_type},
     {"content-type", @json_content_type}
   ]
   @transport_owned_headers ~w(accept authorization content-type idempotency-key user-agent)
@@ -123,11 +122,20 @@ defmodule MollieEx.HTTP.Transport do
   defp maybe_put_body(req_options, body), do: Keyword.put(req_options, :body, body)
 
   defp headers(client, request, token) do
-    @default_headers
+    [accept_header(request) | @default_headers]
     |> Kernel.++([{"authorization", "Bearer " <> token}, {"user-agent", client.user_agent}])
     |> Kernel.++(reject_transport_owned_headers(request.headers))
     |> Idempotency.put_header(request)
   end
+
+  defp accept_header(%Request{accept: accept}) when is_binary(accept) do
+    case String.trim(accept) do
+      "" -> {"accept", @json_content_type}
+      accept -> {"accept", accept}
+    end
+  end
+
+  defp accept_header(%Request{}), do: {"accept", @json_content_type}
 
   defp reject_transport_owned_headers(headers) do
     Enum.reject(headers, fn {name, _value} -> transport_owned_header?(name) end)

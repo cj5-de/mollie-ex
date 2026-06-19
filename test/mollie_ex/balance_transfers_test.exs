@@ -29,6 +29,7 @@ defmodule MollieEx.BalanceTransfersTest do
              }
 
       assert header(conn, "authorization") == "Bearer #{@oauth_token}"
+      assert header(conn, "accept") == "application/hal+json"
       assert header(conn, "idempotency-key") == nil
       assert_empty_body(conn)
 
@@ -77,6 +78,7 @@ defmodule MollieEx.BalanceTransfersTest do
       assert conn.request_path == "/v2/connect/balance-transfers/cbt_123%2F456"
       assert URI.decode_query(conn.query_string) == %{"testmode" => "true"}
       assert header(conn, "authorization") == "Bearer #{@organization_token}"
+      assert header(conn, "accept") == "application/hal+json"
       assert header(conn, "idempotency-key") == nil
       assert_empty_body(conn)
 
@@ -101,6 +103,7 @@ defmodule MollieEx.BalanceTransfersTest do
       assert conn.request_path == "/v2/connect/balance-transfers"
       assert conn.query_string == ""
       assert header(conn, "authorization") == "Bearer #{@organization_token}"
+      assert header(conn, "accept") == "application/hal+json"
       assert header(conn, "idempotency-key") == "balance-transfer-123"
       assert_json_body(conn, expected_body)
 

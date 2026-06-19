@@ -16,6 +16,7 @@ defmodule MollieEx.Resources.BalanceTransfers.List do
     :receive_timeout,
     :request_timeout
   ]
+  @hal_accept "application/hal+json"
 
   @spec build(Client.t(), keyword()) ::
           {:ok, Request.t(), keyword()} | {:error, Error.t()}
@@ -30,6 +31,7 @@ defmodule MollieEx.Resources.BalanceTransfers.List do
         method: :get,
         path: "/connect/balance-transfers",
         path_template: "/connect/balance-transfers",
+        accept: @hal_accept,
         query: Options.query(from: from, limit: limit, sort: sort, testmode: testmode),
         idempotency_policy: :unsupported,
         operation: :balance_transfers_list,
