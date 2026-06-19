@@ -432,7 +432,8 @@ end
 
 ## Clients
 
-Retrieve partner clients with OAuth-style bearer credentials:
+Retrieve partner clients with an advanced access token, represented by an
+`organization_client` or a token-provider-backed client:
 
 ```elixir
 {:ok, clients} =

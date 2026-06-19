@@ -2,6 +2,10 @@ defmodule MollieEx.Clients do
   @moduledoc """
   Retrieve Mollie partner clients.
 
+  These endpoints require a Mollie advanced access token, represented in this
+  SDK as an `:organization_token` client or a `:token_provider` returning an
+  organization-level bearer token.
+
   All functions return result tuples. They do not raise for ordinary API,
   transport, or validation failures.
   """
@@ -29,6 +33,8 @@ defmodule MollieEx.Clients do
 
   @doc """
   Lists clients linked to the authenticated account.
+
+  This endpoint requires `:organization_token` or `:token_provider` auth.
   """
   @doc since: "0.5.0"
   @spec list(Client.t(), [list_option()]) ::
@@ -50,6 +56,8 @@ defmodule MollieEx.Clients do
 
   @doc """
   Retrieves a client by organization ID.
+
+  This endpoint requires `:organization_token` or `:token_provider` auth.
   """
   @doc since: "0.5.0"
   @spec get(Client.t(), String.t(), [get_option()]) ::
