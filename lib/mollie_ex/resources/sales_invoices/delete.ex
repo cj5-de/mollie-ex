@@ -21,7 +21,7 @@ defmodule MollieEx.Resources.SalesInvoices.Delete do
       when is_binary(sales_invoice_id) and is_list(opts) do
     with :ok <- Options.validate_options(opts, @allowed_options),
          {:ok, sales_invoice_id} <- Options.sales_invoice_id(sales_invoice_id),
-         {:ok, testmode} <- Options.effective_testmode(client, opts) do
+         {:ok, testmode} <- effective_delete_testmode(client, opts) do
       RequestBuilder.build(opts,
         method: :delete,
         path: Options.resource_path(["sales-invoices", sales_invoice_id]),
@@ -39,4 +39,15 @@ defmodule MollieEx.Resources.SalesInvoices.Delete do
 
   def build(%Client{}, _sales_invoice_id, _opts),
     do: Options.configuration_error(:invalid_sales_invoice_id)
+
+  defp effective_delete_testmode(%Client{auth: {:api_key, _credential}}, opts) do
+    case Keyword.fetch(opts, :testmode) do
+      {:ok, testmode} -> Options.testmode(testmode)
+      :error -> {:ok, nil}
+    end
+  end
+
+  defp effective_delete_testmode(%Client{} = client, opts) do
+    Options.effective_testmode(client, opts)
+  end
 end
