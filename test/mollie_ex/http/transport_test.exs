@@ -131,6 +131,29 @@ defmodule MollieEx.HTTP.TransportTest do
     assert {:ok, %Response{}} = Transport.request(client(), request)
   end
 
+  test "sends trusted request accept override" do
+    Req.Test.expect(__MODULE__, fn conn ->
+      assert headers(conn, "accept") == ["application/hal+json"]
+      assert headers(conn, "content-type") == ["application/json"]
+      assert header(conn, "authorization") == "Bearer #{@api_key}"
+
+      assert conn
+             |> Req.Test.raw_body()
+             |> IO.iodata_to_binary() == ""
+
+      Req.Test.json(conn, %{"id" => "cbt_123"})
+    end)
+
+    request = %Request{
+      method: :get,
+      path: "/connect/balance-transfers",
+      accept: "application/hal+json",
+      headers: [{"accept", "text/plain"}]
+    }
+
+    assert {:ok, %Response{}} = Transport.request(client(), request)
+  end
+
   test "does not send unsupported idempotency keys" do
     Req.Test.expect(__MODULE__, fn conn ->
       assert header(conn, "idempotency-key") == nil
