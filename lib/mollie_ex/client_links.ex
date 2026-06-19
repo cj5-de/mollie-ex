@@ -3,7 +3,8 @@ defmodule MollieEx.ClientLinks do
   Create Mollie client links for partner onboarding.
 
   Client link creation requires a Mollie advanced access token, represented in
-  this SDK as an `:organization_token` client.
+  this SDK as an `:organization_token` client or a `:token_provider` returning
+  an organization-level bearer token.
 
   All functions return result tuples. They do not raise for ordinary API,
   transport, or validation failures.
@@ -25,7 +26,7 @@ defmodule MollieEx.ClientLinks do
   @doc """
   Creates a client link for onboarding a merchant to an OAuth application.
 
-  This endpoint requires a client created with `:organization_token`.
+  This endpoint requires `:organization_token` or `:token_provider` auth.
   """
   @doc since: "0.5.0"
   @spec create(Client.t(), map(), [create_option()]) ::

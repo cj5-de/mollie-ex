@@ -453,7 +453,7 @@ Retrieve partner clients with OAuth-style bearer credentials:
 ## Client Links
 
 Create a client link for partner onboarding with an advanced access token,
-represented by an `organization_client`:
+represented by an `organization_client` or a token-provider-backed client:
 
 ```elixir
 {:ok, client_link} =

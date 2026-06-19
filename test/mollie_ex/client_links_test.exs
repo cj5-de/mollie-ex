@@ -22,7 +22,7 @@ defmodule MollieEx.ClientLinksTest do
       assert conn.method == "POST"
       assert conn.request_path == "/v2/client-links"
       assert conn.query_string == ""
-      assert header(conn, "authorization") == "Bearer #{@organization_token}"
+      assert header(conn, "authorization") == "Bearer dynamic_client_links_secret"
       assert header(conn, "idempotency-key") == "client-link-123"
       assert_json_body(conn, expected_body)
 
@@ -30,7 +30,7 @@ defmodule MollieEx.ClientLinksTest do
     end)
 
     assert {:ok, %ClientLink{} = client_link} =
-             ClientLinks.create(organization_client([]), create_params(),
+             ClientLinks.create(token_provider_client(), create_params(),
                idempotency_key: "client-link-123"
              )
 
@@ -55,9 +55,6 @@ defmodule MollieEx.ClientLinksTest do
 
     assert {:error, %Error{reason: :unsupported_auth_mode}} =
              ClientLinks.create(oauth_client(), create_params())
-
-    assert {:error, %Error{reason: :unsupported_auth_mode}} =
-             ClientLinks.create(token_provider_client(), create_params())
 
     assert {:error, %Error{reason: :invalid_client_link_params}} =
              ClientLinks.create(organization_client([]), :not_params)
