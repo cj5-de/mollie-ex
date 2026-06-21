@@ -22,6 +22,7 @@ defmodule MollieEx.SalesInvoicesTest do
       assert conn.request_path == "/v2/sales-invoices"
       assert conn.query_string == ""
       assert header(conn, "authorization") == "Bearer #{@api_key}"
+      assert header(conn, "accept") == "application/hal+json"
       assert header(conn, "idempotency-key") == "sales-invoice-123"
       assert_json_body(conn, expected_create_body())
 
@@ -77,6 +78,7 @@ defmodule MollieEx.SalesInvoicesTest do
              }
 
       assert header(conn, "authorization") == "Bearer #{@oauth_token}"
+      assert header(conn, "accept") == "application/hal+json"
       assert header(conn, "idempotency-key") == nil
       assert_empty_body(conn)
 
@@ -117,6 +119,7 @@ defmodule MollieEx.SalesInvoicesTest do
       assert conn.request_path == "/v2/sales-invoices/invoice_2024%2F10000"
       assert URI.decode_query(conn.query_string) == %{"testmode" => "true"}
       assert header(conn, "authorization") == "Bearer #{@organization_token}"
+      assert header(conn, "accept") == "application/hal+json"
       assert header(conn, "idempotency-key") == nil
       assert_empty_body(conn)
 
@@ -138,6 +141,7 @@ defmodule MollieEx.SalesInvoicesTest do
       assert conn.request_path == "/v2/sales-invoices/invoice_4Y0eZitmBnQ6IDoMqZQKh"
       assert conn.query_string == ""
       assert header(conn, "authorization") == "Bearer #{@api_key}"
+      assert header(conn, "accept") == "application/hal+json"
       assert header(conn, "idempotency-key") == "sales-invoice-update-123"
       assert_json_body(conn, expected_update_body())
 
@@ -175,6 +179,7 @@ defmodule MollieEx.SalesInvoicesTest do
       assert conn.method == "DELETE"
       assert conn.request_path == "/v2/sales-invoices/invoice_4Y0eZitmBnQ6IDoMqZQKh"
       assert conn.query_string == ""
+      assert header(conn, "accept") == "application/hal+json"
       assert header(conn, "idempotency-key") == "sales-invoice-delete-123"
       assert_empty_body(conn)
 

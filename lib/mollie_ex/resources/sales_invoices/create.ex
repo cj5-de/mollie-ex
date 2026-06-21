@@ -16,6 +16,7 @@ defmodule MollieEx.Resources.SalesInvoices.Create do
     :request_timeout
   ]
   @structured_body_keys ~w(paymentDetails emailDetails recipient lines discount)
+  @hal_accept "application/hal+json"
 
   @spec build(Client.t(), map(), keyword()) ::
           {:ok, Request.t(), keyword()} | {:error, Error.t()}
@@ -37,6 +38,7 @@ defmodule MollieEx.Resources.SalesInvoices.Create do
         method: :post,
         path: "/sales-invoices",
         path_template: "/sales-invoices",
+        accept: @hal_accept,
         body: body,
         idempotency_policy: :optional,
         operation: :sales_invoices_create,

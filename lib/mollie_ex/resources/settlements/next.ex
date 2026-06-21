@@ -12,6 +12,7 @@ defmodule MollieEx.Resources.Settlements.Next do
     :receive_timeout,
     :request_timeout
   ]
+  @hal_accept "application/hal+json"
 
   @spec build(Client.t(), keyword()) ::
           {:ok, Request.t(), keyword()} | {:error, Error.t()}
@@ -22,6 +23,7 @@ defmodule MollieEx.Resources.Settlements.Next do
         method: :get,
         path: "/settlements/next",
         path_template: "/settlements/next",
+        accept: @hal_accept,
         idempotency_policy: :unsupported,
         operation: :settlements_next
       )

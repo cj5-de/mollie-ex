@@ -12,6 +12,7 @@ defmodule MollieEx.Resources.Settlements.Get do
     :receive_timeout,
     :request_timeout
   ]
+  @hal_accept "application/hal+json"
 
   @spec build(Client.t(), String.t(), keyword()) ::
           {:ok, Request.t(), keyword()} | {:error, Error.t()}
@@ -24,6 +25,7 @@ defmodule MollieEx.Resources.Settlements.Get do
         method: :get,
         path: Options.resource_path(["settlements", settlement_id]),
         path_template: "/settlements/{settlementId}",
+        accept: @hal_accept,
         idempotency_policy: :unsupported,
         operation: :settlements_get
       )

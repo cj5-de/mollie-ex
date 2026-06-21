@@ -35,6 +35,7 @@ defmodule MollieEx.SettlementsTest do
              }
 
       assert header(conn, "authorization") == "Bearer #{@oauth_token}"
+      assert header(conn, "accept") == "application/hal+json"
       assert header(conn, "idempotency-key") == nil
       assert_empty_body(conn)
 
@@ -83,6 +84,7 @@ defmodule MollieEx.SettlementsTest do
       assert conn.request_path == "/v2/settlements/1234567.2404%2F03"
       assert conn.query_string == ""
       assert header(conn, "authorization") == "Bearer #{@organization_token}"
+      assert header(conn, "accept") == "application/hal+json"
       assert header(conn, "idempotency-key") == nil
       assert_empty_body(conn)
 
@@ -106,6 +108,7 @@ defmodule MollieEx.SettlementsTest do
       assert conn.request_path == "/v2/settlements/open"
       assert conn.query_string == ""
       assert header(conn, "authorization") == "Bearer dynamic_settlements_secret"
+      assert header(conn, "accept") == "application/hal+json"
       assert header(conn, "idempotency-key") == nil
       assert_empty_body(conn)
 
@@ -122,6 +125,7 @@ defmodule MollieEx.SettlementsTest do
       assert conn.request_path == "/v2/settlements/next"
       assert conn.query_string == ""
       assert header(conn, "authorization") == "Bearer #{@organization_token}"
+      assert header(conn, "accept") == "application/hal+json"
       assert header(conn, "idempotency-key") == nil
       assert_empty_body(conn)
 
@@ -145,6 +149,7 @@ defmodule MollieEx.SettlementsTest do
              }
 
       assert header(conn, "authorization") == "Bearer #{@oauth_token}"
+      assert header(conn, "accept") == "application/hal+json"
       assert header(conn, "idempotency-key") == nil
       assert_empty_body(conn)
 
@@ -183,6 +188,7 @@ defmodule MollieEx.SettlementsTest do
              }
 
       assert header(conn, "authorization") == "Bearer #{@organization_token}"
+      assert header(conn, "accept") == "application/hal+json"
       assert header(conn, "idempotency-key") == nil
       assert_empty_body(conn)
 
@@ -215,6 +221,7 @@ defmodule MollieEx.SettlementsTest do
              }
 
       assert header(conn, "authorization") == "Bearer #{@organization_token}"
+      assert header(conn, "accept") == "application/hal+json"
       assert header(conn, "idempotency-key") == nil
       assert_empty_body(conn)
 
@@ -248,6 +255,7 @@ defmodule MollieEx.SettlementsTest do
              }
 
       assert header(conn, "authorization") == "Bearer #{@organization_token}"
+      assert header(conn, "accept") == "application/hal+json"
       assert header(conn, "idempotency-key") == nil
       assert_empty_body(conn)
 
