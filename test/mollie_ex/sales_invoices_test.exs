@@ -203,21 +203,20 @@ defmodule MollieEx.SalesInvoicesTest do
              SalesInvoices.delete(client, "invoice_4Y0eZitmBnQ6IDoMqZQKh", testmode: false)
   end
 
-  test "sends explicit testmode in API-key sales invoice delete body" do
-    Req.Test.expect(__MODULE__, fn conn ->
-      assert conn.method == "DELETE"
-      assert conn.request_path == "/v2/sales-invoices/invoice_4Y0eZitmBnQ6IDoMqZQKh"
-      assert conn.query_string == ""
-      assert header(conn, "authorization") == "Bearer #{@api_key}"
-      assert_json_body(conn, %{"testmode" => true})
+  test "rejects API-key sales invoice delete testmode before sending" do
+    test_pid = self()
 
+    Req.Test.stub(__MODULE__, fn conn ->
+      send(test_pid, :request_sent)
       no_content_response(conn)
     end)
 
-    assert {:ok, :no_content} =
+    assert {:error, %Error{reason: :unsupported_testmode}} =
              SalesInvoices.delete(api_key_client(), "invoice_4Y0eZitmBnQ6IDoMqZQKh",
                testmode: true
              )
+
+    refute_receive :request_sent, 10
   end
 
   test "rejects invalid input before sending" do
