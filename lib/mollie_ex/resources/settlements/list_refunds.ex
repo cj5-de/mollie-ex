@@ -15,6 +15,7 @@ defmodule MollieEx.Resources.Settlements.ListRefunds do
     :receive_timeout,
     :request_timeout
   ]
+  @hal_accept "application/hal+json"
 
   @spec build(Client.t(), String.t(), keyword()) ::
           {:ok, Request.t(), keyword()} | {:error, Error.t()}
@@ -30,6 +31,7 @@ defmodule MollieEx.Resources.Settlements.ListRefunds do
         method: :get,
         path: Options.resource_path(["settlements", settlement_id, "refunds"]),
         path_template: "/settlements/{settlementId}/refunds",
+        accept: @hal_accept,
         query: Options.query(from: from, limit: limit, embed: embed),
         idempotency_policy: :unsupported,
         operation: :settlements_list_refunds

@@ -16,6 +16,7 @@ defmodule MollieEx.Resources.SalesInvoices.Update do
   ]
   @structured_body_keys ~w(paymentDetails emailDetails recipient lines discount)
   @non_update_keys [:testmode, "testmode", :profile_id, "profile_id", "profileId"]
+  @hal_accept "application/hal+json"
 
   @spec build(Client.t(), String.t(), map(), keyword()) ::
           {:ok, Request.t(), keyword()} | {:error, Error.t()}
@@ -32,6 +33,7 @@ defmodule MollieEx.Resources.SalesInvoices.Update do
         method: :patch,
         path: Options.resource_path(["sales-invoices", sales_invoice_id]),
         path_template: "/sales-invoices/{salesInvoiceId}",
+        accept: @hal_accept,
         body: body,
         idempotency_policy: :optional,
         operation: :sales_invoices_update,

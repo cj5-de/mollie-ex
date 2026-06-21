@@ -13,6 +13,7 @@ defmodule MollieEx.Resources.SalesInvoices.Get do
     :receive_timeout,
     :request_timeout
   ]
+  @hal_accept "application/hal+json"
 
   @spec build(Client.t(), String.t(), keyword()) ::
           {:ok, Request.t(), keyword()} | {:error, Error.t()}
@@ -25,6 +26,7 @@ defmodule MollieEx.Resources.SalesInvoices.Get do
         method: :get,
         path: Options.resource_path(["sales-invoices", sales_invoice_id]),
         path_template: "/sales-invoices/{salesInvoiceId}",
+        accept: @hal_accept,
         query: Options.query(testmode: testmode),
         idempotency_policy: :unsupported,
         operation: :sales_invoices_get,
