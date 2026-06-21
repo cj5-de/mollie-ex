@@ -24,8 +24,10 @@ defmodule MollieEx.Resources.BalanceTransfers.Create do
          :ok <- Options.reject_api_key_client(client),
          :ok <- Options.require_param(params, [:amount, "amount"], :missing_amount),
          :ok <- Options.require_param(params, [:source, "source"], :missing_source),
-         :ok <- Options.require_param(params, [:destination, "destination"], :missing_destination),
-         :ok <- Options.require_param(params, [:description, "description"], :missing_description),
+         :ok <-
+           Options.require_param(params, [:destination, "destination"], :missing_destination),
+         :ok <-
+           Options.require_param(params, [:description, "description"], :missing_description),
          {:ok, body, testmode} <-
            Options.body_with_testmode(client, params, opts, @structured_body_keys) do
       RequestBuilder.build(opts,
